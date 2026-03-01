@@ -3,5 +3,6 @@
   "LocalPath": "E:\\Lightroom_SyDrive",
   "RemoteName": "synology",
   "RemotePath": "Lightroom",
-  "RclonePath": "C:\\Windows-Extras\\Programme\\rclone\\rclone.exe"
+  "RclonePath": "C:\\Windows-Extras\\Programme\\rclone\\rclone.exe",
+  "BackupsRelativePath": "Backups"
 }

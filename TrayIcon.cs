@@ -6,236 +6,529 @@ using System.Diagnostics;
 
 namespace LightroomSync
 {
-    // Hauptklasse des Programms.
-    // Erstellt das Tray-Icon und verwaltet den Status.
     public class TrayIcon : ApplicationContext
     {
-        // ==================== EIGENSCHAFTEN ====================
+        private NotifyIcon trayIcon;
+        private System.Windows.Forms.Timer timer;
+        private AppConfig config;
+        private string rcloneConfigPath;
 
-        private NotifyIcon trayIcon;       // Das Icon in der Taskleiste
-        private System.Windows.Forms.Timer timer;  // Zeitgeber für regelmäßige Checks
-        private AppConfig config;         // Unsere Konfiguration
+        private Icon iconGreen;
+        private Icon iconRed;
+        private Icon iconBlue;
+        private Icon iconYellow;
 
-        // Die vier Status-Icons
-        private Icon iconGreen;   // Standby (bereit)
-        private Icon iconRed;     // Keine Verbindung
-        private Icon iconBlue;   // Lock erkannt (Lightroom aktiv)
-        private Icon iconYellow; // Synchronisiere gerade
+        private string status = "Standby";
+        private bool isSyncing = false;
+        private bool lockWarDa = false;
 
-        private string status = "Standby";  // Aktueller Status
-
-        // ==================== KONSTRUKTOR ====================
-
-        // Wird beim Start des Programms aufgerufen.
-        // Initialisiert alles: Icons, Config, Timer
         public TrayIcon()
         {
+            // ================= INITIALISIERUNG =================
             // 1. Basis-Verzeichnis holen (wo die .exe liegt)
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
-            // 2. rclone.conf in den Programm-Ordner kopieren falls nicht vorhanden
+            // Logger starten
+            Log.Initialize(baseDir);
+            Log.Info("=== Lightroom Watcher gestartet ===");
+
+            // rclone.conf
             string rcloneConfigPath = Path.Combine(baseDir, "rclone.conf");
             if (!File.Exists(rcloneConfigPath))
             {
-                // Versuche Standard-Ort zu finden
                 string appdataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string defaultConfig = Path.Combine(appdataPath, "rclone", "rclone.conf");
-
-                // Wenn Standard-Config existiert, kopiere sie
                 if (File.Exists(defaultConfig))
                 {
                     File.Copy(defaultConfig, rcloneConfigPath);
                 }
             }
+            this.rcloneConfigPath = rcloneConfigPath;
 
-            // 3. Config laden
+            // Config laden
             string configPath = Path.Combine(baseDir, "config.txt");
             config = AppConfig.LoadFromFile(configPath, baseDir);
-
-            // 4. Wenn keine Config existiert, erstelle Standard-Werte
             if (!File.Exists(configPath))
             {
                 config.Save(configPath);
             }
 
-            // 5. Erstelle die vier farbigen Icons
+            // Icons
             iconGreen = CreateColoredIcon(Color.Green);
             iconRed = CreateColoredIcon(Color.Red);
             iconBlue = CreateColoredIcon(Color.DodgerBlue);
             iconYellow = CreateColoredIcon(Color.Orange);
 
-            // 6. Erstelle das Tray-Icon
+            // Tray-Icon
             trayIcon = new NotifyIcon()
             {
                 Icon = iconGreen,
                 Text = "Lightroom Sync - Start...",
-                Visible = true  // Sichtbar machen
+                Visible = true
             };
 
-            // 7. Erstelle das Kontext-Menü (Rechtsklick)
+            // Context-Menü
             ContextMenuStrip menu = new ContextMenuStrip();
-
-            // Status-Anzeige (kann nicht geklickt werden)
             ToolStripMenuItem statusItem = new ToolStripMenuItem("Status: Start...");
             statusItem.Name = "statusItem";
-            statusItem.Enabled = false;  // Grau (nicht klickbar)
+            statusItem.Enabled = false;
             menu.Items.Add(statusItem);
-
-            menu.Items.Add(new ToolStripSeparator());  // Trennlinie
-
-            // Beenden-Button
+            menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem("Beenden");
-            exitItem.Click += (s, e) => {  // Lambda: Was passiert beim Klick
+            exitItem.Click += (s, e) => {
+                Log.Info("Beendet durch Benutzer");
                 trayIcon.Visible = false;
                 Application.Exit();
             };
             menu.Items.Add(exitItem);
-
-            // Menü zum Icon hinzufügen
             trayIcon.ContextMenuStrip = menu;
 
-            // 8. Timer einrichten (für regelmäßige Status-Checks)
+            // Timer
             timer = new System.Windows.Forms.Timer();
-            timer.Interval = config.CheckInterval * 1000;  // Sekunden → Millisekunden
-            timer.Tick += Timer_Tick;  // Methode die aufgerufen wird
-            timer.Start();  // Timer starten
+            timer.Interval = config.CheckInterval * 1000;
+            timer.Tick += Timer_Tick;
+            timer.Start();
 
-            // 9. Ersten Check sofort machen
             CheckStatus();
         }
 
-        // ==================== EVENT-HANDLER ====================
-
-        // Wird vom Timer aufgerufen (alle 15 Sekunden)
         private void Timer_Tick(object sender, EventArgs e)
         {
             CheckStatus();
         }
 
-        // ==================== HAUPT-LOGIK ====================
-
-        // Prüft den aktuellen Status des Systems
-        // Wird regelmäßig vom Timer aufgerufen
         private void CheckStatus()
         {
             try
             {
-                // === SCHRITT 1: Lock-Datei prüfen ===
-                // Wenn Lightroom offen ist, existiert eine .lrcat.lock Datei
+                // ================= 1. LOCK PRÜFEN =================
                 if (Directory.Exists(config.LocalPath))
                 {
-                    // Suche nach *.lrcat.lock Dateien
-                    string[] lockFiles = Directory.GetFiles(
-                        config.LocalPath,
-                        "*.lrcat.lock",
-                        SearchOption.AllDirectories  // Auch in Unterordnern suchen
-                    );
-
-                    // Wenn Lock-Datei gefunden
+                    string[] lockFiles = Directory.GetFiles(config.LocalPath, "*.lrcat.lock", SearchOption.AllDirectories);
                     if (lockFiles.Length > 0)
                     {
-                        SetStatus("Lock");  // Icon Blau
-                        return;  // Fertig, nichts anderes prüfen
+                        if (!lockWarDa)
+                        {
+                            Log.Info("Lock erkannt");
+                            lockWarDa = true;
+                        }
+                        SetStatus("Lock");
+                        return;
                     }
                 }
 
-                // === SCHRITT 2: Prüfe ob rclone läuft ===
-                // Wenn gerade synchronisiert wird
-                Process[] rcloneProcesses = Process.GetProcessesByName("rclone");
-                if (rcloneProcesses.Length > 0)
+                if (lockWarDa)
                 {
-                    SetStatus("Syncing");  // Icon Gelb
-                    return;
+                    Log.Warn("Lock entfernt - Sync wird fortgesetzt");
+                    lockWarDa = false;
                 }
 
-                // === SCHRITT 3: NAS-Verbindung prüfen ===
-                // Baue den Remote-Pfad (z.B. "synology:Lightroom")
+                // ================= 2. BEREITS SYNCING? =================
+        //        if (isSyncing)
+        //        {
+        //            SetStatus("Syncing");
+        //            return;
+        //        }
+
+                // ================= 3. NAS PRÜFEN =================
                 string remoteFull = config.RemoteName;
                 if (!string.IsNullOrEmpty(config.RemotePath))
-                {
                     remoteFull += ":" + config.RemotePath;
-                }
 
-                // Prüfe ob rclone.exe existiert
-                if (!File.Exists(config.RclonePath))
+                if (!File.Exists(config.RclonePath) || !File.Exists(rcloneConfigPath))
                 {
+                    Log.Warn("Keine NAS-Verbindung");
                     SetStatus("NoConnection");
                     return;
                 }
 
-                // Prüfe ob rclone.conf existiert
-                string rcloneConfigPath = Path.Combine(
-                    AppDomain.CurrentDomain.BaseDirectory,
-                    "rclone.conf"
-                );
-                if (!File.Exists(rcloneConfigPath))
-                {
-                    SetStatus("NoConnection");
-                    return;
-                }
-
-                // Starte rclone Prozess um NAS zu prüfen
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = config.RclonePath;
-                // --config gibt den Pfad zur rclone.conf an
-                // lsd list directories (verbindet nur, keine Änderung)
                 psi.Arguments = $"--config \"{rcloneConfigPath}\" lsd \"{remoteFull}\"";
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;
 
-                // Prozess-Einstellungen für Hintergrund-Ausführung
-                psi.UseShellExecute = false;  // Kein Fenster
-                psi.RedirectStandardOutput = true;  // Ausgabe umleiten
-                psi.RedirectStandardError = true;   // Fehler umleiten
-                psi.CreateNoWindow = true;  // Kein DOS-Fenster
-
-                // Starte den Prozess
                 using (Process p = Process.Start(psi))
                 {
-                    // Lese die Ausgabe
                     string output = p.StandardOutput.ReadToEnd();
-                    string error = p.StandardError.ReadToEnd();
-
-                    // Warte maximal 5 Sekunden auf Antwort
-                    bool exited = p.WaitForExit(5000);
-
-                    // Wenn Timeout oder Fehler
-                    if (!exited)
-                    {
-                        p.Kill();  // Prozess abschießen
-                        SetStatus("NoConnection");
-                        return;
-                    }
-
-                    // Wenn ExitCode != 0 oder keine Ausgabe
+                    p.WaitForExit(5000);
                     if (p.ExitCode != 0 || output.Length < 10)
                     {
+                        Log.Warn("NAS-Verbindung fehlgeschlagen");
                         SetStatus("NoConnection");
                         return;
                     }
                 }
 
-                // === ALLES OK ===
-                SetStatus("Standby");  // Icon Grün
+                // ================= 4. KATALOG PRÜFEN =================
+                DateTime? localDate = GetLocalCatalogDate();
+                DateTime? remoteDate = GetRemoteCatalogDate();
 
+                Log.Info($"Check: Lokal={Log.FormatDateTime(localDate)} | NAS={Log.FormatDateTime(remoteDate)}");
+
+                bool mussSyncen = false;
+                string syncRichtung = "";
+
+                if (localDate != null)
+                {
+                    if (remoteDate == null)
+                    {
+                        Log.Info("Kein Remote-Katalog - Upload");
+                        mussSyncen = true;
+                        syncRichtung = "upload";
+                    }
+                    else
+                    {
+                        double diff = Math.Round(((DateTime)localDate - (DateTime)remoteDate).TotalSeconds, 0);
+
+                        if (diff > 5)
+                        {
+                            Log.Info("PC neuer -> Upload");
+                            mussSyncen = true;
+                            syncRichtung = "upload";
+                        }
+                        else if (diff < -5)
+                        {
+                            Log.Info("NAS neuer -> Download");
+                            mussSyncen = true;
+                            syncRichtung = "download";
+                        }
+                    }
+                }
+
+                // ================= 5. BACKUPS =================
+                // Backups wird NUR geprüft wenn kein Katalog-Sync nötig ist
+
+
+                // Backups sync
+                Log.Info("Check Backups (BISYNC)");
+                SyncBackups();
+
+
+                // ================= 6. ERST HIER: SYNC WENN NÖTIG =================
+                if (mussSyncen)
+                {
+                    // HIER erst Icon Gelb setzen
+                    isSyncing = true;
+                    SetStatus("Syncing");
+
+                    // Katalog sync
+                    if (localDate != null && (syncRichtung == "upload" || syncRichtung == "download"))
+                    {
+                        RunRcloneSync(syncRichtung);
+                    }                    
+
+                    isSyncing = false;
+                    Log.Info("Check End");
+                    SetStatus("Standby");
+                }
+                else
+                {                    
+                    Log.Info("Check End");
+                    SetStatus("Standby");
+                }
+            // ================= 7. Wenn ein Fehler passiert,... =================
             }
-            catch
+            catch (Exception ex)
             {
-                // Bei jedem Fehler: Verbindung verloren
+                Log.Error($"Fehler: {ex.Message}");
                 SetStatus("NoConnection");
             }
         }
 
-        // ==================== HILFSMETHODEN ====================
+        private bool CheckBackupsNeedSync()
+        {
+            // Prüfe ob Backups unterschiedlich sind
+            try
+            {
+                string remoteFull = config.RemoteName;
+                if (!string.IsNullOrEmpty(config.RemotePath))
+                    remoteFull += ":" + config.RemotePath;
 
-        // Ändert den Status und das Icon
-        // newStatus --> Neuer Status-Name
+                string localBackups = Path.Combine(config.LocalPath, "Backups");
+                int localCount = 0;
+                if (Directory.Exists(localBackups))
+                {
+                    localCount = Directory.GetFiles(localBackups, "*", SearchOption.AllDirectories).Length;
+                }
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = config.RclonePath;
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" lsd {remoteFull}/Backups";
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.CreateNoWindow = true;
+
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit(5000);
+
+                    int remoteCount = 0;
+                    foreach (char c in output)
+                    {
+                        if (c == '\n') remoteCount++;
+                    }
+
+                    return Math.Abs(localCount - remoteCount) > 2;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void RunRcloneSync(string direction)
+        {
+            isSyncing = true;
+            SetStatus("Syncing");
+
+            try
+            {
+                string remoteFull = config.RemoteName;
+                if (!string.IsNullOrEmpty(config.RemotePath))
+                    remoteFull += ":" + config.RemotePath;
+
+                string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
+
+                // .lrcat kopieren
+                string[] lrcatFiles = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
+
+                if (lrcatFiles.Length > 0)
+                {
+                    string lrcatFile = lrcatFiles[0];
+
+                    ProcessStartInfo psiCopy = new ProcessStartInfo();
+                    psiCopy.FileName = config.RclonePath;
+
+                    if (direction == "upload")
+                    {
+                        psiCopy.Arguments = $"--config \"{rcloneConfigPath}\" copy \"{lrcatFile}\" {remoteFull} --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    }
+                    else
+                    {
+                        psiCopy.Arguments = $"--config \"{rcloneConfigPath}\" copy {remoteFull} \"{config.LocalPath}\" --include \"*.lrcat\" --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    }
+
+                    psiCopy.UseShellExecute = false;
+                    psiCopy.RedirectStandardOutput = true;
+                    psiCopy.RedirectStandardError = true;
+                    psiCopy.CreateNoWindow = true;
+
+                    Log.Info($"Kopiere *.lrcat: {direction}");
+                    using (Process p = Process.Start(psiCopy))
+                    {
+                        p.WaitForExit(60000);
+                    }
+                    WriteRcloneStats(tempLog);
+                }
+
+                // Rest synchronisieren
+                string excludeBackups = "--exclude \"Backups/**\"";
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = config.RclonePath;
+
+                if (direction == "upload")
+                {
+                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync \"{config.LocalPath}\" {remoteFull} --size-only --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                }
+                else
+                {
+                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync {remoteFull} \"{config.LocalPath}\" --size-only --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                }
+
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;
+
+                Log.Info($"SYNC: {direction} / full");
+                using (Process p = Process.Start(psi))
+                {
+                    p.WaitForExit(120000);
+                }
+
+                WriteRcloneStats(tempLog);
+                Log.Info("Fertig");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Sync-Fehler: {ex.Message}");
+            }
+            finally
+            {
+                isSyncing = false;
+            }
+        }
+
+        private void WriteRcloneStats(string logFile)
+        {
+            try
+            {
+                if (!File.Exists(logFile)) return;
+
+                string[] lines = File.ReadAllLines(logFile);
+
+                foreach (string line in lines)
+                {
+                    // Suche nach allen relevanten Zeilen
+                    string trimmed = line.Trim();
+
+                    // Copied ODER Deleted ODER Transferred (wenn nicht 0) ODER Elapsed
+                    if (trimmed.Contains("Copied") ||
+                        trimmed.Contains("Deleted") ||
+                        (trimmed.Contains("Transferred:") && !trimmed.Contains("0 B / 0 B")) ||
+                        trimmed.Contains("Elapsed time:"))
+                    {
+                        // Prüfe ob es eine relevante Datei ist
+                        if (trimmed.Contains(".lrcat") ||
+                            trimmed.Contains("Backups/") ||
+                            trimmed.Contains("Lightroom-") ||
+                            trimmed.Contains("Options") ||
+                            trimmed.Contains("Manifest") ||
+                            trimmed.Contains("Database") ||
+                            trimmed.Contains("Deleted:") ||
+                            trimmed.Contains("Transferred:") ||
+                            trimmed.Contains("Elapsed time:"))
+                        {
+                            Log.Info("rclone: " + trimmed);
+                        }
+                    }
+                }
+
+                //Löscht das Logfile
+               // File.Delete(logFile);
+            }
+            catch { }
+        }
+
+        private void SyncBackups()
+        {
+            try
+            {
+                // 1. Remote-Pfad zusammenbauen
+                //Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
+                string remoteFull = config.RemoteName;
+                if (!string.IsNullOrEmpty(config.RemotePath))
+                    remoteFull += ":" + config.RemotePath; //synology:Lightroom
+
+                // Dynamischer lokaler Backups-Pfad
+                string includeBackups = $"--include \"{config.BackupsRelativePath}/**\" --include \"{config.BackupsRelativePath}/*/**\" --exclude \"*\"";
+
+                // Debug-Ausgabe
+                Log.Info($"Backups Sync: {config.LocalPath} <-> {remoteFull}/{config.BackupsRelativePath}");
+
+                //Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
+                string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
+
+                ProcessStartInfo psi = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
+                psi.FileName = config.RclonePath;
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.LocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
+                psi.UseShellExecute = false; //Direkter Prozessstart
+                psi.RedirectStandardOutput = true; //Ausgabe abfangen
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;  //Kein Fenster öffnen
+
+                //Prozess starten und maximal 60 Sekunden warten (Timeout)
+                using (Process p = Process.Start(psi))
+                {
+                    p.WaitForExit(60000);
+                }
+
+                //Die Log-Datei auswerten und relevante Zeilen ins Log schreiben
+                WriteRcloneStats(tempLog);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Backups-Fehler: {ex.Message}");
+            }
+        }
+
+        private DateTime? GetLocalCatalogDate()
+        {
+            try
+            {
+                string[] files = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
+                if (files.Length == 0) return null;
+
+                FileInfo newest = null;
+                foreach (string file in files)
+                {
+                    FileInfo fi = new FileInfo(file);
+                    if (newest == null || fi.LastWriteTime > newest.LastWriteTime)
+                        newest = fi;
+                }
+                return newest?.LastWriteTime;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private DateTime? GetRemoteCatalogDate()
+        {
+            try
+            {
+                string remoteFull = config.RemoteName;
+                if (!string.IsNullOrEmpty(config.RemotePath))
+                    remoteFull += ":" + config.RemotePath;
+
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = config.RclonePath;
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" lsl {remoteFull} --include \"*.lrcat\"";
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;
+
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit(5000);
+
+                    if (string.IsNullOrEmpty(output)) return null;
+
+                    string[] lines = output.Split('\n');
+                    DateTime? newestDate = null;
+
+                    foreach (string line in lines)
+                    {
+                        // Nur Hauptverzeichnis (kein /)
+                        if (line.Contains(".lrcat") && !line.Contains("/") && line.Contains("2026"))
+                        {
+                            int idx = line.IndexOf("2026");
+                            if (idx > 0 && idx + 19 <= line.Length)
+                            {
+                                string datePart = line.Substring(idx, 19);
+                                try
+                                {
+                                    DateTime dt = DateTime.ParseExact(datePart, "yyyy-MM-dd HH:mm:ss", null);
+                                    if (newestDate == null || dt > newestDate)
+                                        newestDate = dt;
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    return newestDate;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public void SetStatus(string newStatus)
         {
-            // Nur ändern wenn Status anders ist
             if (status == newStatus) return;
-
             status = newStatus;
 
-            // Icon und Text je nach Status setzen
             switch (status)
             {
                 case "Standby":
@@ -256,38 +549,21 @@ namespace LightroomSync
                     break;
             }
 
-            // Menü-Text aktualisieren
             if (trayIcon.ContextMenuStrip != null)
-            {
                 ((ToolStripMenuItem)trayIcon.ContextMenuStrip.Items["statusItem"]).Text = "Status: " + status;
-            }
         }
 
-        // Erstellt ein einfaches farbiges Kreis-Icon
-        // color --> Die Farbe des Kreises
-        // returns --> Das fertige Icon
         private Icon CreateColoredIcon(Color color)
         {
-            // Erstelle 32x32 Pixel Bitmap (Bild)
             Bitmap bitmap = new Bitmap(32, 32);
-
-            using (Graphics g = Graphics.FromImage(bitmap))  // Graphics zum Zeichnen
+            using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.Clear(Color.Transparent);  // Hintergrund durchsichtig
-
-                using (Brush brush = new SolidBrush(color))  // Farb-Pinsel
-                {
-                    // Zeichne gefüllten Kreis (Ellipse)
+                g.Clear(Color.Transparent);
+                using (Brush brush = new SolidBrush(color))
                     g.FillEllipse(brush, 2, 2, 28, 28);
-                }
-
-                using (Pen pen = new Pen(Color.White, 2))  // Weißer Rand
-                {
+                using (Pen pen = new Pen(Color.White, 2))
                     g.DrawEllipse(pen, 2, 2, 28, 28);
-                }
             }
-
-            // Icon aus Bitmap erstellen und zurückgeben
             return Icon.FromHandle(bitmap.GetHicon());
         }
     }

@@ -15,6 +15,9 @@ namespace LightroomSync
         // Lokaler Pfad zum Lightroom Ordner</summary>
         public string LocalPath = "";
 
+        // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
+        public string BackupsRelativePath = "Backups";  // Standard: Backups
+
         // Name des rclone Remotes (aus rclone config)</summary>
         public string RemoteName = "synology";
 

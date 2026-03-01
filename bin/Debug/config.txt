@@ -3,3 +3,4 @@ LocalPath=E:\Lightroom_test
 RemoteName=synology
 RemotePath=Lightroom
 RcloneRelativePath=./rclone/rclone.exe
+BackupsRelativePath=Backups
