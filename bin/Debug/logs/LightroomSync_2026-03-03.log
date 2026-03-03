@@ -1,0 +1,82 @@
+2026-03-03 22:10:07 [INFO] === Lightroom Watcher gestartet ===
+2026-03-03 22:10:09 [DEBUG] Catalog: Check: Lokal=03.03.2026 21:59:26 | NAS=03.03.2026 19:40:56
+2026-03-03 22:10:09 [INFO] Catalog: PC New -> Upload
+2026-03-03 22:10:09 [DEBUG] Catalog: Sync Start
+2026-03-03 22:10:09 [INFO] Catalog: Katalog upload
+2026-03-03 22:20:00 [INFO] === Lightroom Watcher gestartet ===
+2026-03-03 22:20:01 [DEBUG] Catalog: Check: Lokal=03.03.2026 21:59:26 | NAS=03.03.2026 21:59:26
+2026-03-03 22:20:01 [DEBUG] Catalog: kein Unterschied
+2026-03-03 22:20:02 [DEBUG] Backup: Checking
+2026-03-03 22:20:02 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:02 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:02 [DEBUG] Backup: Check End
+2026-03-03 22:20:02 [DEBUG] Sync loop End
+2026-03-03 22:20:02 [DEBUG] ==============================================
+2026-03-03 22:20:06 [DEBUG] Catalog: Check: Lokal=03.03.2026 21:59:26 | NAS=03.03.2026 21:59:26
+2026-03-03 22:20:06 [DEBUG] Catalog: kein Unterschied
+2026-03-03 22:20:06 [DEBUG] Backup: Checking
+2026-03-03 22:20:06 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:06 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:06 [DEBUG] Backup: Check End
+2026-03-03 22:20:06 [DEBUG] Sync loop End
+2026-03-03 22:20:06 [DEBUG] ==============================================
+2026-03-03 22:20:11 [DEBUG] Catalog: Check: Lokal=03.03.2026 21:59:26 | NAS=03.03.2026 21:59:26
+2026-03-03 22:20:11 [DEBUG] Catalog: kein Unterschied
+2026-03-03 22:20:11 [DEBUG] Backup: Checking
+2026-03-03 22:20:11 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:11 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:11 [DEBUG] Backup: Check End
+2026-03-03 22:20:11 [DEBUG] Sync loop End
+2026-03-03 22:20:11 [DEBUG] ==============================================
+2026-03-03 22:20:15 [INFO] Lock erkannt
+2026-03-03 22:20:35 [INFO] Lock entfernt - Sync wird fortgesetzt
+2026-03-03 22:20:36 [DEBUG] Catalog: Check: Lokal=03.03.2026 22:20:33 | NAS=03.03.2026 21:59:26
+2026-03-03 22:20:36 [INFO] Catalog: PC New -> Upload
+2026-03-03 22:20:36 [DEBUG] Catalog: Sync Start
+2026-03-03 22:20:36 [INFO] Catalog: upload
+2026-03-03 22:20:52 [INFO] Catalog: upload complete
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG.old.1772572813929549: Copied (new)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/MANIFEST-004154: Copied (new)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/004153.log: Copied (new)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/OPTIONS-004156: Copied (new)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/CURRENT: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/LOCK: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Sync.lrdata/0599d3e4191040789de5b1bb43bef3c0/Managed Catalog.mcat-shm: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Sync.lrdata/0599d3e4191040789de5b1bb43bef3c0/Managed Catalog.wfindex-shm: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Previews.lrdata/previews.db: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Sync.lrdata/0599d3e4191040789de5b1bb43bef3c0/Managed Catalog.wfindex-wal: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Helper.lrdata/helper.db: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:37 INFO  : Lightroom-Katalog-v15 Sync.lrdata/0599d3e4191040789de5b1bb43bef3c0/Managed Catalog.mcat-wal: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:38 INFO  : Lightroom-Katalog-v15 Helper.lrdata/metadatahelper.db: Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:52 INFO  : Lightroom-Katalog-v15.lrcat: Multi-thread Copied (replaced existing)
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:52 INFO  : Lightroom-Katalog-v15.lrcat-data/MANIFEST-004150: Deleted
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:52 INFO  : Lightroom-Katalog-v15.lrcat-data/OPTIONS-004148: Deleted
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:52 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG.old.1772556319377487: Deleted
+2026-03-03 22:20:52 [DEBUG] rclone: 2026/03/03 22:20:52 INFO  : Lightroom-Katalog-v15.lrcat-data/004149.log: Deleted
+2026-03-03 22:20:52 [DEBUG] rclone: Transferred:   	    4.449 GiB / 4.449 GiB, 100%, 303.689 MiB/s, ETA 0s
+2026-03-03 22:20:52 [DEBUG] rclone: Deleted:                4 (files), 0 (dirs), 29.957 KiB (freed)
+2026-03-03 22:20:52 [DEBUG] rclone: Transferred:           15 / 15, 100%
+2026-03-03 22:20:52 [DEBUG] Catalog: Sync End
+2026-03-03 22:20:52 [DEBUG] Backup: Checking
+2026-03-03 22:20:52 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:53 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:53 [DEBUG] Backup: Check End
+2026-03-03 22:20:53 [DEBUG] Sync loop End
+2026-03-03 22:20:53 [DEBUG] ==============================================
+2026-03-03 22:20:54 [DEBUG] Catalog: Check: Lokal=03.03.2026 22:20:33 | NAS=03.03.2026 22:20:33
+2026-03-03 22:20:54 [DEBUG] Catalog: kein Unterschied
+2026-03-03 22:20:54 [DEBUG] Backup: Checking
+2026-03-03 22:20:54 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:55 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:55 [DEBUG] Backup: Check End
+2026-03-03 22:20:55 [DEBUG] Sync loop End
+2026-03-03 22:20:55 [DEBUG] ==============================================
+2026-03-03 22:20:56 [DEBUG] Catalog: Check: Lokal=03.03.2026 22:20:33 | NAS=03.03.2026 22:20:33
+2026-03-03 22:20:56 [DEBUG] Catalog: kein Unterschied
+2026-03-03 22:20:56 [DEBUG] Backup: Checking
+2026-03-03 22:20:56 [DEBUG] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-03 22:20:56 [DEBUG] Backup: Keine Änderungen gefunden
+2026-03-03 22:20:56 [DEBUG] Backup: Check End
+2026-03-03 22:20:56 [DEBUG] Sync loop End
+2026-03-03 22:20:56 [DEBUG] ==============================================

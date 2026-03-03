@@ -1,8 +1,12 @@
 ﻿using System;
-using System.Drawing;
-using System.IO;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
+using System.Drawing;
+using System.Drawing.Text;
+using System.IO;
+using System.Net.NetworkInformation;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace LightroomSync
 {
@@ -11,6 +15,7 @@ namespace LightroomSync
         // Config
         private const int WATCHDOG_TIME = 30000; // Sekunden
         private const int DIFF_SEC = 5; // Sekunden
+        private const int REMOTE_TIMEOUT = 5; // Sekunden
 
         // Variablen
         private NotifyIcon trayIcon;
@@ -133,14 +138,7 @@ namespace LightroomSync
                     lockWarDa = false;
                 }
 
-                // ================= 2. BEREITS SYNCING? =================
-           //     if (isSyncing)
-           //     {
-           //         SetStatus("Syncing");
-           //         return;
-           //     }
-
-                // ================= 3. NAS PRÜFEN =================
+                // ================= 2. Netzwerk Prüfen  =================
                 string remoteFull = config.RemoteName;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath;
@@ -177,7 +175,7 @@ namespace LightroomSync
                 DateTime? remoteDate = GetRemoteCatalogDate();
 
                 // Änderungszeit von den Katalogen
-                Log.Debug($"Check: Lokal={Log.FormatDateTime(localDate)} | NAS={Log.FormatDateTime(remoteDate)}");                
+                Log.Debug($"Catalog: Check: Lokal={Log.FormatDateTime(localDate)} | NAS={Log.FormatDateTime(remoteDate)}");                
 
                 // Wenn lokal ein Katalog existiert, dann...
                 if (localDate != null)
@@ -185,7 +183,7 @@ namespace LightroomSync
                     // Wenn Remote kein Katalog exestiert, dann
                     if (remoteDate == null)
                     {
-                        Log.Info("Kein Remote-Katalog - Upload");
+                        Log.Info("Catalog: Kein Remote-Katalog - Upload");
                         CatalogSyncStart = true;
                         SyncDirection = "upload";
                     }
@@ -197,15 +195,20 @@ namespace LightroomSync
 
                         if (diff > DIFF_SEC)
                         {
-                            Log.Info("PC neuer -> Upload");
+                            Log.Debug("Catalog: PC New -> Upload");
                             CatalogSyncStart = true;
                             SyncDirection = "upload";
                         }
                         else if (diff < -DIFF_SEC)
                         {
-                            Log.Info("NAS neuer -> Download");
+                            Log.Debug("Catalog: Remote New -> Download");
                             CatalogSyncStart = true;
                             SyncDirection = "download";
+                        }
+                        else
+                        {
+                            CatalogSyncStart = false;
+                            Log.Debug("Catalog: kein Unterschied");
                         }
                     }
                 }
@@ -215,13 +218,13 @@ namespace LightroomSync
                     // Wenn Remote ein Katalog exestiert, dann...
                     if (remoteDate != null)
                     {
-                        Log.Info("Kein Lokaler Katalog - Download");
+                        Log.Info("Catalog: Kein Lokaler Katalog - Download");
                         CatalogSyncStart = true;
                         SyncDirection = "download";
                     }
                     else
                     {
-                        Log.Error("Katalog Sync Start");
+                        Log.Error("Catalog: Keine Kataloge vorhanden");
                         SetStatus("Error");
                     }
                 }
@@ -229,8 +232,7 @@ namespace LightroomSync
                 // ================= 5. SYNC KATALOG =================
                 if (CatalogSyncStart)
                 {
-                    Log.Debug("Katalog Sync Start");
-            //        isSyncing = true;
+                    Log.Debug("Catalog: Sync Start");
                     SetStatus("Syncing");
 
                     // Katalog sync
@@ -238,27 +240,28 @@ namespace LightroomSync
                     {
                         SyncCatalog(SyncDirection);
                     }
-
-            //        isSyncing = false;
                     CatalogSyncStart = false;
-                    Log.Debug("Katalog Sync End");
+                    Log.Debug("Catalog: Sync End");
                     SetStatus("Standby");
                 }
 
                 // ================= 5.SYNC BACKUPS =================
                 // Wird geprüft ob Backups synchronisiert werden muss.
                 
-                Log.Debug("Check Backups Start"); 
-
+                Log.Debug("Backup: Checking");
+                
                 if (CheckBackup())
                 {
-                    Log.Debug("Check Backups End");
+                    Log.Debug("Backup: Check End");
                     SetStatus("Syncing");
-                    Log.Debug("Backup Sync Start");
+                    Log.Debug("Backup: Sync Start");
+                    Thread.Sleep(1000);
                     SyncBackups();
-                    Log.Debug("Backup Sync End");
+                    Log.Debug("Backup: Sync End");
                 }
-                Log.Info("Sync loop End");
+                Log.Debug("Backup: Check End");
+                Log.Debug("Sync loop End");
+                Log.Debug("==============================================");
                 SetStatus("Standby");
 
                 // ================= 7. Wenn ein Fehler passiert,... =================
@@ -272,85 +275,75 @@ namespace LightroomSync
 
         private void SyncCatalog(string direction)
         {
-         //   isSyncing = true;
-            SetStatus("Syncing");
-
             try
             {
+                // Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
                 string remoteFull = config.RemoteName;
                 if (!string.IsNullOrEmpty(config.RemotePath))
-                    remoteFull += ":" + config.RemotePath;
+                    remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
+                Log.Info($"Catalog: {direction} Start");
+
+                // Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
 
-                // .lrcat kopieren
-                string[] lrcatFiles = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
+                // Alte Log-Datei löschen
+                if (File.Exists(tempLog))
+                    File.Delete(tempLog);
 
-                if (lrcatFiles.Length > 0)
-                {
-                    string lrcatFile = lrcatFiles[0];
-
-                    ProcessStartInfo psiCopy = new ProcessStartInfo();
-                    psiCopy.FileName = config.RclonePath;
-
-                    if (direction == "upload")
-                    {
-                        psiCopy.Arguments = $"--config \"{rcloneConfigPath}\" copy \"{lrcatFile}\" {remoteFull} --update --metadata --log-file \"{tempLog}\" --log-level INFO";
-                    }
-                    else
-                    {
-                        psiCopy.Arguments = $"--config \"{rcloneConfigPath}\" copy {remoteFull} \"{config.LocalPath}\" --include \"*.lrcat\" --update --metadata --log-file \"{tempLog}\" --log-level INFO";
-                    }
-
-                    psiCopy.UseShellExecute = false;
-                    psiCopy.RedirectStandardOutput = true;
-                    psiCopy.RedirectStandardError = true;
-                    psiCopy.CreateNoWindow = true;
-
-                    Log.Info($"Kopiere *.lrcat: {direction}");
-                    using (Process p = Process.Start(psiCopy))
-                    {
-                        p.WaitForExit(60000);
-                    }
-                    WriteRcloneStats(tempLog);
-                }
-
-                // Rest synchronisieren
-                string excludeBackups = "--exclude \"Backups/**\"";
-
-                ProcessStartInfo psi = new ProcessStartInfo();
+                // ================= KATALOG SYNC =================
+                ProcessStartInfo psi = new ProcessStartInfo(); // Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
                 psi.FileName = config.RclonePath;
 
                 if (direction == "upload")
                 {
-                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync \"{config.LocalPath}\" {remoteFull} --size-only --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync \"{config.LocalPath}\" {remoteFull} --update --metadata --log-file \"{tempLog}\" --log-level INFO";
                 }
                 else
                 {
-                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync {remoteFull} \"{config.LocalPath}\" --size-only --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync {remoteFull} \"{config.LocalPath}\" --update --metadata --log-file \"{tempLog}\" --log-level INFO";
                 }
+                psi.UseShellExecute = false; // Direkter Prozessstart
+                psi.RedirectStandardOutput = true; // Ausgabe abfangen
+                psi.RedirectStandardError = true;   // Fehler abfangen
+                psi.CreateNoWindow = true; // Kein Fenster öffnen
 
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                Log.Info($"SYNC: {direction} / full");
+                // ================= rclone Prozess =================
                 using (Process p = Process.Start(psi))
                 {
-                    p.WaitForExit(120000);
+                    DateTime lastConnectedTime = DateTime.Now;
+
+                    // Wenn Prozess noch nicht beendet wurde, dann...
+                    while (!p.HasExited)
+                    {
+                        // Remote ist erreichbar, dann...
+                        if (IsRemoteReachable())
+                        {
+                            // Remote ist erreichbar - Zeitpunkt aktualisieren
+                            lastConnectedTime = DateTime.Now;
+                        }
+                        else
+                        {
+                            // Remote nicht erreichbar - prüfen, ob 5 Sekunden vergangen sind
+                            TimeSpan timeSinceLastConnection = DateTime.Now - lastConnectedTime;
+                            if (timeSinceLastConnection.TotalSeconds > 5)
+                            {
+                                Log.Error("NAS nicht erreichbar für 5 Sekunden - Prozess wird beendet");
+                                p.Kill();
+                                break;
+                            }
+                        }
+                        Thread.Sleep(1000); // Warte 1 Sekunde
+                    }
+                    p.WaitForExit(); // Warte noch auf Ende, falls nicht gekillt wurde
                 }
+                Log.Info($"Catalog: {direction} complete");
 
                 WriteRcloneStats(tempLog);
-                Log.Info("Fertig");
             }
             catch (Exception ex)
             {
                 Log.Error($"Sync-Fehler: {ex.Message}");
-            }
-            finally
-            {
-                isSyncing = false;
             }
         }
 
@@ -359,7 +352,8 @@ namespace LightroomSync
         {
             try
             {
-                // 1. Remote-Pfad zusammenbauen
+                bool BackupChange = false;
+
                 // Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
                 string remoteFull = config.RemoteName;
                 if (!string.IsNullOrEmpty(config.RemotePath))
@@ -369,10 +363,14 @@ namespace LightroomSync
                 string includeBackups = $"--include \"{config.BackupsRelativePath}/**\" --include \"{config.BackupsRelativePath}/*/**\" --exclude \"*\"";
 
                 //Debug Adresspfad
-                Log.Debug($"Backup Check: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
+                Log.Debug($"Backup: Pfad: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
 
                 // Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
+
+                // Alte Log-Datei löschen
+                if (File.Exists(tempLog))
+                    File.Delete(tempLog);
 
                 // DRY-RUN: Prüfen ob Änderungen vorhanden sind
                 ProcessStartInfo psi = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
@@ -387,39 +385,81 @@ namespace LightroomSync
                 {
                     p.WaitForExit(WATCHDOG_TIME);
                 }
-
-                // Log-Datei auf Transfers prüfen
+                                
+                // Log-Datei auslesen,...
                 if (File.Exists(tempLog))
                 {
+                    //Log-Datei einlesen...
                     string[] lines = File.ReadAllLines(tempLog);
                     foreach (string line in lines)
                     {
                         string trimmed = line.Trim();
-                        if ((trimmed.Contains("Transferred:") && !trimmed.Contains("0 B / 0 B")) ||
-                            trimmed.Contains("Copied") ||
-                            trimmed.Contains("Deleted:"))
+
+                        // DEBUG: Zeige alle ERROR-Zeilen
+                        if (trimmed.Contains("ERROR"))
                         {
-                            Log.Info("Backups: Änderungen erkannt (Dry-Run)");
-                            return true;
+                            Log.Debug($"DEBUG ERROR: '{trimmed}'");                        
+
+                            // Prüfe auf Resync-Fehler (flexibler)
+                            if (trimmed.Contains("Bisync aborted") &&
+                                trimmed.Contains("resync"))
+                            {                            
+                                Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss --resync gestaret werden.");
+                                Log.Debug("Backup: resync Start");
+                                SetStatus("Syncing");
+
+                                ProcessStartInfo psi_resync = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
+                                psi_resync.FileName = config.RclonePath;
+                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.LocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
+                                psi_resync.UseShellExecute = false; //Direkter Prozessstart
+                                psi_resync.RedirectStandardOutput = true; //Ausgabe abfangen
+                                psi_resync.RedirectStandardError = true;
+                                psi_resync.CreateNoWindow = true;  //Kein Fenster öffnen
+
+                                using (Process p = Process.Start(psi_resync))
+                                {
+                                    p.WaitForExit(WATCHDOG_TIME);
+                                }
+                                Thread.Sleep(1000);
+                                SetStatus("Standby");
+                                Log.Debug("Backup: resync End");
+                                return false;
+                            }
+                        }
+                    }
+
+                    // Nach dem Resync-Check, jetzt auf "No changes" prüfen
+                    foreach (string line in lines)
+                    {
+                        string trimmed = line.Trim();
+
+                        if (trimmed.Contains("No changes found"))
+                        {
+                            Log.Debug("Backup: Keine Änderungen gefunden");
+                            BackupChange = false;
+                            break;
+                        }
+                        else if (trimmed.Contains("Skipped"))
+                        {
+                            Log.Debug("Backup: Änderungen gefunden");
+                            BackupChange = true;
+                            break;
                         }
                     }
                 }
-
-                Log.Info("Backups: Keine Änderungen erkannt");
-                return false;
+                    return BackupChange;
             }
             catch (Exception ex)
             {
                 Log.Error($"Backups-Check-Fehler: {ex.Message}");
                 return false;
             }
-        }        
+        }
 
         private void SyncBackups()
         {
             try
             {
-                // 1. Remote-Pfad zusammenbauen
                 //Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
                 string remoteFull = config.RemoteName;
                 if (!string.IsNullOrEmpty(config.RemotePath))
@@ -429,10 +469,14 @@ namespace LightroomSync
                 string includeBackups = $"--include \"{config.BackupsRelativePath}/**\" --include \"{config.BackupsRelativePath}/*/**\" --exclude \"*\"";
 
                 //Debug Adresspfad
-                Log.Debug($"Backup Sync: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
+                Log.Debug($"Backup: Pfad: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
 
                 //Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
+
+                // Alte Log-Datei löschen
+                if (File.Exists(tempLog))
+                    File.Delete(tempLog);
 
                 ProcessStartInfo psi = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
                 psi.FileName = config.RclonePath;
@@ -442,12 +486,36 @@ namespace LightroomSync
                 psi.RedirectStandardError = true;
                 psi.CreateNoWindow = true;  //Kein Fenster öffnen
 
-                //Prozess starten und maximal 60 Sekunden warten (Timeout)
+                // ================= rclone Prozess =================
                 using (Process p = Process.Start(psi))
                 {
-                    p.WaitForExit(WATCHDOG_TIME);
-                }
+                    DateTime lastConnectedTime = DateTime.Now;
 
+                    // Wenn Prozess noch nicht beendet wurde, dann...
+                    while (!p.HasExited)
+                    {
+                        // Remote ist erreichbar, dann...
+                        if (IsRemoteReachable())
+                        {
+                            // Remote ist erreichbar - Zeitpunkt aktualisieren
+                            lastConnectedTime = DateTime.Now;
+                        }
+                        else
+                        {
+                            // Remote nicht erreichbar - prüfen, ob 5 Sekunden vergangen sind
+                            TimeSpan timeSinceLastConnection = DateTime.Now - lastConnectedTime;
+                            if (timeSinceLastConnection.TotalSeconds > 5)
+                            {
+                                Log.Debug("NAS nicht erreichbar für 5 Sekunden - Prozess wird beendet");
+                                SetStatus("NoConnection");
+                                p.Kill();
+                                break;
+                            }
+                        }
+                        Thread.Sleep(1000); // Warte 1 Sekunde
+                    }
+                    p.WaitForExit(); // Warte noch auf Ende, falls nicht gekillt wurde
+                }
                 //Die Log-Datei auswerten und relevante Zeilen ins Log schreiben
                 WriteRcloneStats(tempLog);
             }
@@ -484,19 +552,19 @@ namespace LightroomSync
                             trimmed.Contains("Manifest") ||
                             trimmed.Contains("Database") ||
                             trimmed.Contains("Deleted:") ||
-                            trimmed.Contains("Transferred:") ||
-                            trimmed.Contains("Elapsed time:"))
+                            trimmed.Contains("Transferred:")) 
+                          //  trimmed.Contains("Elapsed time:"))
                         {
-                            Log.Info("rclone: " + trimmed);
+                            Log.Debug("rclone: " + trimmed);
                         }
                     }
                 }
-
-                //Löscht das Logfile
-               File.Delete(logFile);
             }
-            catch { }
-        }       
+            catch
+            {
+
+            }
+        }
 
         private DateTime? GetLocalCatalogDate()
         {
@@ -624,5 +692,27 @@ namespace LightroomSync
             }
             return Icon.FromHandle(bitmap.GetHicon());
         }
+
+        private bool IsRemoteReachable()
+        {
+            try
+            {
+                // 1. Holt die NAS-IP aus der Konfiguration
+                string remoteIP = config.RemoteIP; // Falls das die IP ist, sonst z.B. "192.168.1.100"
+                // 2. Erstellt einen Ping-Objekt
+                System.Net.NetworkInformation.Ping ping = new System.Net.NetworkInformation.Ping();
+                // 3. Sendet einen Ping mit 2 Sekunden Timeout
+                System.Net.NetworkInformation.PingReply reply = ping.Send(remoteIP, 2000); // 2 Sekunden Timeout
+                // 4. Prüft ob der Ping erfolgreich war
+                return reply?.Status == System.Net.NetworkInformation.IPStatus.Success;
+            }
+            catch
+            {
+                // 5. Bei Fehler wird false zurückgegeben
+                Log.Debug("Ping auf die IP war nicht erfolgreich.");
+                return false;
+            }
+        }
+
     }
 }

@@ -21,11 +21,16 @@ namespace LightroomSync
         // Name des rclone Remotes (aus rclone config)</summary>
         public string RemoteName = "synology";
 
+        //IP von Remote Pfad
+        public string RemoteIP = "";
+
         // Pfad auf dem Remote (z.B. "Lightroom")</summary>
         public string RemotePath = "";
 
         // Relativer Pfad zu rclone.exe (z.B. "./rclone/rclone.exe")</summary>
         public string RcloneRelativePath = "./rclone/rclone.exe";
+
+        
 
         // Absolute Pfade (werden beim Laden berechnet)
         public string RclonePath { get; private set; }
@@ -58,6 +63,7 @@ namespace LightroomSync
                         if (key == "RemoteName") RemoteName = value;
                         if (key == "RemotePath") RemotePath = value;
                         if (key == "RcloneRelativePath") RcloneRelativePath = value;
+                        if (key == "RemoteIP") RemoteIP = value;
                     }
                 }
             }

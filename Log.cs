@@ -62,5 +62,10 @@ namespace LightroomSync
             if (dt == null) return "";
             return ((DateTime)dt).ToString("MM/dd/yyyy HH:mm:ss");
         }
-    }
+       
+        }
+
 }
+
+
+        

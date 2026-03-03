@@ -4,3 +4,4 @@ RemoteName=synology
 RemotePath=Lightroom
 RcloneRelativePath=./rclone/rclone.exe
 BackupsRelativePath=Backups
+RemoteIP=192.168.178.5
