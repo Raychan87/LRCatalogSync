@@ -28,9 +28,7 @@ namespace LightroomSync
         public string RemotePath = "";
 
         // Relativer Pfad zu rclone.exe (z.B. "./rclone/rclone.exe")</summary>
-        public string RcloneRelativePath = "./rclone/rclone.exe";
-
-        
+        public string RcloneRelativePath = "./rclone/rclone.exe";        
 
         // Absolute Pfade (werden beim Laden berechnet)
         public string RclonePath { get; private set; }

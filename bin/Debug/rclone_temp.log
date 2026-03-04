@@ -1,5 +1,5 @@
-2026/03/03 22:43:11 INFO  : Setting --ignore-listing-checksum as neither --checksum nor --compare checksum are set.
-2026/03/03 22:43:11 INFO  : Bisyncing with Comparison Settings: 
+2026/03/04 19:50:22 INFO  : Setting --ignore-listing-checksum as neither --checksum nor --compare checksum are set.
+2026/03/04 19:50:22 INFO  : Bisyncing with Comparison Settings: 
 {
 	"Modtime": true,
 	"Size": true,
@@ -11,15 +11,15 @@
 	"SlowHashDetected": true,
 	"DownloadHash": false
 }
-2026/03/03 22:43:11 INFO  : Synching Path1 "E:\Lightroom_test\" with Path2 "synology:Lightroom/"
-2026/03/03 22:43:11 INFO  : Building Path1 and Path2 listings
-2026/03/03 22:43:11 INFO  : Path1 checking for diffs
-2026/03/03 22:43:11 INFO  : Path2 checking for diffs
-2026/03/03 22:43:11 INFO  : No changes found
-2026/03/03 22:43:11 INFO  : Updating listings
-2026/03/03 22:43:11 INFO  : Bisync successful
-2026/03/03 22:43:11 NOTICE: 
+2026/03/04 19:50:22 INFO  : Synching Path1 "E:\Lightroom_test\" with Path2 "synology:Lightroom/"
+2026/03/04 19:50:22 INFO  : Building Path1 and Path2 listings
+2026/03/04 19:50:22 INFO  : Path1 checking for diffs
+2026/03/04 19:50:22 INFO  : Path2 checking for diffs
+2026/03/04 19:50:22 INFO  : No changes found
+2026/03/04 19:50:22 INFO  : Updating listings
+2026/03/04 19:50:22 INFO  : Bisync successful
+2026/03/04 19:50:22 NOTICE: 
 Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
-Checks:                22 / 22, 100%, Listed 54
+Checks:                22 / 22, 100%, Listed 56
 Elapsed time:         0.1s
 

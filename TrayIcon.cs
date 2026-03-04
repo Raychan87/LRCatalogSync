@@ -30,7 +30,7 @@ namespace LightroomSync
         private Icon iconWhite;
 
         private string status = "Standby";
-        private bool lockWarDa = false;
+        private bool lockfile = false;
 
         public TrayIcon()
         {
@@ -122,20 +122,20 @@ namespace LightroomSync
                     string[] lockFiles = Directory.GetFiles(config.LocalPath, "*.lrcat.lock", SearchOption.AllDirectories);
                     if (lockFiles.Length > 0)
                     {
-                        if (!lockWarDa)
+                        if (!lockfile)
                         {
                             Log.Info("Lock erkannt");
-                            lockWarDa = true;
+                            lockfile = true;
                         }
                         SetStatus("Lock");
                         return;
                     }
                 }
 
-                if (lockWarDa)
+                if (lockfile)
                 {
                     Log.Info("Lock entfernt - Sync wird fortgesetzt");
-                    lockWarDa = false;
+                    lockfile = false;
                 }
 
                 // ================= 2. Netzwerk Prüfen  =================
@@ -284,6 +284,9 @@ namespace LightroomSync
 
                 Log.Info($"Catalog: {direction} Start");
 
+                // ========== VOR SYNC: Schreibschutz AKTIVIEREN ==========
+                SetCatalogReadOnly(true);
+
                 // Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
 
@@ -340,10 +343,21 @@ namespace LightroomSync
                 Log.Info($"Catalog: {direction} complete");
 
                 WriteRcloneStats(tempLog);
+
+                // ========== NACH SYNC: Schreibschutz DEAKTIVIEREN ==========
+                SetCatalogReadOnly(false);
+
+                // ========== Optional: Remote read-only Status aufheben ==========
+                RemoveRemoteReadOnly();
             }
             catch (Exception ex)
             {
                 Log.Error($"Sync-Fehler: {ex.Message}");
+            }
+            finally
+            {
+                // Sicherstellen, dass Schreibschutz am Ende aufgehoben wird
+                SetCatalogReadOnly(false);
             }
         }
 
@@ -712,6 +726,90 @@ namespace LightroomSync
                 return false;
             }
         }
-                
+
+        private void SetCatalogReadOnly(bool readOnly)
+        {
+            try
+            {
+                // Suche nach *.lrcat im LocalPath (nur oberste Ebene)
+                string[] lrcatFiles = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
+
+                if (lrcatFiles.Length == 0)
+                {
+                    Log.Debug($"Catalog: Keine *.lrcat Datei gefunden in {config.LocalPath}");
+                    return;
+                }
+
+                // Bearbeite die erste (und normalerweise einzige) Datei
+                FileInfo fileInfo = new FileInfo(lrcatFiles[0]);
+
+                if (readOnly)
+                {
+                    // Schreibschutz AKTIVIEREN
+                    fileInfo.Attributes |= FileAttributes.ReadOnly;
+                    Log.Info($"Catalog: Schreibschutz aktiviert für {fileInfo.Name}");
+                }
+                else
+                {
+                    // Schreibschutz DEAKTIVIEREN
+                    fileInfo.Attributes &= ~FileAttributes.ReadOnly;
+                    Log.Info($"Catalog: Schreibschutz deaktiviert für {fileInfo.Name}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Fehler beim Setzen von Schreibschutz: {ex.Message}");
+            }
+        }
+
+        private void RemoveRemoteReadOnly()
+        {
+            try
+            {
+                string remoteFull = config.RemoteName;
+                if (!string.IsNullOrEmpty(config.RemotePath))
+                    remoteFull += ":" + config.RemotePath;
+
+                // Finde die Remote *.lrcat Datei
+                ProcessStartInfo psi = new ProcessStartInfo();
+                psi.FileName = config.RclonePath;
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" lsl {remoteFull} --include \"*.lrcat\"";
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;
+
+                using (Process p = Process.Start(psi))
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit(5000);
+
+                    if (!string.IsNullOrEmpty(output))
+                    {
+                        string[] lines = output.Split('\n');
+                        foreach (string line in lines)
+                        {
+                            if (line.Contains(".lrcat") && !line.Contains("/"))
+                            {
+                                // Extrahiere den Dateinamen
+                                string[] parts = line.Split(new[] { " " }, System.StringSplitOptions.RemoveEmptyEntries);
+                                if (parts.Length > 0)
+                                {
+                                    string fileName = parts[parts.Length - 1];
+                                    Log.Debug($"Catalog: Remote *.lrcat gefunden: {fileName}");
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                Log.Debug("Catalog: Remote read-only Status überprüft");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Fehler beim Überprüfen des Remote read-only Status: {ex.Message}");
+            }
+        }
     }
 }
