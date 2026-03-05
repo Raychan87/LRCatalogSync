@@ -9,29 +9,32 @@ namespace LightroomSync
     {
         // ==================== EIGENSCHAFTEN ====================
 
-        // Intervall in Sekunden wie oft der Status geprüft wird</summary>
-        public int CheckInterval = 15;
-
-        // Lokaler Pfad zum Lightroom Ordner</summary>
+        // Lokaler Pfad zum Lightroom Ordner
         public string LocalPath = "";
 
         // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
         public string BackupsRelativePath = "Backups";  // Standard: Backups
 
-        // Name des rclone Remotes (aus rclone config)</summary>
-        public string RemoteName = "synology";
-
-        //IP von Remote Pfad
+        // IP von Remote Pfad (Samba Server)
         public string RemoteIP = "";
 
-        // Pfad auf dem Remote (z.B. "Lightroom")</summary>
+        // Pfad auf dem Remote (z.B. "Lightroom")
         public string RemotePath = "";
 
-        // Relativer Pfad zu rclone.exe (z.B. "./rclone/rclone.exe")</summary>
+        // Relativer Pfad zu rclone.exe (z.B. "./rclone/rclone.exe")
         public string RcloneRelativePath = "./rclone/rclone.exe";        
+
+        // Samba Benutzername
+        public string SambaUser = "";
+
+        // Samba Passwort (verschlüsselt mit rclone obscure)
+        public string SambaPassword = "";
 
         // Absolute Pfade (werden beim Laden berechnet)
         public string RclonePath { get; private set; }
+
+        //Einstellung von LogLevel = Debug/Info/Warn/Error
+        public string LogLevel { get; set; } = "Info";
 
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.
@@ -49,24 +52,26 @@ namespace LightroomSync
                 foreach (string line in lines)
                 {
                     // Nur Zeilen mit "=" verarbeiten
-                    if (line.Contains("="))
+                    if (line.Contains("=") && !line.StartsWith("#"))
                     {
                         // Teile die Zeile am "=" Zeichen
                         string key = line.Split('=')[0].Trim();      // Linke Seite (z.B. "CheckInterval")
                         string value = line.Split('=')[1].Trim();    // Rechte Seite (z.B. "15")
 
                         // Weise die Werte den Eigenschaften zu
-                        if (key == "CheckInterval") CheckInterval = int.Parse(value);  // Text zu Zahl
                         if (key == "LocalPath") LocalPath = value;
-                        if (key == "RemoteName") RemoteName = value;
+                        if (key == "BackupsRelativePath") BackupsRelativePath = value;
                         if (key == "RemotePath") RemotePath = value;
                         if (key == "RcloneRelativePath") RcloneRelativePath = value;
                         if (key == "RemoteIP") RemoteIP = value;
+                        if (key == "SambaUser") SambaUser = value;
+                        if (key == "SambaPassword") SambaPassword = value;
+                        if (key == "LogLevel") LogLevel = value;
                     }
                 }
             }
 
-            // Berechne absolute Pfade aus den relativen Pfaden
+            // Berechne absolute Pfade
             RclonePath = GetAbsolutePath(RcloneRelativePath, baseDir);
         }
 
@@ -76,14 +81,21 @@ namespace LightroomSync
         // returns --> Absoluter Pfad
         private string GetAbsolutePath(string relativePath, string baseDir)
         {
-            // Wenn der Pfad bereits absolut ist (mit C:\...),nimm ihn direkt
-            if (Path.IsPathRooted(relativePath))
+            // Füge "rclone.exe" hinzu, falls nicht vorhanden
+            string path = relativePath;
+            if (!path.EndsWith("rclone.exe", StringComparison.OrdinalIgnoreCase))
             {
-                return relativePath;
+                path = Path.Combine(path, "rclone.exe");
             }
 
-            // Sonst kombiniere basisDir + relativePath
-            return Path.GetFullPath(Path.Combine(baseDir, relativePath));
+            // Wenn bereits absolut, nimm direkt
+            if (Path.IsPathRooted(path))
+            {
+                return path;
+            }
+
+            // Kombiniere mit baseDir
+            return Path.GetFullPath(Path.Combine(baseDir, path));
         }
 
         // Speichert die Konfiguration in eine Datei.
@@ -93,11 +105,14 @@ namespace LightroomSync
             // Erstelle Array mit allen Einstellungen
             string[] lines = new string[]
             {
-                "CheckInterval=" + CheckInterval,
                 "LocalPath=" + LocalPath,
-                "RemoteName=" + RemoteName,
+                "BackupsRelativePath=" + BackupsRelativePath,
                 "RemotePath=" + RemotePath,
-                "RcloneRelativePath=" + RcloneRelativePath
+                "RcloneRelativePath=" + RcloneRelativePath,
+                "RemoteIP=" + RemoteIP,
+                "SambaUser=" + SambaUser,
+                "SambaPassword=" + SambaPassword,
+                "LogLevel=" + LogLevel
             };
 
             // Schreibe in die Datei

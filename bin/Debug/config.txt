@@ -1,7 +1,0 @@
-CheckInterval=5
-LocalPath=E:\Lightroom_test
-RemoteName=synology
-RemotePath=Lightroom
-RcloneRelativePath=./rclone/rclone.exe
-BackupsRelativePath=Backups
-RemoteIP=192.168.178.5

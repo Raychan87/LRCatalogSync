@@ -9,11 +9,21 @@ namespace LightroomSync
     {
         private static string logFilePath;
         private static object lockObj = new object();
+        private static string currentLogLevel = "Info";
 
-        // Initialisiert den Logger mit dem Basis-Verzeichnis
-        public static void Initialize(string baseDir)
+        // LogLevel Hierarchie: Debug > Info > Warn > Error
+        private enum LogLevelValue
         {
-            // Erstelle Logs-Ordner wenn nicht vorhanden
+            Debug = 0,
+            Info = 1,
+            Warn = 2,
+            Error = 3
+        }
+
+        public static void Initialize(string baseDir, string logLevel = "Info")
+        {
+            currentLogLevel = logLevel;
+
             string logsDir = Path.Combine(baseDir, "logs");
             if (!Directory.Exists(logsDir))
             {
@@ -25,11 +35,28 @@ namespace LightroomSync
             logFilePath = Path.Combine(logsDir, logFileName);
         }
 
-        // Schreibt eine Nachricht in die Log-Datei
-        // <param name="message">Die Nachricht</param>
-        // <param name="level">INFO, WARN, ERROR</param>
+        public static void SetLogLevel(string level)
+        {
+            currentLogLevel = level;
+        }
+
+        // Prüft ob eine Nachricht geschrieben werden soll
+        private static bool ShouldLog(string level)
+        {
+            if (!Enum.TryParse(currentLogLevel, out LogLevelValue configLevel))
+                configLevel = LogLevelValue.Info;
+
+            if (!Enum.TryParse(level, out LogLevelValue messageLevel))
+                return false;
+
+            return messageLevel >= configLevel;
+        }
+
         public static void Write(string message, string level = "INFO")
         {
+            if (!ShouldLog(level))
+                return;
+
             try
             {
                 lock (lockObj)
@@ -51,10 +78,10 @@ namespace LightroomSync
         }
 
         // Convenience-Methoden für verschiedene Stufen
-        public static void Debug(string message) => Write(message, "DEBUG");
-        public static void Info(string message) => Write(message, "INFO");
-        public static void Warn(string message) => Write(message, "WARN");
-        public static void Error(string message) => Write(message, "ERROR");
+        public static void Debug(string message) => Write(message, "Debug");
+        public static void Info(string message) => Write(message, "Info");
+        public static void Warn(string message) => Write(message, "Warn");
+        public static void Error(string message) => Write(message, "Error");
 
         /// Formatiert eine Zeit als String
         public static string FormatDateTime(DateTime? dt)
@@ -62,10 +89,5 @@ namespace LightroomSync
             if (dt == null) return "";
             return ((DateTime)dt).ToString("MM/dd/yyyy HH:mm:ss");
         }
-       
-        }
-
+    }
 }
-
-
-        

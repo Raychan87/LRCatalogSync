@@ -14,8 +14,9 @@ namespace LightroomSync
     {
         // Config
         private const int WATCHDOG_TIME = 30000; // Sekunden
-        private const int DIFF_SEC = 5; // Sekunden
-   //     private const int REMOTE_TIMEOUT = 5; // Sekunden
+        private const int DIFF_SEC = 5; // Sekunden                                       
+        private const int CHECK_INTERVAL = 5; // Sekunden - statt aus Config
+        private const string REMOTE_NAME = "synology"; // Aus rclone.conf
 
         // Variablen
         private NotifyIcon trayIcon;
@@ -31,6 +32,7 @@ namespace LightroomSync
 
         private string status = "Standby";
         private bool lockfile = false;
+        private bool settingsMissingLogged = false; // Flag um einmalig zu loggen
 
         public LRSync()
         {
@@ -42,25 +44,20 @@ namespace LightroomSync
             Log.Initialize(baseDir);
             Log.Info("========= Lightroom C. Sync gestartet =========");
 
-            // rclone.conf
+            // rclone.conf Pfade
             string rcloneConfigPath = Path.Combine(baseDir, "rclone.conf");
-            if (!File.Exists(rcloneConfigPath))
-            {
-                string appdataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                string defaultConfig = Path.Combine(appdataPath, "rclone", "rclone.conf");
-                if (File.Exists(defaultConfig))
-                {
-                    File.Copy(defaultConfig, rcloneConfigPath);
-                }
-            }
+            string configPath = Path.Combine(baseDir, "LRSync.conf");
             this.rcloneConfigPath = rcloneConfigPath;
 
             // Config laden
-            string configPath = Path.Combine(baseDir, "config.txt");
             config = AppConfig.LoadFromFile(configPath, baseDir);
+            Log.SetLogLevel(config.LogLevel);
+            
+            // Falls LRSync.conf nicht existiert, als Standard-Einstellungen speichern
             if (!File.Exists(configPath))
             {
                 config.Save(configPath);
+                Log.Info("Neue LRSync.conf erstellt mit Standard-Einstellungen");
             }
 
             // Icons
@@ -85,6 +82,35 @@ namespace LightroomSync
             statusItem.Enabled = false;
             menu.Items.Add(statusItem);
             menu.Items.Add(new ToolStripSeparator());
+            ToolStripMenuItem settingsItem = new ToolStripMenuItem("Einstellungen");
+            settingsItem.Click += (s, e) =>
+            {
+                // ================= Timer pausieren =================
+                timer.Stop();
+                Log.Info("Einstellungen geöffnet - Sync pausiert");
+
+                using (SettingsForm form = new SettingsForm(config, baseDir))
+                {
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        // Config neu laden
+                        config = AppConfig.LoadFromFile(configPath, baseDir);
+                        Log.SetLogLevel(config.LogLevel);
+                        settingsMissingLogged = false; // Zurücksetzen
+                        Log.Info("Einstellungen aktualisiert");
+                    }
+                    else
+                    {
+                        Log.Info("Einstellungen abgebrochen");
+                    }
+                }
+
+                // ================= Timer wieder starten =================
+                timer.Start();
+                Log.Info("Einstellungen geschlossen - Sync fortgesetzt");
+            };
+            menu.Items.Add(settingsItem);
+            menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem("Beenden");
             exitItem.Click += (s, e) => {
                 Log.Info("Beendet durch Benutzer");
@@ -96,12 +122,11 @@ namespace LightroomSync
 
             // Timer
             timer = new System.Windows.Forms.Timer();
-            timer.Interval = config.CheckInterval * 1000;
+            timer.Interval = CHECK_INTERVAL * 1000;
             timer.Tick += Timer_Tick;
             timer.Start();
 
             Main();
-
         }
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -113,6 +138,37 @@ namespace LightroomSync
         {
             try
             {
+                // ================= EINSTELLUNGEN PRÜFEN =================
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LRSync.conf");
+                
+                // Prüfe ob LRSync.conf und rclone.conf existieren
+                if (!File.Exists(configPath) || !File.Exists(rcloneConfigPath))
+                {
+                    if (!settingsMissingLogged)
+                    {
+                        Log.Error("Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.");
+                        Log.Error("Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.");
+                        settingsMissingLogged = true;
+                    }
+                    SetStatus("SettingsMissing");
+                    return;
+                }
+
+                // Prüfe ob notwendige Einstellungen vorhanden sind
+                if (string.IsNullOrEmpty(config.LocalPath) || string.IsNullOrEmpty(config.RemoteIP))
+                {
+                    if (!settingsMissingLogged)
+                    {
+                        Log.Error("Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.");
+                        settingsMissingLogged = true;
+                    }
+                    SetStatus("SettingsMissing");
+                    return;
+                }
+
+                // Wenn wir hier sind, sind Einstellungen vorhanden
+                settingsMissingLogged = false;
+
                 bool CatalogSyncStart = false;
                 string SyncDirection = "";
 
@@ -139,7 +195,7 @@ namespace LightroomSync
                 }
 
                 // ================= 2. Netzwerk Prüfen  =================
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath;
 
@@ -278,7 +334,7 @@ namespace LightroomSync
             try
             {
                 // Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
@@ -368,7 +424,7 @@ namespace LightroomSync
                 bool BackupChange = false;
 
                 // Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
@@ -474,7 +530,7 @@ namespace LightroomSync
             try
             {
                 //Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
@@ -609,7 +665,7 @@ namespace LightroomSync
         {
             try
             {
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath;
 
@@ -766,7 +822,7 @@ namespace LightroomSync
         {
             try
             {
-                string remoteFull = config.RemoteName;
+                string remoteFull = REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath;
 

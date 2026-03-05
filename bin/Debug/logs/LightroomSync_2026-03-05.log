@@ -1,0 +1,461 @@
+2026-03-05 19:51:07 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 19:51:08 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:51:08 [Debug] Catalog: kein Unterschied
+2026-03-05 19:51:08 [Debug] Backup: Checking
+2026-03-05 19:51:08 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:51:09 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:51:09 [Debug] Backup: Check End
+2026-03-05 19:51:09 [Debug] Sync loop End
+2026-03-05 19:51:09 [Debug] ===============================================
+2026-03-05 19:51:23 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:51:23 [Debug] Catalog: kein Unterschied
+2026-03-05 19:51:23 [Debug] Backup: Checking
+2026-03-05 19:51:23 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:51:24 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:51:24 [Debug] Backup: Check End
+2026-03-05 19:51:24 [Debug] Sync loop End
+2026-03-05 19:51:24 [Debug] ===============================================
+2026-03-05 19:54:36 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 19:54:38 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:54:38 [Debug] Catalog: kein Unterschied
+2026-03-05 19:54:38 [Debug] Backup: Checking
+2026-03-05 19:54:38 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:54:38 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:54:38 [Debug] Backup: Check End
+2026-03-05 19:54:38 [Debug] Sync loop End
+2026-03-05 19:54:38 [Debug] ===============================================
+2026-03-05 19:54:42 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:54:42 [Debug] Catalog: kein Unterschied
+2026-03-05 19:54:42 [Debug] Backup: Checking
+2026-03-05 19:54:42 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:54:42 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:54:42 [Debug] Backup: Check End
+2026-03-05 19:54:42 [Debug] Sync loop End
+2026-03-05 19:54:42 [Debug] ===============================================
+2026-03-05 19:55:17 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 19:55:18 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:18 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:18 [Debug] Backup: Checking
+2026-03-05 19:55:18 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:19 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:19 [Debug] Backup: Check End
+2026-03-05 19:55:19 [Debug] Sync loop End
+2026-03-05 19:55:19 [Debug] ===============================================
+2026-03-05 19:55:23 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:23 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:23 [Debug] Backup: Checking
+2026-03-05 19:55:23 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:23 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:23 [Debug] Backup: Check End
+2026-03-05 19:55:23 [Debug] Sync loop End
+2026-03-05 19:55:23 [Debug] ===============================================
+2026-03-05 19:55:28 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:28 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:28 [Debug] Backup: Checking
+2026-03-05 19:55:28 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:28 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:28 [Debug] Backup: Check End
+2026-03-05 19:55:28 [Debug] Sync loop End
+2026-03-05 19:55:28 [Debug] ===============================================
+2026-03-05 19:55:33 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:33 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:33 [Debug] Backup: Checking
+2026-03-05 19:55:33 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:33 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:33 [Debug] Backup: Check End
+2026-03-05 19:55:33 [Debug] Sync loop End
+2026-03-05 19:55:33 [Debug] ===============================================
+2026-03-05 19:55:38 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:38 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:38 [Debug] Backup: Checking
+2026-03-05 19:55:38 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:38 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:38 [Debug] Backup: Check End
+2026-03-05 19:55:38 [Debug] Sync loop End
+2026-03-05 19:55:38 [Debug] ===============================================
+2026-03-05 19:55:43 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:43 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:43 [Debug] Backup: Checking
+2026-03-05 19:55:43 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:43 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:43 [Debug] Backup: Check End
+2026-03-05 19:55:43 [Debug] Sync loop End
+2026-03-05 19:55:43 [Debug] ===============================================
+2026-03-05 19:55:48 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:48 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:48 [Debug] Backup: Checking
+2026-03-05 19:55:48 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:48 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:48 [Debug] Backup: Check End
+2026-03-05 19:55:48 [Debug] Sync loop End
+2026-03-05 19:55:48 [Debug] ===============================================
+2026-03-05 19:55:53 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:53 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:53 [Debug] Backup: Checking
+2026-03-05 19:55:53 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:53 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:53 [Debug] Backup: Check End
+2026-03-05 19:55:53 [Debug] Sync loop End
+2026-03-05 19:55:53 [Debug] ===============================================
+2026-03-05 19:55:58 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:55:58 [Debug] Catalog: kein Unterschied
+2026-03-05 19:55:58 [Debug] Backup: Checking
+2026-03-05 19:55:58 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:55:58 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:55:58 [Debug] Backup: Check End
+2026-03-05 19:55:58 [Debug] Sync loop End
+2026-03-05 19:55:58 [Debug] ===============================================
+2026-03-05 19:56:03 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:56:03 [Debug] Catalog: kein Unterschied
+2026-03-05 19:56:03 [Debug] Backup: Checking
+2026-03-05 19:56:03 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:56:03 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:56:03 [Debug] Backup: Check End
+2026-03-05 19:56:03 [Debug] Sync loop End
+2026-03-05 19:56:03 [Debug] ===============================================
+2026-03-05 19:56:08 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:56:08 [Debug] Catalog: kein Unterschied
+2026-03-05 19:56:08 [Debug] Backup: Checking
+2026-03-05 19:56:08 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:56:08 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:56:08 [Debug] Backup: Check End
+2026-03-05 19:56:08 [Debug] Sync loop End
+2026-03-05 19:56:08 [Debug] ===============================================
+2026-03-05 19:56:13 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:56:13 [Debug] Catalog: kein Unterschied
+2026-03-05 19:56:13 [Debug] Backup: Checking
+2026-03-05 19:56:13 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:56:13 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:56:13 [Debug] Backup: Check End
+2026-03-05 19:56:13 [Debug] Sync loop End
+2026-03-05 19:56:13 [Debug] ===============================================
+2026-03-05 19:58:32 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 19:58:33 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:33 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:33 [Debug] Backup: Checking
+2026-03-05 19:58:33 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:34 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:34 [Debug] Backup: Check End
+2026-03-05 19:58:34 [Debug] Sync loop End
+2026-03-05 19:58:34 [Debug] ===============================================
+2026-03-05 19:58:38 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:38 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:38 [Debug] Backup: Checking
+2026-03-05 19:58:38 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:38 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:38 [Debug] Backup: Check End
+2026-03-05 19:58:38 [Debug] Sync loop End
+2026-03-05 19:58:38 [Debug] ===============================================
+2026-03-05 19:58:43 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:43 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:43 [Debug] Backup: Checking
+2026-03-05 19:58:43 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:43 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:43 [Debug] Backup: Check End
+2026-03-05 19:58:43 [Debug] Sync loop End
+2026-03-05 19:58:43 [Debug] ===============================================
+2026-03-05 19:58:48 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:48 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:48 [Debug] Backup: Checking
+2026-03-05 19:58:48 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:48 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:48 [Debug] Backup: Check End
+2026-03-05 19:58:48 [Debug] Sync loop End
+2026-03-05 19:58:48 [Debug] ===============================================
+2026-03-05 19:58:52 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 19:58:53 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:53 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:53 [Debug] Backup: Checking
+2026-03-05 19:58:53 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:53 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:53 [Debug] Backup: Check End
+2026-03-05 19:58:53 [Debug] Sync loop End
+2026-03-05 19:58:53 [Debug] ===============================================
+2026-03-05 19:58:58 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:58:58 [Debug] Catalog: kein Unterschied
+2026-03-05 19:58:58 [Debug] Backup: Checking
+2026-03-05 19:58:58 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:58:58 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:58:58 [Debug] Backup: Check End
+2026-03-05 19:58:58 [Debug] Sync loop End
+2026-03-05 19:58:58 [Debug] ===============================================
+2026-03-05 19:59:03 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:03 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:03 [Debug] Backup: Checking
+2026-03-05 19:59:03 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:03 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:03 [Debug] Backup: Check End
+2026-03-05 19:59:03 [Debug] Sync loop End
+2026-03-05 19:59:03 [Debug] ===============================================
+2026-03-05 19:59:08 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:08 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:08 [Debug] Backup: Checking
+2026-03-05 19:59:08 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:08 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:08 [Debug] Backup: Check End
+2026-03-05 19:59:08 [Debug] Sync loop End
+2026-03-05 19:59:08 [Debug] ===============================================
+2026-03-05 19:59:13 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:13 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:13 [Debug] Backup: Checking
+2026-03-05 19:59:13 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:13 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:13 [Debug] Backup: Check End
+2026-03-05 19:59:13 [Debug] Sync loop End
+2026-03-05 19:59:13 [Debug] ===============================================
+2026-03-05 19:59:18 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:18 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:18 [Debug] Backup: Checking
+2026-03-05 19:59:18 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:18 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:18 [Debug] Backup: Check End
+2026-03-05 19:59:18 [Debug] Sync loop End
+2026-03-05 19:59:18 [Debug] ===============================================
+2026-03-05 19:59:23 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:23 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:23 [Debug] Backup: Checking
+2026-03-05 19:59:23 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:23 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:23 [Debug] Backup: Check End
+2026-03-05 19:59:23 [Debug] Sync loop End
+2026-03-05 19:59:23 [Debug] ===============================================
+2026-03-05 19:59:28 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:28 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:28 [Debug] Backup: Checking
+2026-03-05 19:59:28 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:28 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:28 [Debug] Backup: Check End
+2026-03-05 19:59:28 [Debug] Sync loop End
+2026-03-05 19:59:28 [Debug] ===============================================
+2026-03-05 19:59:33 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:33 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:33 [Debug] Backup: Checking
+2026-03-05 19:59:33 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:33 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:33 [Debug] Backup: Check End
+2026-03-05 19:59:33 [Debug] Sync loop End
+2026-03-05 19:59:33 [Debug] ===============================================
+2026-03-05 19:59:38 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:38 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:38 [Debug] Backup: Checking
+2026-03-05 19:59:38 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:38 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:38 [Debug] Backup: Check End
+2026-03-05 19:59:38 [Debug] Sync loop End
+2026-03-05 19:59:38 [Debug] ===============================================
+2026-03-05 19:59:43 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:43 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:43 [Debug] Backup: Checking
+2026-03-05 19:59:43 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:43 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:43 [Debug] Backup: Check End
+2026-03-05 19:59:43 [Debug] Sync loop End
+2026-03-05 19:59:43 [Debug] ===============================================
+2026-03-05 19:59:43 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 19:59:48 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:48 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:48 [Debug] Backup: Checking
+2026-03-05 19:59:48 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:48 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:48 [Debug] Backup: Check End
+2026-03-05 19:59:48 [Debug] Sync loop End
+2026-03-05 19:59:48 [Debug] ===============================================
+2026-03-05 19:59:53 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:53 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:53 [Debug] Backup: Checking
+2026-03-05 19:59:53 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:53 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:53 [Debug] Backup: Check End
+2026-03-05 19:59:53 [Debug] Sync loop End
+2026-03-05 19:59:53 [Debug] ===============================================
+2026-03-05 19:59:58 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 19:59:58 [Debug] Catalog: kein Unterschied
+2026-03-05 19:59:58 [Debug] Backup: Checking
+2026-03-05 19:59:58 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 19:59:58 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 19:59:58 [Debug] Backup: Check End
+2026-03-05 19:59:58 [Debug] Sync loop End
+2026-03-05 19:59:58 [Debug] ===============================================
+2026-03-05 20:00:03 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:00:03 [Debug] Catalog: kein Unterschied
+2026-03-05 20:00:03 [Debug] Backup: Checking
+2026-03-05 20:00:03 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:00:03 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:00:03 [Debug] Backup: Check End
+2026-03-05 20:00:03 [Debug] Sync loop End
+2026-03-05 20:00:03 [Debug] ===============================================
+2026-03-05 20:00:08 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:00:08 [Debug] Catalog: kein Unterschied
+2026-03-05 20:00:08 [Debug] Backup: Checking
+2026-03-05 20:00:08 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:00:08 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:00:08 [Debug] Backup: Check End
+2026-03-05 20:00:08 [Debug] Sync loop End
+2026-03-05 20:00:08 [Debug] ===============================================
+2026-03-05 20:00:13 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:00:13 [Debug] Catalog: kein Unterschied
+2026-03-05 20:00:13 [Debug] Backup: Checking
+2026-03-05 20:00:13 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:00:13 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:00:13 [Debug] Backup: Check End
+2026-03-05 20:00:13 [Debug] Sync loop End
+2026-03-05 20:00:13 [Debug] ===============================================
+2026-03-05 20:00:18 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:00:18 [Debug] Catalog: kein Unterschied
+2026-03-05 20:00:18 [Debug] Backup: Checking
+2026-03-05 20:00:18 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:00:18 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:00:18 [Debug] Backup: Check End
+2026-03-05 20:00:18 [Debug] Sync loop End
+2026-03-05 20:00:18 [Debug] ===============================================
+2026-03-05 20:00:22 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:27 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:32 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:37 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:39 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 20:00:42 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:47 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:52 [Warn] Keine NAS-Verbindung
+2026-03-05 20:00:57 [Warn] Keine NAS-Verbindung
+2026-03-05 20:01:02 [Warn] Keine NAS-Verbindung
+2026-03-05 20:01:07 [Warn] Keine NAS-Verbindung
+2026-03-05 20:01:12 [Warn] Keine NAS-Verbindung
+2026-03-05 20:08:40 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:08:45 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:08:47 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:08:47 [Debug] Catalog: kein Unterschied
+2026-03-05 20:08:47 [Debug] Backup: Checking
+2026-03-05 20:08:47 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:08:48 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:08:48 [Debug] Backup: Check End
+2026-03-05 20:08:48 [Debug] Sync loop End
+2026-03-05 20:08:48 [Debug] ===============================================
+2026-03-05 20:08:51 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:08:51 [Debug] Catalog: kein Unterschied
+2026-03-05 20:08:51 [Debug] Backup: Checking
+2026-03-05 20:08:51 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:08:51 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:08:51 [Debug] Backup: Check End
+2026-03-05 20:08:51 [Debug] Sync loop End
+2026-03-05 20:08:51 [Debug] ===============================================
+2026-03-05 20:08:53 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:09:16 [Info] Einstellungen aktualisiert
+2026-03-05 20:09:16 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:09:22 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:09:22 [Debug] Catalog: kein Unterschied
+2026-03-05 20:09:22 [Debug] Backup: Checking
+2026-03-05 20:09:22 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:09:22 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:09:22 [Debug] Backup: Check End
+2026-03-05 20:09:22 [Debug] Sync loop End
+2026-03-05 20:09:22 [Debug] ===============================================
+2026-03-05 20:09:25 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:09:39 [Info] Einstellungen aktualisiert
+2026-03-05 20:09:39 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:09:45 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:09:45 [Debug] Catalog: kein Unterschied
+2026-03-05 20:09:45 [Debug] Backup: Checking
+2026-03-05 20:09:45 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:09:45 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:09:45 [Debug] Backup: Check End
+2026-03-05 20:09:45 [Debug] Sync loop End
+2026-03-05 20:09:45 [Debug] ===============================================
+2026-03-05 20:12:08 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:12:08 [Info] Neue LRSync.conf erstellt mit Standard-Einstellungen
+2026-03-05 20:12:08 [Warn] Keine NAS-Verbindung
+2026-03-05 20:12:13 [Warn] Keine NAS-Verbindung
+2026-03-05 20:16:33 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:16:33 [Warn] Keine NAS-Verbindung
+2026-03-05 20:16:38 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:18:33 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:18:33 [Warn] Keine NAS-Verbindung
+2026-03-05 20:18:36 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:19:24 [Error] Fehler beim Verschlüsseln des Passworts: Das System kann die angegebene Datei nicht finden
+2026-03-05 20:19:27 [Info] Einstellungen aktualisiert
+2026-03-05 20:19:27 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:19:32 [Warn] Keine NAS-Verbindung
+2026-03-05 20:19:37 [Warn] Keine NAS-Verbindung
+2026-03-05 20:19:42 [Warn] Keine NAS-Verbindung
+2026-03-05 20:19:43 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:19:55 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 20:19:58 [Info] Einstellungen aktualisiert
+2026-03-05 20:19:58 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:20:03 [Warn] Keine NAS-Verbindung
+2026-03-05 20:20:07 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:20:13 [Info] Einstellungen aktualisiert
+2026-03-05 20:20:13 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:20:17 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:20:26 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 20:20:27 [Info] Einstellungen aktualisiert
+2026-03-05 20:20:27 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:20:33 [Warn] Keine NAS-Verbindung
+2026-03-05 20:20:37 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:21:08 [Error] Fehler beim Verschlüsseln des Passworts: Das System kann die angegebene Datei nicht finden
+2026-03-05 20:21:16 [Info] Einstellungen aktualisiert
+2026-03-05 20:21:16 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:21:21 [Warn] Keine NAS-Verbindung
+2026-03-05 20:21:22 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:21:25 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 20:21:26 [Info] Einstellungen aktualisiert
+2026-03-05 20:21:26 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:21:28 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:21:33 [Error] Fehler beim Verschlüsseln des Passworts: Das System kann die angegebene Datei nicht finden
+2026-03-05 20:21:35 [Info] Einstellungen aktualisiert
+2026-03-05 20:21:35 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:21:40 [Warn] Keine NAS-Verbindung
+2026-03-05 20:27:38 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:27:43 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:27:48 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:27:53 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:27:53 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:27:56 [Info] Einstellungen abgebrochen
+2026-03-05 20:27:56 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:28:00 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:28:05 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:28:10 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:28:10 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:28:26 [Info] Einstellungen abgebrochen
+2026-03-05 20:28:26 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:28:29 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:28:31 [Info] Einstellungen abgebrochen
+2026-03-05 20:28:31 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:28:41 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:28:46 [Warn] NAS-Verbindung fehlgeschlagen
+2026-03-05 20:28:46 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:28:56 [Info] rclone.conf erfolgreich erstellt
+2026-03-05 20:28:57 [Info] Einstellungen aktualisiert
+2026-03-05 20:28:57 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:29:03 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:29:03 [Debug] Catalog: kein Unterschied
+2026-03-05 20:29:03 [Debug] Backup: Checking
+2026-03-05 20:29:03 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:29:03 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:29:03 [Debug] Backup: Check End
+2026-03-05 20:29:03 [Debug] Sync loop End
+2026-03-05 20:29:03 [Debug] ===============================================
+2026-03-05 20:29:08 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:29:08 [Debug] Catalog: kein Unterschied
+2026-03-05 20:29:08 [Debug] Backup: Checking
+2026-03-05 20:29:08 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:29:08 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:29:08 [Debug] Backup: Check End
+2026-03-05 20:29:08 [Debug] Sync loop End
+2026-03-05 20:29:08 [Debug] ===============================================
+2026-03-05 20:29:13 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-05 20:29:13 [Debug] Catalog: kein Unterschied
+2026-03-05 20:29:13 [Debug] Backup: Checking
+2026-03-05 20:29:13 [Debug] Backup: Pfad: E:\Lightroom_test/Backups <-> synology:Lightroom/Backups
+2026-03-05 20:29:13 [Debug] Backup: Keine Änderungen gefunden
+2026-03-05 20:29:13 [Debug] Backup: Check End
+2026-03-05 20:29:13 [Debug] Sync loop End
+2026-03-05 20:29:13 [Debug] ===============================================
+2026-03-05 20:29:24 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-05 20:29:24 [Info] Neue LRSync.conf erstellt mit Standard-Einstellungen
+2026-03-05 20:29:24 [Error] Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.
+2026-03-05 20:29:24 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
+2026-03-05 20:29:46 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:30:10 [Info] Einstellungen abgebrochen
+2026-03-05 20:30:10 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-05 20:30:22 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-05 20:30:24 [Info] Einstellungen abgebrochen
+2026-03-05 20:30:24 [Info] Einstellungen geschlossen - Sync fortgesetzt

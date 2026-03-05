@@ -1,5 +1,4 @@
 Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\obj\Debug\LightroomSync.csproj.AssemblyReference.cache
-Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\obj\Debug\LightroomSync.Form1.resources
 Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\obj\Debug\LightroomSync.Properties.Resources.resources
 Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\obj\Debug\LightroomSync.csproj.GenerateResource.cache
 Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\obj\Debug\LightroomSync.csproj.CoreCompileInputs.cache
