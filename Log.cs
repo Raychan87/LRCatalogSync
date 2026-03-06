@@ -31,7 +31,7 @@ namespace LRCatalogSync
             }
 
             // Log-Datei mit Datum im Namen
-            string logFileName = $"LightroomSync_{DateTime.Now:yyyy-MM-dd}.log";
+            string logFileName = $"LRCatalogSync_{DateTime.Now:yyyy-MM-dd}.log";
             logFilePath = Path.Combine(logsDir, logFileName);
         }
 

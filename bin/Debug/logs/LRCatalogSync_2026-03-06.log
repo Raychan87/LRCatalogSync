@@ -1,0 +1,325 @@
+2026-03-06 16:43:46 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 16:43:46 [Error] Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.
+2026-03-06 16:44:23 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 16:44:24 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-06 16:44:24 [Debug] Catalog: kein Unterschied
+2026-03-06 16:44:24 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:44:24 [Debug] Sync loop End
+2026-03-06 16:44:24 [Debug] ===============================================
+2026-03-06 16:44:29 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-06 16:44:29 [Debug] Catalog: kein Unterschied
+2026-03-06 16:44:29 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:44:29 [Debug] Sync loop End
+2026-03-06 16:44:29 [Debug] ===============================================
+2026-03-06 16:44:34 [Debug] Catalog: Check: Lokal=03.05.2026 19:45:16 | NAS=03.05.2026 19:45:16
+2026-03-06 16:44:34 [Debug] Catalog: kein Unterschied
+2026-03-06 16:44:34 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:44:34 [Debug] Sync loop End
+2026-03-06 16:44:34 [Debug] ===============================================
+2026-03-06 16:44:38 [Debug] Einstellungen geöffnet - Sync pausiert
+2026-03-06 16:45:02 [Debug] Einstellungen abgebrochen
+2026-03-06 16:45:02 [Debug] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-06 16:45:07 [Info] Lock erkannt
+2026-03-06 16:45:17 [Info] Lock entfernt - Sync wird fortgesetzt
+2026-03-06 16:45:18 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.05.2026 19:45:16
+2026-03-06 16:45:18 [Debug] Catalog: PC New -> Upload
+2026-03-06 16:45:18 [Debug] Catalog: Sync Start
+2026-03-06 16:45:18 [Info] Catalog: upload Start
+2026-03-06 16:45:18 [Info] Catalog: Schreibschutz aktiviert für Lightroom-Katalog-v15.lrcat
+2026-03-06 16:45:44 [Info] Catalog: upload complete
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/004185.log: Copied (new)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/CURRENT: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15 Previews.lrdata/previews.db: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/LOCK: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/MANIFEST-004186: Copied (new)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/OPTIONS-004188: Copied (new)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG.old.1772811901777958: Copied (new)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15 Helper.lrdata/helper.db: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:19 INFO  : Lightroom-Katalog-v15 Helper.lrdata/metadatahelper.db: Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : Lightroom-Katalog-v15.lrcat: Multi-thread Copied (replaced existing)
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : 2025-11-29 0311/Lightroom-Katalog-v15.zip: Deleted
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : Lightroom-Katalog-v15.lrcat-data/LOG.old.1772574542561722: Deleted
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : Lightroom-Katalog-v15.lrcat-data/004181.log: Deleted
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : Lightroom-Katalog-v15.lrcat-data/MANIFEST-004182: Deleted
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : 2025-12-01 1427/Lightroom-Katalog-v15.zip: Deleted
+2026-03-06 16:45:44 [Debug] rclone: 2026/03/06 16:45:43 INFO  : Lightroom-Katalog-v15.lrcat-data/OPTIONS-004180: Deleted
+2026-03-06 16:45:44 [Debug] rclone: Transferred:   	    4.325 GiB / 4.325 GiB, 100%, 179.365 MiB/s, ETA 0s
+2026-03-06 16:45:44 [Debug] rclone: Deleted:                6 (files), 2 (dirs), 4.321 GiB (freed)
+2026-03-06 16:45:44 [Debug] rclone: Transferred:           11 / 11, 100%
+2026-03-06 16:45:44 [Info] Catalog: Schreibschutz deaktiviert für Lightroom-Katalog-v15.lrcat
+2026-03-06 16:45:44 [Debug] Catalog: Remote *.lrcat gefunden: Lightroom-Katalog-v15.lrcat
+2026-03-06 16:45:44 [Debug] Catalog: Remote read-only Status überprüft
+2026-03-06 16:45:44 [Info] Catalog: Schreibschutz deaktiviert für Lightroom-Katalog-v15.lrcat
+2026-03-06 16:45:44 [Debug] Catalog: Sync End
+2026-03-06 16:45:44 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:45:44 [Debug] Sync loop End
+2026-03-06 16:45:44 [Debug] ===============================================
+2026-03-06 16:45:45 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:45:45 [Debug] Catalog: kein Unterschied
+2026-03-06 16:45:45 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:45:45 [Debug] Sync loop End
+2026-03-06 16:45:45 [Debug] ===============================================
+2026-03-06 16:45:48 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:45:48 [Debug] Catalog: kein Unterschied
+2026-03-06 16:45:48 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:45:48 [Debug] Sync loop End
+2026-03-06 16:45:48 [Debug] ===============================================
+2026-03-06 16:45:53 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:45:53 [Debug] Catalog: kein Unterschied
+2026-03-06 16:45:53 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:45:53 [Debug] Sync loop End
+2026-03-06 16:45:53 [Debug] ===============================================
+2026-03-06 16:45:58 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:45:58 [Debug] Catalog: kein Unterschied
+2026-03-06 16:45:58 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:45:58 [Debug] Sync loop End
+2026-03-06 16:45:58 [Debug] ===============================================
+2026-03-06 16:46:03 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:03 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:03 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:03 [Debug] Sync loop End
+2026-03-06 16:46:03 [Debug] ===============================================
+2026-03-06 16:46:08 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:08 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:08 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:08 [Debug] Sync loop End
+2026-03-06 16:46:08 [Debug] ===============================================
+2026-03-06 16:46:13 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:13 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:13 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:13 [Debug] Sync loop End
+2026-03-06 16:46:13 [Debug] ===============================================
+2026-03-06 16:46:18 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:18 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:18 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:18 [Debug] Sync loop End
+2026-03-06 16:46:18 [Debug] ===============================================
+2026-03-06 16:46:23 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:23 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:23 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:23 [Debug] Sync loop End
+2026-03-06 16:46:23 [Debug] ===============================================
+2026-03-06 16:46:28 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:28 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:28 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:28 [Debug] Sync loop End
+2026-03-06 16:46:28 [Debug] ===============================================
+2026-03-06 16:46:33 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:33 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:33 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:33 [Debug] Sync loop End
+2026-03-06 16:46:33 [Debug] ===============================================
+2026-03-06 16:46:40 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:40 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:40 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:40 [Debug] Sync loop End
+2026-03-06 16:46:40 [Debug] ===============================================
+2026-03-06 16:46:45 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:46:45 [Debug] Catalog: kein Unterschied
+2026-03-06 16:46:45 [Debug] Backup: Deaktiviert - übersprungen
+2026-03-06 16:46:45 [Debug] Sync loop End
+2026-03-06 16:46:45 [Debug] ===============================================
+2026-03-06 16:46:47 [Debug] Einstellungen geöffnet - Sync pausiert
+2026-03-06 16:47:10 [Debug] rclone.conf erfolgreich erstellt
+2026-03-06 16:47:11 [Info] Einstellungen aktualisiert
+2026-03-06 16:47:11 [Debug] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-06 16:47:17 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:17 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:17 [Debug] Backup: Checking
+2026-03-06 16:47:17 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:17 [Debug] DEBUG ERROR: '2026/03/06 16:47:17 ERROR : Bisync critical error: cannot find prior Path1 or Path2 listings, likely due to critical error on prior run'
+2026-03-06 16:47:17 [Debug] DEBUG ERROR: '2026/03/06 16:47:17 ERROR : Bisync aborted. Must run --resync to recover.'
+2026-03-06 16:47:17 [Debug] rclone: *.lck Files fehlen, Bisync abgebrochen, es muss --resync gestaret werden.
+2026-03-06 16:47:17 [Debug] Backup: resync Start
+2026-03-06 16:47:48 [Debug] Backup: resync End
+2026-03-06 16:47:48 [Debug] Backup: Check End
+2026-03-06 16:47:48 [Debug] Sync loop End
+2026-03-06 16:47:48 [Debug] ===============================================
+2026-03-06 16:47:49 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:49 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:49 [Debug] Backup: Checking
+2026-03-06 16:47:49 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:49 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:49 [Debug] Backup: Check End
+2026-03-06 16:47:49 [Debug] Sync loop End
+2026-03-06 16:47:49 [Debug] ===============================================
+2026-03-06 16:47:52 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:52 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:52 [Debug] Backup: Checking
+2026-03-06 16:47:52 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:52 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:52 [Debug] Backup: Check End
+2026-03-06 16:47:52 [Debug] Sync loop End
+2026-03-06 16:47:52 [Debug] ===============================================
+2026-03-06 16:47:53 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:53 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:53 [Debug] Backup: Checking
+2026-03-06 16:47:53 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:53 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:53 [Debug] Backup: Check End
+2026-03-06 16:47:53 [Debug] Sync loop End
+2026-03-06 16:47:53 [Debug] ===============================================
+2026-03-06 16:47:54 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:54 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:54 [Debug] Backup: Checking
+2026-03-06 16:47:54 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:54 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:54 [Debug] Backup: Check End
+2026-03-06 16:47:54 [Debug] Sync loop End
+2026-03-06 16:47:54 [Debug] ===============================================
+2026-03-06 16:47:55 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:55 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:55 [Debug] Backup: Checking
+2026-03-06 16:47:55 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:55 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:55 [Debug] Backup: Check End
+2026-03-06 16:47:55 [Debug] Sync loop End
+2026-03-06 16:47:55 [Debug] ===============================================
+2026-03-06 16:47:56 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:56 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:56 [Debug] Backup: Checking
+2026-03-06 16:47:56 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:56 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:56 [Debug] Backup: Check End
+2026-03-06 16:47:56 [Debug] Sync loop End
+2026-03-06 16:47:56 [Debug] ===============================================
+2026-03-06 16:47:56 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:56 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:56 [Debug] Backup: Checking
+2026-03-06 16:47:56 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:57 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:57 [Debug] Backup: Check End
+2026-03-06 16:47:57 [Debug] Sync loop End
+2026-03-06 16:47:57 [Debug] ===============================================
+2026-03-06 16:47:57 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:47:57 [Debug] Catalog: kein Unterschied
+2026-03-06 16:47:57 [Debug] Backup: Checking
+2026-03-06 16:47:57 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:47:57 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:47:57 [Debug] Backup: Check End
+2026-03-06 16:47:57 [Debug] Sync loop End
+2026-03-06 16:47:57 [Debug] ===============================================
+2026-03-06 16:48:02 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:02 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:02 [Debug] Backup: Checking
+2026-03-06 16:48:02 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:02 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:02 [Debug] Backup: Check End
+2026-03-06 16:48:02 [Debug] Sync loop End
+2026-03-06 16:48:02 [Debug] ===============================================
+2026-03-06 16:48:09 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:09 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:09 [Debug] Backup: Checking
+2026-03-06 16:48:09 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:09 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:09 [Debug] Backup: Check End
+2026-03-06 16:48:09 [Debug] Sync loop End
+2026-03-06 16:48:09 [Debug] ===============================================
+2026-03-06 16:48:12 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:12 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:12 [Debug] Backup: Checking
+2026-03-06 16:48:12 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:12 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:12 [Debug] Backup: Check End
+2026-03-06 16:48:12 [Debug] Sync loop End
+2026-03-06 16:48:12 [Debug] ===============================================
+2026-03-06 16:48:17 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:17 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:17 [Debug] Backup: Checking
+2026-03-06 16:48:17 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:17 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:17 [Debug] Backup: Check End
+2026-03-06 16:48:17 [Debug] Sync loop End
+2026-03-06 16:48:17 [Debug] ===============================================
+2026-03-06 16:48:22 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:22 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:22 [Debug] Backup: Checking
+2026-03-06 16:48:22 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:22 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:22 [Debug] Backup: Check End
+2026-03-06 16:48:22 [Debug] Sync loop End
+2026-03-06 16:48:22 [Debug] ===============================================
+2026-03-06 16:48:28 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:28 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:28 [Debug] Backup: Checking
+2026-03-06 16:48:28 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:28 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:28 [Debug] Backup: Check End
+2026-03-06 16:48:28 [Debug] Sync loop End
+2026-03-06 16:48:28 [Debug] ===============================================
+2026-03-06 16:48:34 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 16:48:34 [Debug] Catalog: kein Unterschied
+2026-03-06 16:48:34 [Debug] Backup: Checking
+2026-03-06 16:48:34 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 16:48:34 [Error] Backups-Check-Fehler: Der Prozess kann nicht auf die Datei "Z:\_Projekte_Github\#.Net-Projekte\LightroomSync\bin\Debug\rclone_temp.log" zugreifen, da sie von einem anderen Prozess verwendet wird.
+2026-03-06 16:48:34 [Debug] Backup: Check End
+2026-03-06 16:48:34 [Debug] Sync loop End
+2026-03-06 16:48:34 [Debug] ===============================================
+2026-03-06 21:46:28 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 21:46:29 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 21:46:29 [Debug] Catalog: kein Unterschied
+2026-03-06 21:46:29 [Debug] Backup: Checking
+2026-03-06 21:46:29 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 21:46:30 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 21:46:30 [Debug] Backup: Check End
+2026-03-06 21:46:30 [Debug] Sync loop End
+2026-03-06 21:46:30 [Debug] ===============================================
+2026-03-06 21:46:35 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 21:46:35 [Debug] Catalog: kein Unterschied
+2026-03-06 21:46:35 [Debug] Backup: Checking
+2026-03-06 21:46:35 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 21:46:36 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 21:46:36 [Debug] Backup: Check End
+2026-03-06 21:46:36 [Debug] Sync loop End
+2026-03-06 21:46:36 [Debug] ===============================================
+2026-03-06 21:46:40 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 21:46:40 [Debug] Catalog: kein Unterschied
+2026-03-06 21:46:40 [Debug] Backup: Checking
+2026-03-06 21:46:40 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 21:46:41 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 21:46:41 [Debug] Backup: Check End
+2026-03-06 21:46:41 [Debug] Sync loop End
+2026-03-06 21:46:41 [Debug] ===============================================
+2026-03-06 22:10:08 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 22:10:09 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 22:10:09 [Debug] Catalog: kein Unterschied
+2026-03-06 22:10:09 [Debug] Backup: Checking
+2026-03-06 22:10:09 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 22:10:09 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 22:10:09 [Debug] Backup: Check End
+2026-03-06 22:10:09 [Debug] Sync loop End
+2026-03-06 22:10:09 [Debug] ===============================================
+2026-03-06 22:10:15 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | NAS=03.06.2026 16:45:16
+2026-03-06 22:10:15 [Debug] Catalog: kein Unterschied
+2026-03-06 22:10:15 [Debug] Backup: Checking
+2026-03-06 22:10:15 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 22:10:16 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 22:10:16 [Debug] Backup: Check End
+2026-03-06 22:10:16 [Debug] Sync loop End
+2026-03-06 22:10:16 [Debug] ===============================================
+2026-03-06 22:31:01 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 22:31:02 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | Remote=03.06.2026 16:45:16
+2026-03-06 22:31:02 [Debug] Catalog: kein Unterschied
+2026-03-06 22:31:02 [Debug] Backup: Checking
+2026-03-06 22:31:02 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 22:31:03 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 22:31:03 [Debug] Backup: Check End
+2026-03-06 22:31:03 [Debug] Sync loop End
+2026-03-06 22:31:03 [Debug] ===============================================
+2026-03-06 22:31:08 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | Remote=03.06.2026 16:45:16
+2026-03-06 22:31:08 [Debug] Catalog: kein Unterschied
+2026-03-06 22:31:08 [Debug] Backup: Checking
+2026-03-06 22:31:08 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 22:31:09 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 22:31:09 [Debug] Backup: Check End
+2026-03-06 22:31:09 [Debug] Sync loop End
+2026-03-06 22:31:09 [Debug] ===============================================
+2026-03-06 22:31:13 [Debug] Catalog: Check: Lokal=03.06.2026 16:45:16 | Remote=03.06.2026 16:45:16
+2026-03-06 22:31:13 [Debug] Catalog: kein Unterschied
+2026-03-06 22:31:13 [Debug] Backup: Checking
+2026-03-06 22:31:13 [Debug] Backup: Pfad: E:\Lightroom_test\Backups <-> synology:/Lightroom//Backups
+2026-03-06 22:31:14 [Debug] Backup: Keine Änderungen gefunden
+2026-03-06 22:31:14 [Debug] Backup: Check End
+2026-03-06 22:31:14 [Debug] Sync loop End
+2026-03-06 22:31:14 [Debug] ===============================================

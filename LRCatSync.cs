@@ -7,6 +7,7 @@ using System.IO;
 using System.Net.NetworkInformation;
 using System.Threading;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace LRCatalogSync
 {
@@ -42,7 +43,7 @@ namespace LRCatalogSync
 
             // Logger starten
             Log.Initialize(baseDir);
-            Log.Info("========= Lightroom C. Sync gestartet =========");
+            Log.Info("========= LR Catalog Sync gestartet =========");
 
             // rclone.conf Pfade
             string rcloneConfigPath = Path.Combine(baseDir, "rclone.conf");
@@ -57,7 +58,7 @@ namespace LRCatalogSync
             if (!File.Exists(configPath))
             {
                 config.Save(configPath);
-                Log.Info("Neue LRCatSync.conf erstellt mit Standard-Einstellungen");
+                Log.Debug("Neue LRCatSync.conf erstellt mit Standard-Einstellungen");
             }
 
             // Icons
@@ -71,7 +72,7 @@ namespace LRCatalogSync
             trayIcon = new NotifyIcon()
             {
                 Icon = iconGreen,
-                Text = "Lightroom Sync - Start...",
+                Text = "LR Catalog Sync - Start...",
                 Visible = true
             };
 
@@ -87,7 +88,7 @@ namespace LRCatalogSync
             {
                 // ================= Timer pausieren =================
                 timer.Stop();
-                Log.Info("Einstellungen geöffnet - Sync pausiert");
+                Log.Debug("Einstellungen geöffnet - Sync pausiert");
 
                 using (SettingsForm form = new SettingsForm(config, baseDir))
                 {
@@ -101,32 +102,33 @@ namespace LRCatalogSync
                     }
                     else
                     {
-                        Log.Info("Einstellungen abgebrochen");
+                        Log.Debug("Einstellungen abgebrochen");
                     }
                 }
 
                 // ================= Timer wieder starten =================
                 timer.Start();
-                Log.Info("Einstellungen geschlossen - Sync fortgesetzt");
+                Log.Debug("Einstellungen geschlossen - Sync fortgesetzt");
             };
             menu.Items.Add(settingsItem);
             menu.Items.Add(new ToolStripSeparator());
             ToolStripMenuItem exitItem = new ToolStripMenuItem("Beenden");
             exitItem.Click += (s, e) => {
-                Log.Info("Beendet durch Benutzer");
+                Log.Debug("Beendet durch Benutzer");
                 trayIcon.Visible = false;
                 Application.Exit();
             };
             menu.Items.Add(exitItem);
             trayIcon.ContextMenuStrip = menu;
 
-            // Timer
+            // Erst einmaliger Aufruf von Main() für den initialen Sync-Check
+            Main();
+
+            // Timer für periodische Checks
             timer = new System.Windows.Forms.Timer();
             timer.Interval = CHECK_INTERVAL * 1000;
             timer.Tick += Timer_Tick;
-            timer.Start();
-
-            Main();
+            timer.Start();            
         }
 
         private void Timer_Tick(object sender, EventArgs e)
@@ -199,10 +201,11 @@ namespace LRCatalogSync
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath;
 
-                if (!File.Exists(config.RclonePath) || !File.Exists(rcloneConfigPath))
+                // Nur prüfen ob rclone.exe existiert
+                if (!File.Exists(config.RclonePath))
                 {
-                    Log.Warn("Keine NAS-Verbindung");
-                    SetStatus("NoConnection");
+                    Log.Error("rclone.exe nicht gefunden!");
+                    SetStatus("r");
                     return;
                 }
 
@@ -220,8 +223,8 @@ namespace LRCatalogSync
                     p.WaitForExit(WATCHDOG_TIME);
                     if (p.ExitCode != 0 || output.Length < 10)
                     {
-                        Log.Warn("NAS-Verbindung fehlgeschlagen");
-                        SetStatus("NoConnection");
+                        Log.Warn("Samba-Verbindung fehlgeschlagen");
+                        SetStatus("rclone");
                         return;
                     }
                 }
@@ -231,7 +234,7 @@ namespace LRCatalogSync
                 DateTime? remoteDate = GetRemoteCatalogDate();
 
                 // Änderungszeit von den Katalogen
-                Log.Debug($"Catalog: Check: Lokal={Log.FormatDateTime(localDate)} | NAS={Log.FormatDateTime(remoteDate)}");                
+                Log.Debug($"Catalog: Check: Lokal={Log.FormatDateTime(localDate)} | Remote={Log.FormatDateTime(remoteDate)}");                
 
                 // Wenn lokal ein Katalog existiert, dann...
                 if (localDate != null)
@@ -301,21 +304,27 @@ namespace LRCatalogSync
                     SetStatus("Standby");
                 }
 
-                // ================= 5.SYNC BACKUPS =================
-                // Wird geprüft ob Backups synchronisiert werden muss.
-                
-                Log.Debug("Backup: Checking");
-                
-                if (CheckBackup())
+                // ================= 6. SYNC BACKUPS (nur wenn aktiviert) =================
+                if (config.EnableBackups)
                 {
+                    Log.Debug("Backup: Checking");
+                    
+                    if (CheckBackup())
+                    {
+                        Log.Debug("Backup: Check End");
+                        SetStatus("Syncing");
+                        Log.Debug("Backup: Sync Start");
+                        Thread.Sleep(1000);
+                        SyncBackups();
+                        Log.Debug("Backup: Sync End");
+                    }
                     Log.Debug("Backup: Check End");
-                    SetStatus("Syncing");
-                    Log.Debug("Backup: Sync Start");
-                    Thread.Sleep(1000);
-                    SyncBackups();
-                    Log.Debug("Backup: Sync End");
                 }
-                Log.Debug("Backup: Check End");
+                else
+                {
+                    Log.Debug("Backup: Deaktiviert - übersprungen");
+                }
+
                 Log.Debug("Sync loop End");
                 Log.Debug("===============================================");
                 SetStatus("Standby");
@@ -387,7 +396,7 @@ namespace LRCatalogSync
                             TimeSpan timeSinceLastConnection = DateTime.Now - lastConnectedTime;
                             if (timeSinceLastConnection.TotalSeconds > 5)
                             {
-                                Log.Error("NAS nicht erreichbar für 5 Sekunden - Prozess wird beendet");
+                                Log.Error("Samba nicht erreichbar für 5 Sekunden - Prozess wird beendet");
                                 p.Kill();
                                 break;
                             }
@@ -428,11 +437,12 @@ namespace LRCatalogSync
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
-                // Dynamischer lokaler Backups-Pfad
-                string includeBackups = $"--include \"{config.BackupsRelativePath}/**\" --include \"{config.BackupsRelativePath}/*/**\" --exclude \"*\"";
+                // Dynamischer absoluter Backups-Pfad
+                string backupsFolder = Path.GetFileName(config.BackupsAbsolutePath);
+                string includeBackups = $"--include \"{backupsFolder}/**\" --include \"{backupsFolder}/*/**\" --exclude \"*\"";
 
                 //Debug Adresspfad
-                Log.Debug($"Backup: Pfad: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
+                Log.Debug($"Backup: Pfad: {config.BackupsAbsolutePath} <-> {remoteFull}/{backupsFolder}");
 
                 // Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
@@ -444,7 +454,7 @@ namespace LRCatalogSync
                 // DRY-RUN: Prüfen ob Änderungen vorhanden sind
                 ProcessStartInfo psi = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
                 psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.LocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO --dry-run {includeBackups}";
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsAbsolutePath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO --dry-run {includeBackups}";
                 psi.UseShellExecute = false; //Direkter Prozessstart
                 psi.RedirectStandardOutput = true; //Ausgabe abfangen
                 psi.RedirectStandardError = true;
@@ -479,7 +489,7 @@ namespace LRCatalogSync
 
                                 ProcessStartInfo psi_resync = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
                                 psi_resync.FileName = config.RclonePath;
-                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.LocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
+                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsAbsolutePath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
                                 psi_resync.UseShellExecute = false; //Direkter Prozessstart
                                 psi_resync.RedirectStandardOutput = true; //Ausgabe abfangen
                                 psi_resync.RedirectStandardError = true;
@@ -534,11 +544,12 @@ namespace LRCatalogSync
                 if (!string.IsNullOrEmpty(config.RemotePath))
                     remoteFull += ":" + config.RemotePath; //synology:Lightroom
 
-                // Dynamischer lokaler Backups-Pfad
-                string includeBackups = $"--include \"{config.BackupsRelativePath}/**\" --include \"{config.BackupsRelativePath}/*/**\" --exclude \"*\"";
+                // Dynamischer absoluter Backups-Pfad
+                string backupsFolder = Path.GetFileName(config.BackupsAbsolutePath);
+                string includeBackups = $"--include \"{backupsFolder}/**\" --include \"{backupsFolder}/*/**\" --exclude \"*\"";
 
                 //Debug Adresspfad
-                Log.Debug($"Backup: Pfad: {config.LocalPath}/{config.BackupsRelativePath} <-> {remoteFull}/{config.BackupsRelativePath}");
+                Log.Debug($"Backup: Pfad: {config.BackupsAbsolutePath} <-> {remoteFull}/{backupsFolder}");
 
                 //Temporäre Log-Datei für rclone-Ausgabe im Programm-Ordner
                 string tempLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "rclone_temp.log");
@@ -549,7 +560,7 @@ namespace LRCatalogSync
 
                 ProcessStartInfo psi = new ProcessStartInfo(); //Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
                 psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.LocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
+                psi.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsAbsolutePath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO {includeBackups}";
                 psi.UseShellExecute = false; //Direkter Prozessstart
                 psi.RedirectStandardOutput = true; //Ausgabe abfangen
                 psi.RedirectStandardError = true;
@@ -575,7 +586,7 @@ namespace LRCatalogSync
                             TimeSpan timeSinceLastConnection = DateTime.Now - lastConnectedTime;
                             if (timeSinceLastConnection.TotalSeconds > 5)
                             {
-                                Log.Debug("NAS nicht erreichbar für 5 Sekunden - Prozess wird beendet");
+                                Log.Debug("Samba nicht erreichbar für 5 Sekunden - Prozess wird beendet");
                                 SetStatus("NoConnection");
                                 p.Kill();
                                 break;
@@ -689,13 +700,16 @@ namespace LRCatalogSync
 
                     foreach (string line in lines)
                     {
-                        // Nur Hauptverzeichnis (kein /)
-                        if (line.Contains(".lrcat") && !line.Contains("/") && line.Contains("2026"))
+                        // Nur Hauptverzeichnis (kein /) und .lrcat Dateien
+                        if (line.Contains(".lrcat") && !line.Contains("/"))
                         {
-                            int idx = line.IndexOf("2026");
-                            if (idx > 0 && idx + 19 <= line.Length)
+                            // Regex sucht nach Datum im Format: yyyy-MM-dd HH:mm:ss
+                            // Das funktioniert für JEDES Jahr (2020, 2021, ... 2030, etc.)
+                            Match match = Regex.Match(line, @"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})");
+
+                            if (match.Success)
                             {
-                                string datePart = line.Substring(idx, 19);
+                                string datePart = match.Groups[1].Value;
                                 try
                                 {
                                     DateTime dt = DateTime.ParseExact(datePart, "yyyy-MM-dd HH:mm:ss", null);
@@ -724,28 +738,36 @@ namespace LRCatalogSync
             {
                 case "Standby":
                     trayIcon.Icon = iconGreen;
-                    trayIcon.Text = "Lightroom Sync - Standby";
+                    trayIcon.Text = "LR Catalog Sync - Standby";
                     break;
                 case "NoConnection":
                     trayIcon.Icon = iconWhite;
-                    trayIcon.Text = "Lightroom Sync - Keine Verbindung!";
+                    trayIcon.Text = "LR Catalog Sync - Keine Verbindung!";
                     break;
                 case "Lock":
                     trayIcon.Icon = iconBlue;
-                    trayIcon.Text = "Lightroom Sync - Lightroom aktiv";
+                    trayIcon.Text = "LR Catalog Sync - Lightroom aktiv";
                     break;
                 case "Syncing":
                     trayIcon.Icon = iconYellow;
-                    trayIcon.Text = "Lightroom Sync - Synchronisiere...";
+                    trayIcon.Text = "LR Catalog Sync - Synchronisiere...";
                     break;
                 case "Error":
                     trayIcon.Icon = iconRed;
-                    trayIcon.Text = "Lightroom Sync - Kein Katalog gefunden!";
+                    trayIcon.Text = "LR Catalog Sync - Kein Katalog gefunden!";
+                    break;
+                case "SettingsMissing":
+                    trayIcon.Icon = iconWhite;
+                    trayIcon.Text = "LR Catalog Sync - Einstellungen fehlen!";
+                    break;
+                case "rclone":
+                    trayIcon.Icon = iconRed;
+                    trayIcon.Text = "LR Catalog Sync - rclone.exe Fehler!";
                     break;
             }
 
             if (trayIcon.ContextMenuStrip != null)
-                ((ToolStripMenuItem)trayIcon.ContextMenuStrip.Items["statusItem"]).Text = "Status: " + status;
+                ((ToolStripMenuItem)trayIcon.ContextMenuStrip.Items["statusItem"]).Text = "Status: " + trayIcon.Text;
         }
 
         private Icon CreateColoredIcon(Color color)
@@ -766,7 +788,7 @@ namespace LRCatalogSync
         {
             try
             {
-                // 1. Holt die NAS-IP aus der Konfiguration
+                // 1. Holt die Remote-IP aus der Konfiguration
                 string remoteIP = config.RemoteIP; // Falls das die IP ist, sonst z.B. "192.168.1.100"
                 // 2. Erstellt einen Ping-Objekt
                 System.Net.NetworkInformation.Ping ping = new System.Net.NetworkInformation.Ping();
@@ -803,13 +825,13 @@ namespace LRCatalogSync
                 {
                     // Schreibschutz AKTIVIEREN
                     fileInfo.Attributes |= FileAttributes.ReadOnly;
-                    Log.Info($"Catalog: Schreibschutz aktiviert für {fileInfo.Name}");
+                    Log.Debug($"Catalog: Schreibschutz aktiviert für {fileInfo.Name}");
                 }
                 else
                 {
                     // Schreibschutz DEAKTIVIEREN
                     fileInfo.Attributes &= ~FileAttributes.ReadOnly;
-                    Log.Info($"Catalog: Schreibschutz deaktiviert für {fileInfo.Name}");
+                    Log.Debug($"Catalog: Schreibschutz deaktiviert für {fileInfo.Name}");
                 }
             }
             catch (Exception ex)
@@ -852,7 +874,7 @@ namespace LRCatalogSync
                                 if (parts.Length > 0)
                                 {
                                     string fileName = parts[parts.Length - 1];
-                                    Log.Debug($"Catalog: Remote *.lrcat gefunden: {fileName}");
+                                    Log.Debug($"Catalog: Samba-Server *.lrcat gefunden: {fileName}");
                                 }
                                 break;
                             }
@@ -860,11 +882,11 @@ namespace LRCatalogSync
                     }
                 }
 
-                Log.Debug("Catalog: Remote read-only Status überprüft");
+                Log.Debug("Catalog: Samba-Server read-only Status überprüft");
             }
             catch (Exception ex)
             {
-                Log.Error($"Fehler beim Überprüfen des Remote read-only Status: {ex.Message}");
+                Log.Error($"Fehler beim Überprüfen des Samba-Server read-only Status: {ex.Message}");
             }
         }
     }

@@ -12,8 +12,11 @@ namespace LRCatalogSync
         // Lokaler Pfad zum Lightroom Ordner
         public string LocalPath = "";
 
-        // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
-        public string BackupsRelativePath = "Backups";  // Standard: Backups
+        // Absoluter Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
+        public string BackupsAbsolutePath = "";
+
+        // Aktiviert/Deaktiviert die Backup-Synchronisierung
+        public bool EnableBackups = true;
 
         // IP von Remote Pfad (Samba Server)
         public string RemoteIP = "";
@@ -21,8 +24,8 @@ namespace LRCatalogSync
         // Pfad auf dem Remote (z.B. "Lightroom")
         public string RemotePath = "";
 
-        // Relativer Pfad zu rclone.exe (z.B. "./rclone/rclone.exe")
-        public string RcloneRelativePath = "./rclone/rclone.exe";        
+        // Ordner in dem rclone.exe liegt (z.B. "./rclone" oder "C:\Program Files\rclone")
+        public string RcloneFolder = "./rclone";
 
         // Samba Benutzername
         public string SambaUser = "";
@@ -60,9 +63,10 @@ namespace LRCatalogSync
 
                         // Weise die Werte den Eigenschaften zu
                         if (key == "LocalPath") LocalPath = value;
-                        if (key == "BackupsRelativePath") BackupsRelativePath = value;
+                        if (key == "BackupsAbsolutePath") BackupsAbsolutePath = value;
+                        if (key == "EnableBackups") EnableBackups = bool.TryParse(value, out bool result) && result;
                         if (key == "RemotePath") RemotePath = value;
-                        if (key == "RcloneRelativePath") RcloneRelativePath = value;
+                        if (key == "RcloneFolder") RcloneFolder = value;
                         if (key == "RemoteIP") RemoteIP = value;
                         if (key == "SambaUser") SambaUser = value;
                         if (key == "SambaPassword") SambaPassword = value;
@@ -72,30 +76,26 @@ namespace LRCatalogSync
             }
 
             // Berechne absolute Pfade
-            RclonePath = GetAbsolutePath(RcloneRelativePath, baseDir);
+            RclonePath = GetAbsoluteRclonePath(RcloneFolder, baseDir);
         }
 
-        // Wandelt einen relativen Pfad in einen absoluten Pfad um.
-        // relativePath" --> Relativer Pfad (z.B. "./rclone/rclone.exe")
-        // baseDir" --> Basis-Verzeichnis
-        // returns --> Absoluter Pfad
-        private string GetAbsolutePath(string relativePath, string baseDir)
+        // Wandelt einen relativen Rclone-Ordnerpfad in den absoluten Pfad zur rclone.exe um.
+        // rcloneFolder --> Rclone-Ordner (z.B. "./rclone" oder "C:\Program Files\rclone")
+        // baseDir --> Basis-Verzeichnis
+        // returns --> Absoluter Pfad zur rclone.exe
+        private string GetAbsoluteRclonePath(string rcloneFolder, string baseDir)
         {
-            // Füge "rclone.exe" hinzu, falls nicht vorhanden
-            string path = relativePath;
-            if (!path.EndsWith("rclone.exe", StringComparison.OrdinalIgnoreCase))
-            {
-                path = Path.Combine(path, "rclone.exe");
-            }
+            string path = rcloneFolder;
 
-            // Wenn bereits absolut, nimm direkt
+            // Wenn bereits absolut, nutze es direkt
             if (Path.IsPathRooted(path))
             {
-                return path;
+                return Path.Combine(path, "rclone.exe");
             }
 
             // Kombiniere mit baseDir
-            return Path.GetFullPath(Path.Combine(baseDir, path));
+            string absoluteFolder = Path.GetFullPath(Path.Combine(baseDir, path));
+            return Path.Combine(absoluteFolder, "rclone.exe");
         }
 
         // Speichert die Konfiguration in eine Datei.
@@ -106,9 +106,10 @@ namespace LRCatalogSync
             string[] lines = new string[]
             {
                 "LocalPath=" + LocalPath,
-                "BackupsRelativePath=" + BackupsRelativePath,
+                "BackupsAbsolutePath=" + BackupsAbsolutePath,
+                "EnableBackups=" + EnableBackups,
                 "RemotePath=" + RemotePath,
-                "RcloneRelativePath=" + RcloneRelativePath,
+                "RcloneFolder=" + RcloneFolder,
                 "RemoteIP=" + RemoteIP,
                 "SambaUser=" + SambaUser,
                 "SambaPassword=" + SambaPassword,

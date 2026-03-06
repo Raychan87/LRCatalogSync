@@ -1,37 +1,26 @@
-2026-03-06 15:47:44 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:47:44 [Error] Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:47:44 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:47:50 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:47:55 [Info] Einstellungen abgebrochen
-2026-03-06 15:47:55 [Info] Einstellungen geschlossen - Sync fortgesetzt
-2026-03-06 15:48:09 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:48:09 [Error] Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:48:09 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:48:12 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:48:15 [Info] Einstellungen abgebrochen
-2026-03-06 15:48:15 [Info] Einstellungen geschlossen - Sync fortgesetzt
-2026-03-06 15:48:23 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:48:23 [Error] Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:48:23 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:48:26 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:48:30 [Info] Einstellungen abgebrochen
-2026-03-06 15:48:34 [Info] Einstellungen geschlossen - Sync fortgesetzt
-2026-03-06 15:48:36 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:48:37 [Error] Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:48:37 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:48:39 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:48:47 [Info] Einstellungen abgebrochen
-2026-03-06 15:48:47 [Info] Einstellungen geschlossen - Sync fortgesetzt
-2026-03-06 15:48:55 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:48:57 [Info] Einstellungen abgebrochen
-2026-03-06 15:48:57 [Info] Einstellungen geschlossen - Sync fortgesetzt
-2026-03-06 15:54:41 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:54:41 [Info] Neue LRCatSync.conf erstellt mit Standard-Einstellungen
-2026-03-06 15:54:41 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:54:41 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:57:22 [Info] ========= Lightroom C. Sync gestartet =========
-2026-03-06 15:57:22 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
-2026-03-06 15:57:22 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
-2026-03-06 15:57:35 [Info] Einstellungen geöffnet - Sync pausiert
-2026-03-06 15:57:37 [Info] Einstellungen abgebrochen
-2026-03-06 15:57:37 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-06 16:03:44 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-06 16:03:44 [Info] Neue LRCatSync.conf erstellt mit Standard-Einstellungen
+2026-03-06 16:03:44 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
+2026-03-06 16:03:44 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
+2026-03-06 16:03:51 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-06 16:03:57 [Info] Einstellungen abgebrochen
+2026-03-06 16:03:57 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-06 16:05:02 [Info] ========= Lightroom C. Sync gestartet =========
+2026-03-06 16:05:02 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
+2026-03-06 16:05:02 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
+2026-03-06 16:05:04 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-06 16:05:10 [Info] Einstellungen abgebrochen
+2026-03-06 16:05:10 [Info] Einstellungen geschlossen - Sync fortgesetzt
+2026-03-06 16:06:25 [Info] Einstellungen geöffnet - Sync pausiert
+2026-03-06 16:19:11 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 16:19:11 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
+2026-03-06 16:19:11 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
+2026-03-06 16:22:55 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 16:22:55 [Error] Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.
+2026-03-06 16:22:55 [Error] Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.
+2026-03-06 16:24:18 [Info] Einstellungen aktualisiert
+2026-03-06 16:24:23 [Error] Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.
+2026-03-06 16:40:31 [Info] ========= LR Catalog Sync gestartet =========
+2026-03-06 16:40:32 [Error] Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.
+2026-03-06 16:41:54 [Info] Einstellungen aktualisiert
+2026-03-06 16:41:59 [Error] Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.
