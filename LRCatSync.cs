@@ -8,9 +8,9 @@ using System.Net.NetworkInformation;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace LightroomSync
+namespace LRCatalogSync
 {
-    public class LRSync : ApplicationContext
+    public class LRCatSync : ApplicationContext
     {
         // Config
         private const int WATCHDOG_TIME = 30000; // Sekunden
@@ -34,7 +34,7 @@ namespace LightroomSync
         private bool lockfile = false;
         private bool settingsMissingLogged = false; // Flag um einmalig zu loggen
 
-        public LRSync()
+        public LRCatSync()
         {
             // ================= INITIALISIERUNG =================
             // 1. Basis-Verzeichnis holen (wo die .exe liegt)
@@ -46,18 +46,18 @@ namespace LightroomSync
 
             // rclone.conf Pfade
             string rcloneConfigPath = Path.Combine(baseDir, "rclone.conf");
-            string configPath = Path.Combine(baseDir, "LRSync.conf");
+            string configPath = Path.Combine(baseDir, "LRCatSync.conf");
             this.rcloneConfigPath = rcloneConfigPath;
 
             // Config laden
             config = AppConfig.LoadFromFile(configPath, baseDir);
             Log.SetLogLevel(config.LogLevel);
             
-            // Falls LRSync.conf nicht existiert, als Standard-Einstellungen speichern
+            // Falls LRCatSync.conf nicht existiert, als Standard-Einstellungen speichern
             if (!File.Exists(configPath))
             {
                 config.Save(configPath);
-                Log.Info("Neue LRSync.conf erstellt mit Standard-Einstellungen");
+                Log.Info("Neue LRCatSync.conf erstellt mit Standard-Einstellungen");
             }
 
             // Icons
@@ -139,14 +139,14 @@ namespace LightroomSync
             try
             {
                 // ================= EINSTELLUNGEN PRÜFEN =================
-                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LRSync.conf");
+                string configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LRCatSync.conf");
                 
-                // Prüfe ob LRSync.conf und rclone.conf existieren
+                // Prüfe ob LRCatSync.conf und rclone.conf existieren
                 if (!File.Exists(configPath) || !File.Exists(rcloneConfigPath))
                 {
                     if (!settingsMissingLogged)
                     {
-                        Log.Error("Einstellungen fehlen! LRSync.conf oder rclone.conf nicht vorhanden.");
+                        Log.Error("Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.");
                         Log.Error("Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.");
                         settingsMissingLogged = true;
                     }

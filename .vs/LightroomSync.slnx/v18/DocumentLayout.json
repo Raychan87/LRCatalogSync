@@ -3,16 +3,8 @@
   "WorkspaceRootPath": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\lrsync.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|solutionrelative:lrsync.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\config.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|solutionrelative:config.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LightroomSync.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LRCatalogSync.csproj|z:\\_projekte_github\\#.net-projekte\\lightroomsync\\config.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8FBEA064-CCBE-4298-90A8-1DCA7EAB31BA}|LRCatalogSync.csproj|solutionrelative:config.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,7 +14,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
@@ -38,41 +30,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Config.cs",
               "DocumentMoniker": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\Config.cs",
               "RelativeDocumentMoniker": "Config.cs",
               "ToolTip": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\Config.cs",
               "RelativeToolTip": "Config.cs",
-              "ViewState": "AgIAADsAAAAAAAAAAAAwwEsAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-28T18:35:44.245Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "LRSync.cs",
-              "DocumentMoniker": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\LRSync.cs",
-              "RelativeDocumentMoniker": "LRSync.cs",
-              "ToolTip": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\LRSync.cs",
-              "RelativeToolTip": "LRSync.cs",
-              "ViewState": "AgIAAEwAAAAAAAAAAAAgwB4AAAAfAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-28T18:13:14.36Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "Program.cs",
-              "DocumentMoniker": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\Program.cs",
-              "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "Z:\\_Projekte_Github\\#.Net-Projekte\\LightroomSync\\Program.cs",
-              "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-28T18:10:37.108Z",
+              "WhenOpened": "2026-03-06T14:57:18.466Z",
               "EditorCaption": ""
             }
           ]

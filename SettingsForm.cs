@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
-namespace LightroomSync
+namespace LRCatalogSync
 {
     public partial class SettingsForm : Form
     {
@@ -29,7 +29,7 @@ namespace LightroomSync
         private void SetupControls()
         {
             this.Text = "Lightroom Sync - Einstellungen";
-            this.Size = new System.Drawing.Size(600, 700);
+            this.Size = new System.Drawing.Size(615, 400);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace LightroomSync
+namespace LRCatalogSync
 {
     static class Program
     {
@@ -16,7 +16,7 @@ namespace LightroomSync
             Application.SetCompatibleTextRenderingDefault(false);
 
             // Startet die Anwendung mit unserem TrayIcon
-            Application.Run(new LRSync());
+            Application.Run(new LRCatSync());
         }
     }
 }

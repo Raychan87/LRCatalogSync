@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace LightroomSync
+namespace LRCatalogSync
 {
     // Logging-Funktion für die Anwendung
     // Schreibt in Log-Datei im Programm-Verzeichnis

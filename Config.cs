@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace LightroomSync
+namespace LRCatalogSync
 {
     // Konfigurationsklasse für das Lightroom Sync Programm.
     // Speichert alle Einstellungen wie Pfade, Intervalle usw.
