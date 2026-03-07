@@ -67,7 +67,7 @@ namespace LRCatalogSync
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
-            AddCheckBox(scrollPanel, "Preview-Daten syncen", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
+            AddCheckBox(scrollPanel, "*Previews.lrdata syncen (Nicht sinnvoll)", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Lokaler Pfad:", ref yPos, "txtLocalPath", config.LocalPath, labelWidth, controlWidth, true);
             yPos += lineHeight;
@@ -107,8 +107,8 @@ namespace LRCatalogSync
             this.Controls.Add(btnPanel);
 
             // Links auf der linken Seite
-            AddLinkLabel(btnPanel, "GitHub Project", "https://github.com/Raychan87/LRCatalogSync", 10, 8);
-            AddLinkLabel(btnPanel, "Fototour und Technik", "https://Fototour-und-Technik.de", 10, 28);
+            AddLinkLabel(btnPanel, "GitHub Project", "https://github.com/Raychan87/LRCatalogSync", 10, 15);
+            AddLinkLabel(btnPanel, "Fototour und Technik", "https://Fototour-und-Technik.de", 10, 35);
 
             // Buttons auf der rechten Seite
             var btnSave = new Button
@@ -147,8 +147,9 @@ namespace LRCatalogSync
                 Height = 20,
                 AutoSize = false,
                 LinkColor = System.Drawing.Color.FromArgb(0, 120, 215),
-                VisitedLinkColor = System.Drawing.Color.FromArgb(0, 120, 215)
-            };
+                VisitedLinkColor = System.Drawing.Color.FromArgb(0, 120, 215),
+                LinkBehavior = LinkBehavior.NeverUnderline //Kein Unterstrich
+        };
 
             linkLabel.LinkClicked += (s, e) =>
             {
@@ -258,7 +259,7 @@ namespace LRCatalogSync
                 Top = yPos,
                 Width = 300,
                 Height = 20,
-                ForeColor = System.Drawing.Color.Blue,
+                ForeColor = System.Drawing.Color.FromArgb(0, 120, 215),
                 AutoSize = false
             };
 

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die einer Assembly zugeordnet sind.
 [assembly: AssemblyTitle("LRCatalogSync")]
-[assembly: AssemblyDescription("Synchronisiert Kataloge von Adobe Lightroom Classic.")]
+[assembly: AssemblyDescription("Synchronisiert ein Katalog von Adobe Lightroom Classic.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Fototour-und-Technik.de")]
 [assembly: AssemblyProduct("LRCatalogSync")]
@@ -30,10 +30,10 @@ using System.Runtime.InteropServices;
 //      Revision
 //
 // Version (wird in der Versionsnummer angezeigt)
-[assembly: AssemblyVersion("0.9.0.2")]
+[assembly: AssemblyVersion("0.9.0.3")]
 
 // Dateiversion (für Benutzer sichtbar)
-[assembly: AssemblyFileVersion("0.9.0.2")]
+[assembly: AssemblyFileVersion("0.9.0.3")]
 
 // Informational Version (z.B. für Beta-Hinweis)
-[assembly: AssemblyInformationalVersion("0.9.0-beta2")]
+[assembly: AssemblyInformationalVersion("0.9.0-beta3")]
