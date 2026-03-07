@@ -12,8 +12,11 @@ namespace LRCatalogSync
         // Lokaler Pfad zum Lightroom Ordner
         public string LocalPath = "";
 
-        // Absoluter Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
-        public string BackupsAbsolutePath = "";
+        // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
+        public string BackupsLocalPath = "";
+
+        // Remote Pfad zum Backups Ordner (auf dem Samba Server)
+        public string BackupsRemotePath = "";
 
         // Aktiviert/Deaktiviert die Backup-Synchronisierung
         public bool EnableBackups = true;
@@ -63,7 +66,8 @@ namespace LRCatalogSync
 
                         // Weise die Werte den Eigenschaften zu
                         if (key == "LocalPath") LocalPath = value;
-                        if (key == "BackupsAbsolutePath") BackupsAbsolutePath = value;
+                        if (key == "BackupsLocalPath") BackupsLocalPath = value;
+                        if (key == "BackupsRemotePath") BackupsRemotePath = value;
                         if (key == "EnableBackups") EnableBackups = bool.TryParse(value, out bool result) && result;
                         if (key == "RemotePath") RemotePath = value;
                         if (key == "RcloneFolder") RcloneFolder = value;
@@ -106,7 +110,8 @@ namespace LRCatalogSync
             string[] lines = new string[]
             {
                 "LocalPath=" + LocalPath,
-                "BackupsAbsolutePath=" + BackupsAbsolutePath,
+                "BackupsLocalPath=" + BackupsLocalPath,
+                "BackupsRemotePath=" + BackupsRemotePath,
                 "EnableBackups=" + EnableBackups,
                 "RemotePath=" + RemotePath,
                 "RcloneFolder=" + RcloneFolder,

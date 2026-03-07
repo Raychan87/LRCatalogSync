@@ -11,9 +11,9 @@ namespace LRCatalogSync
         private static object lockObj = new object();
         private static string currentLogLevel = "Info";
 
-        // LogLevel Hierarchie: Debug > Info > Warn > Error
         private enum LogLevelValue
         {
+            Aus = -1,
             Debug = 0,
             Info = 1,
             Warn = 2,
@@ -24,7 +24,7 @@ namespace LRCatalogSync
         {
             currentLogLevel = logLevel;
 
-            string logsDir = Path.Combine(baseDir, "logs");
+            string logsDir = Path.Combine(baseDir, "data", "logs");
             if (!Directory.Exists(logsDir))
             {
                 Directory.CreateDirectory(logsDir);
@@ -39,10 +39,12 @@ namespace LRCatalogSync
         {
             currentLogLevel = level;
         }
-
         // Prüft ob eine Nachricht geschrieben werden soll
         private static bool ShouldLog(string level)
         {
+            if (currentLogLevel == "Aus")
+                return false;
+
             if (!Enum.TryParse(currentLogLevel, out LogLevelValue configLevel))
                 configLevel = LogLevelValue.Info;
 

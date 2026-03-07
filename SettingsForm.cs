@@ -18,8 +18,8 @@ namespace LRCatalogSync
             InitializeComponent();
             config = cfg;
             baseDir = basePath;
-            configFilePath = Path.Combine(baseDir, "LRCatSync.conf");
-            rcloneConfigPath = Path.Combine(baseDir, "rclone.conf");
+            configFilePath = Path.Combine(baseDir, "data", "config", "LRCatSync.conf");
+            rcloneConfigPath = Path.Combine(baseDir, "data", "config", "rclone.conf");
             originalPassword = cfg.SambaPassword; // Speichern des ursprünglichen Passworts
 
             SetupControls();
@@ -28,8 +28,8 @@ namespace LRCatalogSync
 
         private void SetupControls()
         {
-            this.Text = "Lightroom Catalog Sync - Einstellungen";
-            this.Size = new System.Drawing.Size(615, 500);
+            this.Text = "Lightroom Catalog Sync - by Fototour-und-Technik.de";
+            this.Size = new System.Drawing.Size(510, 610);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -45,60 +45,79 @@ namespace LRCatalogSync
             this.Controls.Add(scrollPanel);
 
             int yPos = 10;
-            const int labelWidth = 150;
-            const int controlWidth = 380;
-            const int lineHeight = 35;
+            const int labelWidth = 125;
+            const int controlWidth = 300;
+            const int lineHeight = 25;
 
-            // 1. Rclone Ordner
-            AddLabelAndTextBox(scrollPanel, "Rclone Ordner:", ref yPos, "txtRcloneFolder", config.RcloneFolder, lineHeight, labelWidth, controlWidth, true);
-
-            // Info-Text für Rclone Download
-            AddInfoText(scrollPanel, "Download von https://rclone.org/downloads/", ref yPos, labelWidth + 10);
-
-            // 2. LocalPath
-            AddLabelAndTextBox(scrollPanel, "Lokaler Pfad:", ref yPos, "txtLocalPath", config.LocalPath, lineHeight, labelWidth, controlWidth, true);
-
-            // 3. Backups aktivieren (Checkbox)
-            yPos += 5;
-            AddCheckBox(scrollPanel, "Backups aktivieren", ref yPos, "chkEnableBackups", config.EnableBackups, labelWidth);
-
-            // 4. BackupsAbsolutePath
-            AddLabelAndTextBox(scrollPanel, "Backups Pfad:", ref yPos, "txtBackupsPath", config.BackupsAbsolutePath, lineHeight, labelWidth, controlWidth, true);
-
-            // 5. RemoteIP (Samba)
-            AddLabelAndTextBox(scrollPanel, "Samba Server IP:", ref yPos, "txtRemoteIP", config.RemoteIP, lineHeight, labelWidth, controlWidth, false);
-
-            // 6. RemotePath
-            AddLabelAndTextBox(scrollPanel, "Samba Pfad:", ref yPos, "txtRemotePath", config.RemotePath, lineHeight, labelWidth, controlWidth, false);
-
-            // 7. SambaUser
-            AddLabelAndTextBox(scrollPanel, "Samba Benutzer:", ref yPos, "txtSambaUser", config.SambaUser, lineHeight, labelWidth, controlWidth, false);
-
-            // 8. SambaPassword 
-            AddLabelAndTextBox(scrollPanel, "Samba Passwort:", ref yPos, "txtSambaPassword", "", lineHeight, labelWidth, controlWidth, false, true);
-
-            // 9. LogLevel (Dropdown)
-            AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "Debug", "Info", "Warn", "Error" }, config.LogLevel, lineHeight, labelWidth, controlWidth);
-
-            // Abstand vor Buttons
+            AddInfoText(scrollPanel, "LR Catalog Sync Einstellungen", ref yPos, 10);
+            yPos += 10;
+            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight;
+            
+            AddLabelAndTextBox(scrollPanel, "Rclone Pfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true);
+            yPos += 22;
+            AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth + 17);
+            yPos += lineHeight;
+            
+            AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "Aus", "Debug", "Info", "Warn", "Error" }, config.LogLevel, labelWidth, controlWidth - 200);
+            yPos += lineHeight;
+            
+            AddInfoText(scrollPanel, "Lightroom Katalog", ref yPos, 10);
+            yPos += 10;
+            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight;
+            
+            AddLabelAndTextBox(scrollPanel, "Lokaler Pfad:", ref yPos, "txtLocalPath", config.LocalPath, labelWidth, controlWidth, true);
+            yPos += lineHeight;
+            AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtRemotePath", config.RemotePath, labelWidth, controlWidth, false);
+            yPos += lineHeight;
+            
+            AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
+            yPos += 10;
+            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight;
+            
+            AddCheckBox(scrollPanel, "Sicherungsordner aktivieren", ref yPos, "chkEnableBackups", config.EnableBackups, labelWidth);
+            yPos += lineHeight;
+            
+            AddLabelAndTextBox(scrollPanel, "Lokaler Backup Pfad:", ref yPos, "txtBackupsLocalPath", config.BackupsLocalPath, labelWidth, controlWidth, true);
+            yPos += lineHeight;
+            AddLabelAndTextBox(scrollPanel, "Remote Backup Pfad:", ref yPos, "txtBackupsRemotePath", config.BackupsRemotePath, labelWidth, controlWidth, false);
+            yPos += lineHeight;
+            
+            AddInfoText(scrollPanel, "Samba Server Einstellungen", ref yPos, 10);
+            yPos += 10;
+            AddInfoText(scrollPanel, "________________________________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight;
+            
+            AddLabelAndTextBox(scrollPanel, "Remote Server IP/Name:", ref yPos, "txtRemoteIP", config.RemoteIP, labelWidth, controlWidth, false);
+            yPos += lineHeight;
+            AddLabelAndTextBox(scrollPanel, "Remote Benutzer:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false);
+            yPos += lineHeight;
+            AddLabelAndTextBox(scrollPanel, "Remote Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true);
             yPos += 30;
 
-            // Buttons
+            // Button Panel mit Links
             var btnPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 50,
+                Height = 60,
                 BackColor = System.Drawing.SystemColors.Control
             };
             this.Controls.Add(btnPanel);
 
+            // Links auf der linken Seite
+            AddLinkLabel(btnPanel, "GitHub Project", "https://github.com/Raychan87/LRCatalogSync", 10, 8);
+            AddLinkLabel(btnPanel, "Fototour und Technik", "https://Fototour-und-Technik.de", 10, 28);
+
+            // Buttons auf der rechten Seite
             var btnSave = new Button
             {
                 Text = "Speichern",
                 Width = 100,
                 Height = 35,
-                Left = 150,
-                Top = 7
+                Left = 265,
+                Top = 12
             };
             btnSave.Click += BtnSave_Click;
             btnPanel.Controls.Add(btnSave);
@@ -109,17 +128,49 @@ namespace LRCatalogSync
                 DialogResult = DialogResult.Cancel,
                 Width = 100,
                 Height = 35,
-                Left = 350,
-                Top = 7
+                Left = 380,
+                Top = 12
             };
             btnPanel.Controls.Add(btnCancel);
 
             this.CancelButton = btnCancel;
         }
 
+        private void AddLinkLabel(Panel panel, string text, string url, int left, int top)
+        {
+            var linkLabel = new LinkLabel
+            {
+                Text = text,
+                Left = left,
+                Top = top,
+                Width = 230,
+                Height = 20,
+                AutoSize = false,
+                LinkColor = System.Drawing.Color.FromArgb(0, 120, 215),
+                VisitedLinkColor = System.Drawing.Color.FromArgb(0, 120, 215)
+            };
+
+            linkLabel.LinkClicked += (s, e) =>
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = url,
+                        UseShellExecute = true
+                    });
+                }
+                catch
+                {
+                    MessageBox.Show("Link konnte nicht geöffnet werden.", "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            panel.Controls.Add(linkLabel);
+        }
+
         private void LoadSettings()
         {
-            // Passwort-Feld: Wenn vorhanden, zeige "****"
             var passwordControl = this.Controls.Find("txtSambaPassword", true);
             if (passwordControl.Length > 0 && !string.IsNullOrEmpty(originalPassword))
             {
@@ -127,7 +178,7 @@ namespace LRCatalogSync
             }
         }
 
-        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int lineHeight, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false)
+        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false)
         {
             var label = new Label
             {
@@ -178,8 +229,6 @@ namespace LRCatalogSync
                 };
                 panel.Controls.Add(btnBrowse);
             }
-
-            yPos += lineHeight;
         }
 
         private CheckBox AddCheckBox(Panel panel, string labelText, ref int yPos, string controlName, bool isChecked, int labelWidth)
@@ -197,12 +246,10 @@ namespace LRCatalogSync
             };
             panel.Controls.Add(checkBox);
 
-            yPos += 30;
-
             return checkBox;
         }
 
-        private void AddInfoText(Panel panel, string infoText, ref int yPos, int leftPosition)
+        private void AddInfoRclone(Panel panel, string infoText, ref int yPos, int leftPosition)
         {
             var infoLabel = new Label
             {
@@ -234,11 +281,25 @@ namespace LRCatalogSync
 
             infoLabel.Cursor = System.Windows.Forms.Cursors.Hand;
             panel.Controls.Add(infoLabel);
-
-            yPos += 25;
         }
 
-        private void AddLabelAndComboBox(Panel panel, string labelText, ref int yPos, string controlName, string[] items, string selectedValue, int lineHeight, int labelWidth, int controlWidth)
+        private void AddInfoText(Panel panel, string infoText, ref int yPos, int leftPosition)
+        {
+            var infoLabel = new Label
+            {
+                Text = infoText,
+                Left = leftPosition,
+                Top = yPos,
+                Width = 300,
+                Height = 20,
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                AutoSize = false
+            };
+
+            panel.Controls.Add(infoLabel);
+        }
+
+        private void AddLabelAndComboBox(Panel panel, string labelText, ref int yPos, string controlName, string[] items, string selectedValue, int labelWidth, int controlWidth)
         {
             var label = new Label
             {
@@ -269,8 +330,6 @@ namespace LRCatalogSync
 
             comboBox.SelectedItem = selectedValue;
             panel.Controls.Add(comboBox);
-
-            yPos += lineHeight;
         }
 
         private string BrowseFolder()
@@ -290,10 +349,10 @@ namespace LRCatalogSync
         {
             try
             {
-                // Werte auslesen
                 config.RcloneFolder = GetControlValue("txtRcloneFolder");
                 config.LocalPath = GetControlValue("txtLocalPath");
-                config.BackupsAbsolutePath = GetControlValue("txtBackupsPath");
+                config.BackupsLocalPath = GetControlValue("txtBackupsLocalPath");
+                config.BackupsRemotePath = GetControlValue("txtBackupsRemotePath");
                 config.EnableBackups = GetCheckBoxValue("chkEnableBackups");
                 config.RemoteIP = GetControlValue("txtRemoteIP");
                 config.RemotePath = GetControlValue("txtRemotePath");
@@ -320,7 +379,7 @@ namespace LRCatalogSync
                         "rclone.exe nicht gefunden",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
-                    return; // Fenster bleibt offen
+                    return;
                 }
 
                 // ================= VALIDIERUNG 2: Lokaler Pfad und *.lrcat prüfen =================
@@ -359,21 +418,31 @@ namespace LRCatalogSync
                 // ================= VALIDIERUNG 3: Backups Pfad prüfen (nur wenn aktiviert) =================
                 if (config.EnableBackups)
                 {
-                    if (string.IsNullOrEmpty(config.BackupsAbsolutePath))
+                    if (string.IsNullOrEmpty(config.BackupsLocalPath))
                     {
                         MessageBox.Show(
-                            "Fehler: Der Backups Pfad ist erforderlich wenn Backups aktiviert sind!",
-                            "Backups Pfad fehlt",
+                            "Fehler: Der lokale Backup Pfad ist erforderlich wenn Backups aktiviert sind!",
+                            "Lokaler Backup Pfad fehlt",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
                         return;
                     }
 
-                    if (!Directory.Exists(config.BackupsAbsolutePath))
+                    if (!Directory.Exists(config.BackupsLocalPath))
                     {
                         MessageBox.Show(
-                            $"Fehler: Der Backups Pfad existiert nicht!\n\nPfad: {config.BackupsAbsolutePath}",
-                            "Backups Pfad existiert nicht",
+                            $"Fehler: Der lokale Backup Pfad existiert nicht!\n\nPfad: {config.BackupsLocalPath}",
+                            "Lokaler Backup Pfad existiert nicht",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    if (string.IsNullOrEmpty(config.BackupsRemotePath))
+                    {
+                        MessageBox.Show(
+                            "Fehler: Der Remote Backup Pfad ist erforderlich wenn Backups aktiviert sind!",
+                            "Remote Backup Pfad fehlt",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error);
                         return;
@@ -400,10 +469,14 @@ namespace LRCatalogSync
                     config.SambaPassword = ObscurePassword(passwordInput, absoluteRclonePath);
                 }
 
-                // Config speichern
-                config.Save(configFilePath);
+                // Stelle sicher, dass data/config Ordner existiert
+                string configDir = Path.Combine(baseDir, "data", "config");
+                if (!Directory.Exists(configDir))
+                {
+                    Directory.CreateDirectory(configDir);
+                }
 
-                // rclone.conf erzeugen
+                config.Save(configFilePath);
                 SaveRcloneConfig();
 
                 MessageBox.Show("Einstellungen erfolgreich gespeichert!", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);

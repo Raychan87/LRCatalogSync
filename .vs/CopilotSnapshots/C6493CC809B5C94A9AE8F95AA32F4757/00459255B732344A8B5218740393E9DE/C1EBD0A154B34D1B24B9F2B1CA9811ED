@@ -40,7 +40,7 @@ namespace LRCatalogSync
         private bool isSyncing = false; // Verhindert gleichzeitige Syncs
         private readonly object syncLock = new object(); // Thread-Safety für isSyncing
         // UI Synchronization context captured on construction (UI thread)
-        private readonly SynchronizationContext uiContext;      
+        private readonly SynchronizationContext uiContext;
 
         public LRCatSync()
         {
@@ -94,21 +94,6 @@ namespace LRCatalogSync
             ToolStripMenuItem settingsItem = new ToolStripMenuItem("Einstellungen");
             settingsItem.Click += (s, e) =>
             {
-                // ================= PRÜFE OB SYNC LÄUFT =================
-                // Thread-safe überprüfen, ob gerade synchronisiert wird
-                lock (syncLock)
-                {
-                    if (isSyncing)
-                    {
-                        MessageBox.Show(
-                            "Die Einstellungen können nicht geöffnet werden, während ein Sync läuft.\n\nBitte warten Sie, bis der Sync abgeschlossen ist.",
-                            "Sync läuft",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-                        return;
-                    }
-                }
-
                 // ================= Timer pausieren =================
                 timer.Stop();
                 Log.Debug("Einstellungen geöffnet - Sync pausiert");
@@ -505,38 +490,13 @@ namespace LRCatalogSync
                             if (trimmed.Contains("Bisync aborted") &&
                                 trimmed.Contains("resync"))
                             {                            
-                                Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss mit --resync gestaret werden.");
+                                Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss --resync gestaret werden.");
                                 Log.Debug("Backup: resync Start");
                                 SetStatus("Syncing");
 
                                 ProcessStartInfo psi_resync = new ProcessStartInfo();
                                 psi_resync.FileName = config.RclonePath;
                                 psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO";
-                                psi_resync.UseShellExecute = false;
-                                psi_resync.RedirectStandardOutput = true;
-                                psi_resync.RedirectStandardError = true;
-                                psi_resync.CreateNoWindow = true;
-
-                                using (Process p = Process.Start(psi_resync))
-                                {
-                                    p.WaitForExit(WATCHDOG_TIME);
-                                    if (p.ExitCode != 0)
-                                    {
-                                        Log.Error("Sync fehlgeschlagen");
-                                    }
-                                }
-                                Thread.Sleep(1000);
-                                SetStatus("Standby");
-                                Log.Debug("Backup: resync End");
-                                return false;
-                            }
-
-                            if (trimmed.Contains("too many deletes"))
-                            {
-                                Log.Debug("rclone: große Änderung >50%, es muss mit --force gestaret werden.");
-                                ProcessStartInfo psi_resync = new ProcessStartInfo();
-                                psi_resync.FileName = config.RclonePath;
-                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level INFO";
                                 psi_resync.UseShellExecute = false;
                                 psi_resync.RedirectStandardOutput = true;
                                 psi_resync.RedirectStandardError = true;
@@ -833,9 +793,8 @@ namespace LRCatalogSync
                     break;
             }
 
-            // Hinweis: Das Statusmenü-Update wurde entfernt, da ContextMenuStrip
-            // nur vom UI-Thread aktualisiert werden kann und dies zu Cross-Thread-Fehlern führte.
-            // Das Tray-Icon Text ist die primäre Statusanzeige.
+            if (trayIcon?.ContextMenuStrip != null)
+                ((ToolStripMenuItem)trayIcon.ContextMenuStrip.Items["statusItem"]).Text = "Status: " + trayIcon.Text;
         }
 
         private Icon CreateColoredIcon(Color color)
