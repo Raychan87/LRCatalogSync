@@ -67,7 +67,8 @@ namespace LRCatalogSync
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
-            
+            AddCheckBox(scrollPanel, "Preview-Daten syncen", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
+            yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Lokaler Pfad:", ref yPos, "txtLocalPath", config.LocalPath, labelWidth, controlWidth, true);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtRemotePath", config.RemotePath, labelWidth, controlWidth, false);
@@ -76,11 +77,9 @@ namespace LRCatalogSync
             AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
-            yPos += lineHeight - 5;
-            
+            yPos += lineHeight - 5;            
             AddCheckBox(scrollPanel, "Sicherungsordner aktivieren", ref yPos, "chkEnableBackups", config.EnableBackups, labelWidth);
-            yPos += lineHeight;
-            
+            yPos += lineHeight;            
             AddLabelAndTextBox(scrollPanel, "Lokaler Backup Pfad:", ref yPos, "txtBackupsLocalPath", config.BackupsLocalPath, labelWidth, controlWidth, true);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Remote Backup Pfad:", ref yPos, "txtBackupsRemotePath", config.BackupsRemotePath, labelWidth, controlWidth, false);
@@ -355,6 +354,7 @@ namespace LRCatalogSync
                 config.BackupsLocalPath = GetControlValue("txtBackupsLocalPath");
                 config.BackupsRemotePath = GetControlValue("txtBackupsRemotePath");
                 config.EnableBackups = GetCheckBoxValue("chkEnableBackups");
+                config.SyncPreviewData = GetCheckBoxValue("chkSyncPreviewData");
                 config.RemoteIP = GetControlValue("txtRemoteIP");
                 config.RemotePath = GetControlValue("txtRemotePath");
                 config.SambaUser = GetControlValue("txtSambaUser");

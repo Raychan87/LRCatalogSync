@@ -4,10 +4,14 @@ using System.IO;
 namespace LRCatalogSync
 {
     // Logging-Funktion für die Anwendung
-    // Schreibt in Log-Datei im Programm-Verzeichnis
+    // Schreibt in Log-Datei im Programm-Verzeichnis mit automatischer Rotation
     public static class Log
     {
+        private const long MAX_LOG_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+        private const int MAX_BACKUP_FILES = 3; // Behalte max X alte Log-Dateien
+        
         private static string logFilePath;
+        private static string logsDir;
         private static object lockObj = new object();
         private static string currentLogLevel = "Info";
 
@@ -24,7 +28,7 @@ namespace LRCatalogSync
         {
             currentLogLevel = logLevel;
 
-            string logsDir = Path.Combine(baseDir, "data", "logs");
+            logsDir = Path.Combine(baseDir, "data", "logs");
             if (!Directory.Exists(logsDir))
             {
                 Directory.CreateDirectory(logsDir);
@@ -33,12 +37,16 @@ namespace LRCatalogSync
             // Log-Datei mit Datum im Namen
             string logFileName = $"LRCatalogSync_{DateTime.Now:yyyy-MM-dd}.log";
             logFilePath = Path.Combine(logsDir, logFileName);
+            
+            // Prüfe am Start ob Rotation nötig ist
+            CheckAndRotateLog();
         }
 
         public static void SetLogLevel(string level)
         {
             currentLogLevel = level;
         }
+
         // Prüft ob eine Nachricht geschrieben werden soll
         private static bool ShouldLog(string level)
         {
@@ -54,6 +62,76 @@ namespace LRCatalogSync
             return messageLevel >= configLevel;
         }
 
+        // Prüfe ob Log-Rotation nötig ist und führe sie durch
+        private static void CheckAndRotateLog()
+        {
+            try
+            {
+                if (!File.Exists(logFilePath))
+                    return;
+
+                FileInfo fileInfo = new FileInfo(logFilePath);
+                
+                // Wenn Datei größer als 20MB ist - führe Rotation durch
+                if (fileInfo.Length >= MAX_LOG_FILE_SIZE)
+                {
+                    RotateLogFiles();
+                }
+            }
+            catch
+            {
+                // Stille Fehlerbehandlung
+            }
+        }
+
+        // Rotiere die Log-Dateien (Ringspeicher)
+        private static void RotateLogFiles()
+        {
+            try
+            {
+                lock (lockObj)
+                {
+                    string currentBaseLogName = Path.Combine(logsDir, $"LRCatalogSync_{DateTime.Now:yyyy-MM-dd}");
+                    
+                    // Verschiebe alte Backups (Ringspeicher: .log.1 -> .log.2, aber max 3 alte Dateien)
+                    for (int i = MAX_BACKUP_FILES - 1; i >= 1; i--)
+                    {
+                        string oldBackupPath = $"{currentBaseLogName}.{i}.log";
+                        string newBackupPath = $"{currentBaseLogName}.{i + 1}.log";
+                        
+                        if (File.Exists(oldBackupPath))
+                        {
+                            // Lösche die älteste Datei wenn wir das Limit erreicht haben
+                            if (i == MAX_BACKUP_FILES - 1)
+                            {
+                                File.Delete(oldBackupPath);
+                            }
+                            else
+                            {
+                                // Verschiebe zu einer höheren Nummer (erst löschen, dann verschieben)
+                                if (File.Exists(newBackupPath))
+                                    File.Delete(newBackupPath);
+                                File.Move(oldBackupPath, newBackupPath);
+                            }
+                        }
+                    }
+                    
+                    // Benenne die aktuelle Log-Datei um zu .1.log
+                    string firstBackupPath = $"{currentBaseLogName}.1.log";
+                    if (File.Exists(firstBackupPath))
+                        File.Delete(firstBackupPath);
+                    File.Move(logFilePath, firstBackupPath);
+                    
+                    // Aktualisiere logFilePath für die neue Datei
+                    logFilePath = Path.Combine(logsDir, $"LRCatalogSync_{DateTime.Now:yyyy-MM-dd}.log");
+                }
+            }
+            catch
+            {
+                // Falls Rotation fehlschlägt - ignorieren und weitermachen
+            }
+        }
+
         public static void Write(string message, string level = "INFO")
         {
             if (!ShouldLog(level))
@@ -63,6 +141,9 @@ namespace LRCatalogSync
             {
                 lock (lockObj)
                 {
+                    // Prüfe vor jedem Write ob Rotation nötig ist
+                    CheckAndRotateLog();
+                    
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     string logEntry = $"{timestamp} [{level}] {message}";
 

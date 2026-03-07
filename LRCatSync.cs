@@ -402,36 +402,49 @@ namespace LRCatalogSync
                 if (File.Exists(tempLog))
                     File.Delete(tempLog);
 
+                // ================= ERSTELLE FILTER-DATEI =================
+                string filterFilePath = Path.Combine(logsDir, "rclone_catalog_filter.txt");
+                CreateCatalogFilterFile(filterFilePath);
+
                 // ================= KATALOG SYNC =================
-                ProcessStartInfo psi = new ProcessStartInfo();// Startet einen neuen Prozess (rclone) unsichtbar im Hintergrund
+                ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = config.RclonePath;
+
+                // Bestimme rclone Argumente basierend auf Preview-Einstellung und Richtung
+                string baseArgs = $"--config \"{rcloneConfigPath}\" sync";
+                string filterArgs = $"--filter-from \"{filterFilePath}\"";
+                string commonArgs = "--update --metadata --log-file \"{tempLog}\" --log-level INFO";
 
                 if (direction == "upload")
                 {
-                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync \"{config.LocalPath}\" {remoteFull} --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    psi.Arguments = $"{baseArgs} \"{config.LocalPath}\" {remoteFull} {filterArgs} {commonArgs}";
                 }
                 else
                 {
-                    psi.Arguments = $"--config \"{rcloneConfigPath}\" sync {remoteFull} \"{config.LocalPath}\" --update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                    psi.Arguments = $"{baseArgs} {remoteFull} \"{config.LocalPath}\" {filterArgs} {commonArgs}";
                 }
-                psi.UseShellExecute = false; // Direkter Prozessstart
-                psi.RedirectStandardOutput = true; // Ausgabe abfangen
-                psi.RedirectStandardError = true;   // Fehler abfangen
-                psi.CreateNoWindow = true; // Kein Fenster öffnen
+
+                psi.UseShellExecute = false;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+                psi.CreateNoWindow = true;
+
+                Log.Debug($"Catalog: rclone Kommando: {psi.FileName} {psi.Arguments}");
 
                 // ================= rclone Prozess =================
-
                 using (Process p = Process.Start(psi))
                 {
-                    p.WaitForExit();  // Einfach warten bis fertig
+                    p.WaitForExit();
 
-                    // Verbindung war durchgehend ok (sonst wäre Prozess abgebrochen)
                     if (p.ExitCode != 0)
                     {
-                        Log.Error("Sync fehlgeschlagen");
-                        //Hier muss ich noch was machen.....
+                        Log.Error($"Sync fehlgeschlagen mit Exit-Code: {p.ExitCode}");
                     }
                 }
+
+                // Warte kurz, bis rclone die Datei komplett freigegeben hat
+                Thread.Sleep(500);
+
                 Log.Info($"Catalog: {direction} complete");
 
                 WriteRcloneStats(tempLog);
@@ -450,6 +463,42 @@ namespace LRCatalogSync
             {
                 // Sicherstellen, dass Schreibschutz am Ende aufgehoben wird
                 SetCatalogReadOnly(false);
+            }
+        }
+
+        private void CreateCatalogFilterFile(string filterFilePath)
+        {
+            try
+            {
+                // Konvertiere LocalPath zu absolut Pfad mit Forward-Slashes
+                string absoluteLocalPath = Path.GetFullPath(config.LocalPath).Replace("\\", "/");
+
+                // Liste der Filter-Regeln
+                var filterLines = new System.Collections.Generic.List<string>();
+
+                if (!config.SyncPreviewData)
+                {
+                    // Wenn Preview-Daten NICHT synchronisiert werden sollen
+                    filterLines.Add("+ /*Smart Previews.lrdata/");
+                    filterLines.Add("- /*Previews.lrdata/**");
+                    Log.Debug("Catalog: Filter erstellt - *Previews.lrdata ausgeschlossen, *Smart Previews.lrdata wird synchronisiert");
+                }
+                else
+                {
+                    // Wenn Preview-Daten synchronisiert werden sollen
+                    Log.Debug("Catalog: Alle Preview-Daten werden synchronisiert - keine Filter für Previews");
+                }
+
+                // Exclude Backups Ordner immer
+                filterLines.Add($"- {absoluteLocalPath}");
+
+                // Schreibe Filter-Datei
+                File.WriteAllLines(filterFilePath, filterLines);
+                Log.Debug($"Catalog: Filter-Datei erstellt: {filterFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Fehler beim Erstellen der Filter-Datei: {ex.Message}");
             }
         }
 
@@ -486,95 +535,102 @@ namespace LRCatalogSync
                 {
                     p.WaitForExit(WATCHDOG_TIME);
                 }
-                                
-                // Log-Datei auslesen,...
-                if (File.Exists(tempLog))
+                
+                // Warte kurz, bis rclone die Datei komplett freigegeben hat
+                Thread.Sleep(500);
+
+                // Versuche die Log-Datei zu lesen (mit Retry)
+                string[] lines = ReadLogFileWithRetry(tempLog);
+                if (lines == null || lines.Length == 0)
                 {
-                    //Log-Datei einlesen...
-                    string[] lines = File.ReadAllLines(tempLog);
-                    foreach (string line in lines)
+                    Log.Debug("Backup: Keine Log-Datei gefunden oder Datei ist leer");
+                    return BackupChange;
+                }
+
+                foreach (string line in lines)
+                {
+                    string trimmed = line.Trim();
+
+                    // DEBUG: Zeige alle ERROR-Zeilen
+                    if (trimmed.Contains("ERROR"))
                     {
-                        string trimmed = line.Trim();
+                        Log.Debug($"DEBUG ERROR: '{trimmed}'");                        
 
-                        // DEBUG: Zeige alle ERROR-Zeilen
-                        if (trimmed.Contains("ERROR"))
-                        {
-                            Log.Debug($"DEBUG ERROR: '{trimmed}'");                        
+                        // Prüfe auf Resync-Fehler (flexibler)
+                        if (trimmed.Contains("Bisync aborted") &&
+                            trimmed.Contains("resync"))
+                        {                            
+                            Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss mit --resync gestaret werden.");
+                            Log.Debug("Backup: resync Start");
+                            SetStatus("Syncing");
 
-                            // Prüfe auf Resync-Fehler (flexibler)
-                            if (trimmed.Contains("Bisync aborted") &&
-                                trimmed.Contains("resync"))
-                            {                            
-                                Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss mit --resync gestaret werden.");
-                                Log.Debug("Backup: resync Start");
-                                SetStatus("Syncing");
+                            ProcessStartInfo psi_resync = new ProcessStartInfo();
+                            psi_resync.FileName = config.RclonePath;
+                            psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO";
+                            psi_resync.UseShellExecute = false;
+                            psi_resync.RedirectStandardOutput = true;
+                            psi_resync.RedirectStandardError = true;
+                            psi_resync.CreateNoWindow = true;
 
-                                ProcessStartInfo psi_resync = new ProcessStartInfo();
-                                psi_resync.FileName = config.RclonePath;
-                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO";
-                                psi_resync.UseShellExecute = false;
-                                psi_resync.RedirectStandardOutput = true;
-                                psi_resync.RedirectStandardError = true;
-                                psi_resync.CreateNoWindow = true;
-
-                                using (Process p = Process.Start(psi_resync))
-                                {
-                                    p.WaitForExit(WATCHDOG_TIME);
-                                    if (p.ExitCode != 0)
-                                    {
-                                        Log.Error("Sync fehlgeschlagen");
-                                    }
-                                }
-                                Thread.Sleep(1000);
-                                SetStatus("Standby");
-                                Log.Debug("Backup: resync End");
-                                return false;
-                            }
-
-                            if (trimmed.Contains("too many deletes"))
+                            using (Process p = Process.Start(psi_resync))
                             {
-                                Log.Debug("rclone: große Änderung >50%, es muss mit --force gestaret werden.");
-                                ProcessStartInfo psi_resync = new ProcessStartInfo();
-                                psi_resync.FileName = config.RclonePath;
-                                psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level INFO";
-                                psi_resync.UseShellExecute = false;
-                                psi_resync.RedirectStandardOutput = true;
-                                psi_resync.RedirectStandardError = true;
-                                psi_resync.CreateNoWindow = true;
-
-                                using (Process p = Process.Start(psi_resync))
+                                p.WaitForExit(WATCHDOG_TIME);
+                                Thread.Sleep(500); // Auch hier warten
+                                if (p.ExitCode != 0)
                                 {
-                                    p.WaitForExit(WATCHDOG_TIME);
-                                    if (p.ExitCode != 0)
-                                    {
-                                        Log.Error("Sync fehlgeschlagen");
-                                    }
+                                    Log.Error("Sync fehlgeschlagen");
                                 }
-                                Thread.Sleep(1000);
-                                SetStatus("Standby");
-                                Log.Debug("Backup: resync End");
-                                return false;
                             }
+                            Thread.Sleep(1000);
+                            SetStatus("Standby");
+                            Log.Debug("Backup: resync End");
+                            return false;
+                        }
+
+                        if (trimmed.Contains("too many deletes"))
+                        {
+                            Log.Debug("rclone: große Änderung >50%, es muss mit --force gestaret werden.");
+                            ProcessStartInfo psi_resync = new ProcessStartInfo();
+                            psi_resync.FileName = config.RclonePath;
+                            psi_resync.Arguments = $"--config \"{rcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level INFO";
+                            psi_resync.UseShellExecute = false;
+                            psi_resync.RedirectStandardOutput = true;
+                            psi_resync.RedirectStandardError = true;
+                            psi_resync.CreateNoWindow = true;
+
+                            using (Process p = Process.Start(psi_resync))
+                            {
+                                p.WaitForExit(WATCHDOG_TIME);
+                                Thread.Sleep(500); // Auch hier warten
+                                if (p.ExitCode != 0)
+                                {
+                                    Log.Error("Sync fehlgeschlagen");
+                                }
+                            }
+                            Thread.Sleep(1000);
+                            SetStatus("Standby");
+                            Log.Debug("Backup: resync End");
+                            return false;
                         }
                     }
+                }
 
-                    // Nach dem Resync-Check, jetzt auf "No changes" prüfen
-                    foreach (string line in lines)
+                // Nach dem Resync-Check, jetzt auf "No changes" prüfen
+                foreach (string line in lines)
+                {
+                    string trimmed = line.Trim();
+
+                    if (trimmed.Contains("No changes found"))
                     {
-                        string trimmed = line.Trim();
-
-                        if (trimmed.Contains("No changes found"))
-                        {
-                            Log.Debug("Backup: Keine Änderungen gefunden");
-                            BackupChange = false;
-                            break;
-                        }
-                        else if (trimmed.Contains("Skipped"))
-                        {
-                            Log.Debug("Backup: Änderungen gefunden");
-                            BackupChange = true;
-                            break;
-                        }
+                        Log.Debug("Backup: Keine Änderungen gefunden");
+                        BackupChange = false;
+                        break;
+                    }
+                    else if (trimmed.Contains("Skipped"))
+                    {
+                        Log.Debug("Backup: Änderungen gefunden");
+                        BackupChange = true;
+                        break;
                     }
                 }
                 return BackupChange;
@@ -584,6 +640,32 @@ namespace LRCatalogSync
                 Log.Error($"Backups-Check-Fehler: {ex.Message}");
                 return false;
             }
+        }
+
+        private string[] ReadLogFileWithRetry(string filePath, int maxRetries = 3, int delayMs = 200)
+        {
+            for (int i = 0; i < maxRetries; i++)
+            {
+                try
+                {
+                    if (!File.Exists(filePath))
+                        return new string[0];
+
+                    return File.ReadAllLines(filePath);
+                }
+                catch (IOException)
+                {
+                    if (i < maxRetries - 1)
+                    {
+                        Thread.Sleep(delayMs);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+            return new string[0];
         }
 
         private void SyncBackups()

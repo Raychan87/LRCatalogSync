@@ -12,7 +12,7 @@ namespace LRCatalogSync
         // Lokaler Pfad zum Lightroom Ordner
         public string LocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom";
 
-        // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge)
+        // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge) 
         public string BackupsLocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname]/Backups/";
 
         // Remote Pfad zum Backups Ordner (auf dem Samba Server)
@@ -20,6 +20,9 @@ namespace LRCatalogSync
 
         // Aktiviert/Deaktiviert die Backup-Synchronisierung
         public bool EnableBackups = true;
+
+        // Syncen von Preview-Daten (aktiviert *Smart Previews.lrdata, deaktiviert auch *Previews.lrdata)
+        public bool SyncPreviewData = false;
 
         // IP von Remote Pfad (Samba Server)
         public string RemoteIP = "xxx.xxx.xxx.xxx";
@@ -69,6 +72,7 @@ namespace LRCatalogSync
                         if (key == "BackupsLocalPath") BackupsLocalPath = value;
                         if (key == "BackupsRemotePath") BackupsRemotePath = value;
                         if (key == "EnableBackups") EnableBackups = bool.TryParse(value, out bool result) && result;
+                        if (key == "SyncPreviewData") SyncPreviewData = bool.TryParse(value, out bool result2) && result2;
                         if (key == "RemotePath") RemotePath = value;
                         if (key == "RcloneFolder") RcloneFolder = value;
                         if (key == "RemoteIP") RemoteIP = value;
@@ -113,6 +117,7 @@ namespace LRCatalogSync
                 "BackupsLocalPath=" + BackupsLocalPath,
                 "BackupsRemotePath=" + BackupsRemotePath,
                 "EnableBackups=" + EnableBackups,
+                "SyncPreviewData=" + SyncPreviewData,
                 "RemotePath=" + RemotePath,
                 "RcloneFolder=" + RcloneFolder,
                 "RemoteIP=" + RemoteIP,
