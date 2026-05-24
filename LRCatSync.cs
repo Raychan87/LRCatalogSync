@@ -48,7 +48,6 @@ namespace LRCatalogSync
                 string configDir = Path.Combine(GlobalData.BaseDir, "data", "config");
                 if (!Directory.Exists(configDir))
                     Directory.CreateDirectory(configDir);
-                config.Save(GlobalData.LRCatSyncConfigPath);
                 Log.Debug("Neue LRCatSync.conf erstellt mit Standard-Einstellungen");
             }
 
