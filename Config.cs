@@ -42,8 +42,8 @@ namespace LRCatalogSync
         // Absolute Pfade (werden beim Laden berechnet)
         public string RclonePath { get; private set; }
 
-        //Einstellung von LogLevel = Debug/Info/Warn/Error
-        public string LogLevel { get; set; } = "Info";
+        //Einstellung von LogLevel = Aus/DEBUG/INFO/NOTICE/ERROR
+        public string LogLevel { get; set; } = "INFO";
 
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.

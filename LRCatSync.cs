@@ -30,6 +30,8 @@ namespace LRCatalogSync
         private bool settingsMissingLogged = false;
         private bool isSyncing = false; // Verhindert gleichzeitige Syncs
         private readonly object syncLock = new object(); // Thread-Safety für isSyncing
+        // Speichert den aktuell ermittelten Katalognamen (ohne Extension)
+        private string currentCatalogName = null;
         // UI Synchronization context captured on construction (UI thread)
         private readonly SynchronizationContext uiContext;      
 
@@ -189,11 +191,13 @@ namespace LRCatalogSync
                 bool CatalogSyncStart = false;
                 string SyncDirection = "";
 
-                // ================= 1. LOCK PRÜFEN =================
-                if (Directory.Exists(config.LocalPath))
+                // ================= 1. KATALOG LOKAL ERMITTELN UND LOCK PRÜFEN =================
+                DateTime? localDate = GetLocalCatalogDate(); // setzt currentCatalogName
+
+                if (!string.IsNullOrEmpty(currentCatalogName))
                 {
-                    string[] lockFiles = Directory.GetFiles(config.LocalPath, "*.lrcat.lock", SearchOption.AllDirectories);
-                    if (lockFiles.Length > 0)
+                    string lockPath = Path.Combine(config.LocalPath, currentCatalogName + ".lrcat.lock");
+                    if (File.Exists(lockPath))
                     {
                         if (!lockfile)
                         {
@@ -203,12 +207,21 @@ namespace LRCatalogSync
                         SetStatus("Lock");
                         return;
                     }
-                }
 
-                if (lockfile)
+                    if (lockfile)
+                    {
+                        Log.Info("Lock entfernt - Sync wird fortgesetzt");
+                        lockfile = false;
+                    }
+                }
+                else
                 {
-                    Log.Info("Lock entfernt - Sync wird fortgesetzt");
-                    lockfile = false;
+                    // Kein lokaler Katalog gefunden - kein Lock möglich
+                    if (lockfile)
+                    {
+                        Log.Info("Lock entfernt - Sync wird fortgesetzt");
+                        lockfile = false;
+                    }
                 }
 
                 // ================= 2. Netzwerk Prüfen =================
@@ -238,7 +251,7 @@ namespace LRCatalogSync
                     p.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
                     if (p.ExitCode != 0 || output.Length < 10)
                     {
-                        Log.Warn("Samba-Verbindung fehlgeschlagen");
+                        Log.Notice("Samba-Verbindung fehlgeschlagen");
                         Log.Debug($"rclone Pfad: {config.RclonePath}");
                         Log.Debug($"rclone Config Pfad: {GlobalData.RcloneConfigPath}");
                         Log.Debug($"Remote: {remoteFull}");
@@ -248,7 +261,7 @@ namespace LRCatalogSync
                 }
 
                 // ================= 4. KATALOG PRÜFEN =================
-                DateTime? localDate = GetLocalCatalogDate();
+                // remoteDate ermitteln
                 DateTime? remoteDate = GetRemoteCatalogDate();
 
                 // Änderungszeit von den Katalogen
@@ -374,22 +387,38 @@ namespace LRCatalogSync
 
                 Log.Info($"Catalog: {direction} Start");
 
-                // ========== VOR SYNC: Schreibschutz AKTIVIEREN ==========
-                SetCatalogReadOnly(true);
-
                 // Eindeutige Log-Datei für Katalog-Sync
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_catalog_sync.log");
                 string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
                 if (!Directory.Exists(logsDir))
                     Directory.CreateDirectory(logsDir);
 
-                // Alte Log-Datei löschen
+                // Alte Log-Datei löschen (sicher mit Retry) - warte gezielt, falls gesperrt
                 if (File.Exists(tempLog))
-                    File.Delete(tempLog);
+                {
+                    if (WaitForFileUnlocked(tempLog, 5000, 200))
+                    {
+                        TryDeleteFileWithRetry(tempLog);
+                    }
+                    else
+                    {
+                        Log.Debug($"Catalog: Konnte Logdatei nicht freigeben zum Löschen: {tempLog}");
+                    }
+                }
 
                 // ================= ERSTELLE FILTER-DATEI =================
                 string filterFilePath = Path.Combine(logsDir, "rclone_catalog_filter.txt");
                 CreateCatalogFilterFile(filterFilePath);
+
+                // ================= VORHERIGE VERSIONEN SICHERN IN KATALOG.OLD =================
+                try
+                {
+                    BackupLocalCatalog(currentCatalogName);
+                }
+                catch (Exception exBackup)
+                {
+                    Log.Error($"Fehler beim Erstellen des lokalen Backups: {exBackup.Message}");
+                }
 
                 // ================= KATALOG SYNC =================
                 ProcessStartInfo psi = new ProcessStartInfo();
@@ -398,7 +427,8 @@ namespace LRCatalogSync
                 // Bestimme rclone Argumente basierend auf Preview-Einstellung und Richtung
                 string baseArgs = $"--config \"{GlobalData.RcloneConfigPath}\" sync";
                 string filterArgs = $"--filter-from \"{filterFilePath}\"";
-                string commonArgs = "--update --metadata --log-file \"{tempLog}\" --log-level INFO";
+                string logLevel = GetRcloneLogLevel();
+                string commonArgs = $"--update --metadata --log-file \"{tempLog}\" --log-level {logLevel}";
 
                 if (direction == "upload")
                 {
@@ -434,10 +464,8 @@ namespace LRCatalogSync
 
                 WriteRcloneStats(tempLog);
 
-                // ========== NACH SYNC: Schreibschutz DEAKTIVIEREN ==========
-                SetCatalogReadOnly(false);
-
-                // ========== Optional: Remote read-only Status aufheben ==========
+                // Schreibschutz-Deaktivierung entfernt (kein Deaktivieren mehr)
+                // ================= Optional: Remote read-only Status aufheben =================
                 RemoveRemoteReadOnly();
             }
             catch (Exception ex)
@@ -446,8 +474,7 @@ namespace LRCatalogSync
             }
             finally
             {
-                // Sicherstellen, dass Schreibschutz am Ende aufgehoben wird
-                SetCatalogReadOnly(false);
+                // Schreibschutz-Deaktivierung entfernt - kein Vorgehen nötig
             }
         }
 
@@ -510,7 +537,8 @@ namespace LRCatalogSync
 
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO --dry-run";
+                string logLevel = GetRcloneLogLevel();
+                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {logLevel} --dry-run";
                 psi.UseShellExecute = false;
                 psi.RedirectStandardOutput = true;
                 psi.RedirectStandardError = true;
@@ -551,7 +579,8 @@ namespace LRCatalogSync
 
                             ProcessStartInfo psi_resync = new ProcessStartInfo();
                             psi_resync.FileName = config.RclonePath;
-                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level INFO";
+                            string logLevelResync = GetRcloneLogLevel();
+                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level {logLevelResync}";
                             psi_resync.UseShellExecute = false;
                             psi_resync.RedirectStandardOutput = true;
                             psi_resync.RedirectStandardError = true;
@@ -577,7 +606,8 @@ namespace LRCatalogSync
                             Log.Debug("rclone: große Änderung >50%, es muss mit --force gestaret werden.");
                             ProcessStartInfo psi_resync = new ProcessStartInfo();
                             psi_resync.FileName = config.RclonePath;
-                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level INFO";
+                            string logLevelForce = GetRcloneLogLevel();
+                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level {logLevelForce}";
                             psi_resync.UseShellExecute = false;
                             psi_resync.RedirectStandardOutput = true;
                             psi_resync.RedirectStandardError = true;
@@ -674,7 +704,8 @@ namespace LRCatalogSync
 
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level INFO";
+                string logLevel = GetRcloneLogLevel();
+                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {logLevel}";
                 psi.UseShellExecute = false;
                 psi.RedirectStandardOutput = true;
                 psi.RedirectStandardError = true;
@@ -722,9 +753,10 @@ namespace LRCatalogSync
         {
             try
             {
-                if (!File.Exists(logFile)) return;
+                if (string.IsNullOrEmpty(logFile) || !File.Exists(logFile)) return;
 
-                string[] lines = File.ReadAllLines(logFile);
+                string[] lines = ReadLogFileWithRetry(logFile, 5, 200);
+                if (lines == null || lines.Length == 0) return;
 
                 foreach (string line in lines)
                 {
@@ -745,16 +777,16 @@ namespace LRCatalogSync
                             trimmed.Contains("Manifest") ||
                             trimmed.Contains("Database") ||
                             trimmed.Contains("Deleted:") ||
-                            trimmed.Contains("Transferred:")) 
-                          //  trimmed.Contains("Elapsed time:"))
+                            trimmed.Contains("Transferred:"))
                         {
                             Log.Debug("rclone: " + trimmed);
                         }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Debug($"WriteRcloneStats Fehler: {ex.Message}");
             }
         }
 
@@ -762,11 +794,14 @@ namespace LRCatalogSync
         {
             try
             {
-                // Sucht im lokalen Verzeichnis nach .lrcat Dateien und gibt die letzte Änderungszeit der neuesten zurück
+                // Sucht im lokalen Verzeichnis nach .lrcat Dateien (nur oberste Ebene)
                 string[] files = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
 
-                // Wenn keine .lrcat Datei gefunden → gib null zurück
-                if (files.Length == 0) return null;
+                if (files.Length == 0)
+                {
+                    currentCatalogName = null;
+                    return null;
+                }
 
                 // Finde die neueste Datei 
                 FileInfo newest = null;
@@ -776,10 +811,19 @@ namespace LRCatalogSync
                     if (newest == null || fi.LastWriteTime > newest.LastWriteTime)
                         newest = fi;
                 }
-                return newest?.LastWriteTime;
+
+                if (newest != null)
+                {
+                    currentCatalogName = Path.GetFileNameWithoutExtension(newest.Name);
+                    return newest.LastWriteTime;
+                }
+
+                currentCatalogName = null;
+                return null;
             }
             catch
             {
+                currentCatalogName = null;
                 return null;
             }
         }
@@ -936,38 +980,212 @@ namespace LRCatalogSync
             }
         }
 
+        private string GetRcloneLogLevel()
+        {
+            // Konvertiere unsere Log-Level zu rclone-kompatiblen Leveln
+            return config.LogLevel switch
+            {
+                "Aus" => "ERROR",           // "Aus" = nur Fehler, entspricht ERROR
+                "DEBUG" => "DEBUG",
+                "INFO" => "INFO",
+                "NOTICE" => "NOTICE",
+                "ERROR" => "ERROR",
+                _ => "INFO"                 // Fallback auf INFO
+            };
+        }
+
+        // Schreibschutz-Handling entfernt: Methode bleibt leer für Rückwärtskompatibilität
         private void SetCatalogReadOnly(bool readOnly)
+        {
+            // keine Operation
+        }
+
+        private void TryDeleteFileWithRetry(string path, int maxRetries = 5, int delayMs = 200)
         {
             try
             {
-                // Suche nach *.lrcat im LocalPath (nur oberste Ebene)
-                string[] lrcatFiles = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
-
-                if (lrcatFiles.Length == 0)
+                for (int i = 0; i < maxRetries; i++)
                 {
-                    Log.Debug($"Catalog: Keine *.lrcat Datei gefunden in {config.LocalPath}");
-                    return;
-                }
-
-                // Bearbeite die erste (und normalerweise einzige) Datei
-                FileInfo fileInfo = new FileInfo(lrcatFiles[0]);
-
-                if (readOnly)
-                {
-                    // Schreibschutz AKTIVIEREN
-                    fileInfo.Attributes |= FileAttributes.ReadOnly;
-                    Log.Debug($"Catalog: Schreibschutz aktiviert für {fileInfo.Name}");
-                }
-                else
-                {
-                    // Schreibschutz DEAKTIVIEREN
-                    fileInfo.Attributes &= ~FileAttributes.ReadOnly;
-                    Log.Debug($"Catalog: Schreibschutz deaktiviert für {fileInfo.Name}");
+                    try
+                    {
+                        if (File.Exists(path)) File.Delete(path);
+                        return;
+                    }
+                    catch (IOException)
+                    {
+                        if (i < maxRetries - 1) Thread.Sleep(delayMs);
+                        else throw;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"Fehler beim Setzen von Schreibschutz: {ex.Message}");
+                Log.Debug($"TryDeleteFileWithRetry: konnte Datei nicht löschen {path}: {ex.Message}");
+            }
+        }
+
+        private bool WaitForFileUnlocked(string path, int timeoutMs = 5000, int pollMs = 200)
+        {
+            try
+            {
+                DateTime end = DateTime.Now.AddMilliseconds(timeoutMs);
+                while (DateTime.Now < end)
+                {
+                    try
+                    {
+                        using (var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                        {
+                            return true;
+                        }
+                    }
+                    catch (IOException)
+                    {
+                        Thread.Sleep(pollMs);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"WaitForFileUnlocked Fehler: {ex.Message}");
+            }
+            return false;
+        }
+
+        private void BackupLocalCatalog(string catalogName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(catalogName))
+                {
+                    Log.Debug("Backup: Kein Katalogname verfügbar, Backup übersprungen");
+                    return;
+                }
+
+                string sourceDir = config.LocalPath;
+                string backupDir = Path.Combine(sourceDir, "Katalog.old");
+
+                // Wenn Backup-Ordner existiert, Inhalt löschen
+                if (Directory.Exists(backupDir))
+                {
+                    Log.Debug($"Backup: Vorhandener Backup-Ordner wird gelöscht: {backupDir}");
+                    try
+                    {
+                        Directory.Delete(backupDir, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug($"Backup: Fehler beim Löschen des bestehenden Backup-Ordners: {ex.Message}");
+                    }
+                }
+                Directory.CreateDirectory(backupDir);
+                Log.Debug($"Backup: Backup-Ordner erstellt: {backupDir}");
+
+                // Liste der zu sichernden Einträge
+                string[] dirsToCopy = new string[] {
+                    Path.Combine(sourceDir, catalogName + " Sync.lrdata"),
+                    Path.Combine(sourceDir, catalogName + ".lrcat-data"),
+                    Path.Combine(sourceDir, catalogName + " Helper.lrdata")
+                };
+
+                foreach (string d in dirsToCopy)
+                {
+                    if (Directory.Exists(d))
+                    {
+                        string dest = Path.Combine(backupDir, Path.GetFileName(d));
+                        DirectoryCopy(d, dest, true);
+                        Log.Debug($"Backup: Verzeichnis gesichert: {d} -> {dest}");
+                    }
+                    else
+                    {
+                        Log.Debug($"Backup: Verzeichnis nicht vorhanden und wurde übersprungen: {d}");
+                    }
+                }
+
+                // Katalog-Datei
+                string catalogFile = Path.Combine(sourceDir, catalogName + ".lrcat");
+                if (File.Exists(catalogFile))
+                {
+                    string destFile = Path.Combine(backupDir, Path.GetFileName(catalogFile));
+                    File.Copy(catalogFile, destFile, true);
+                    Log.Debug($"Backup: Datei gesichert: {catalogFile} -> {destFile}");
+                }
+                else
+                {
+                    Log.Debug($"Backup: Katalog-Datei nicht gefunden: {catalogFile}");
+                }
+
+                // ================= NACH BACKUP: ORIGINALE LÖSCHEN =================
+                Log.Debug("Backup: Lösche Originale nach erfolgreichem Backup");
+
+                foreach (string d in dirsToCopy)
+                {
+                    try
+                    {
+                        if (Directory.Exists(d))
+                        {
+                            Directory.Delete(d, true);
+                            Log.Debug($"Backup: Original-Verzeichnis gelöscht: {d}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"Backup: Fehler beim Löschen des Originals {d}: {ex.Message}");
+                    }
+                }
+
+                if (File.Exists(catalogFile))
+                {
+                    try
+                    {
+                        File.Delete(catalogFile);
+                        Log.Debug($"Backup: Original-Katalog-Datei gelöscht: {catalogFile}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"Backup: Fehler beim Löschen der Katalog-Datei {catalogFile}: {ex.Message}");
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Backup-Fehler: {ex.Message}");
+            }
+        }
+
+        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+            if (!dir.Exists)
+            {
+                return;
+            }
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+            // If the destination directory doesn't exist, create it.
+            if (!Directory.Exists(destDirName))
+            {
+                Directory.CreateDirectory(destDirName);
+            }
+
+            // Get the files in the directory and copy them to the new location.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string temppath = Path.Combine(destDirName, file.Name);
+                file.CopyTo(temppath, true);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location.
+            if (copySubDirs)
+            {
+                foreach (DirectoryInfo subdir in dirs)
+                {
+                    string temppath = Path.Combine(destDirName, subdir.Name);
+                    DirectoryCopy(subdir.FullName, temppath, copySubDirs);
+                }
             }
         }
 

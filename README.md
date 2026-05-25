@@ -84,7 +84,7 @@ Zu prüfen ob .NET 4.8 installiert ist:
 | Feld | Beschreibung | Beispiel |
 |------|-------------|---------|
 | **Rclone Pfad** | Pfad zur rclone.exe | `C:\Programme\rclone` oder `./rclone` |
-| **Log-Level** | Detailgrad des Loggings | Debug, Info, Warn, Error, Aus |
+| **Log-Level** | Detailgrad des Loggings | DEBUG, INFO, NOTICE, ERROR, Aus |
 
 #### Lightroom Katalog
 | Feld | Beschreibung | Beispiel |
@@ -140,17 +140,17 @@ Zu prüfen ob .NET 4.8 installiert ist:
 |------|-------------|
 | `data/config/LRSync.conf` | Hauptkonfigurationsdatei von LRCatalogSync (wird automatisch erstellt) |
 | `data/config/rclone.conf` | Konfigurationsdatei von rclone (wird automatisch erstellt) |
-| `data/logs/` | Ordner für Log-Dateien (Debug, Info, Warn, Error) |
+| `data/logs/` | Ordner für Log-Dateien (AUS, DEBUG, INFO, NOTICE, ERROR) |
 
 ---
 
 ### Log-Levels erklärt
 
 - **Aus**: Keine Logs
-- **Debug**: Detaillierte technische Informationen (für Entwicklung/Debugging)
-- **Info**: Wichtige Informationen (Sync-Start, Sync-Ende)
-- **Warn**: Warnungen (Lock erkannt, Verbindung unterbrochen)
-- **Error**: Nur Fehler
+- **DEBUG**: Detaillierte technische Informationen (für Entwicklung/Debugging)
+- **INFO**: Wichtige Informationen (Sync-Start, Sync-Ende)
+- **NOTICE**: Warnungen (Lock erkannt, Verbindung unterbrochen)
+- **ERROR**: Nur Fehler
 
 ---
 

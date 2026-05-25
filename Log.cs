@@ -20,7 +20,7 @@ namespace LRCatalogSync
             Aus = -1,
             Debug = 0,
             Info = 1,
-            Warn = 2,
+            Notice = 2,
             Error = 3
         }
 
@@ -44,7 +44,16 @@ namespace LRCatalogSync
 
         public static void SetLogLevel(string level)
         {
-            currentLogLevel = level;
+            // Normalisiere zu enum-kompatiblen Namen (case-insensitiv)
+            currentLogLevel = level?.ToUpper() switch
+            {
+                "AUS" => "Aus",
+                "DEBUG" => "Debug",
+                "INFO" => "Info",
+                "NOTICE" => "Notice",
+                "ERROR" => "Error",
+                _ => level ?? "Info"  // Fallback auf Original oder Default
+            };
         }
 
         // Prüft ob eine Nachricht geschrieben werden soll
@@ -163,7 +172,7 @@ namespace LRCatalogSync
         // Convenience-Methoden für verschiedene Stufen
         public static void Debug(string message) => Write(message, "Debug");
         public static void Info(string message) => Write(message, "Info");
-        public static void Warn(string message) => Write(message, "Warn");
+        public static void Notice(string message) => Write(message, "Notice");
         public static void Error(string message) => Write(message, "Error");
 
         /// Formatiert eine Zeit als String
