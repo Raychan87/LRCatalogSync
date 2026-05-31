@@ -1,654 +1,287 @@
-﻿using System;
+using System;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
-using System.Drawing.Text;
 using System.IO;
-using System.Net.NetworkInformation;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Text.RegularExpressions;
 
 namespace LRCatalogSync
 {
+    /// <summary>
+    /// Vereinfachte Variante der Anwendung: Nur Tray-Icon, Einstellungen und Backup-Sync
+    /// </summary>
     public class LRCatSync : ApplicationContext
     {
-        // Variablen
-        private NotifyIcon trayIcon;
-        private System.Windows.Forms.Timer timer;
-        private AppConfig config;
-        
-        private Icon iconGreen;
-        private Icon iconRed;
-        private Icon iconBlue;
-        private Icon iconYellow;
-        private Icon iconWhite;
+        // ==================== EIGENSCHAFTEN ====================
+        private NotifyIcon trayIcon;           // Tray-Icon für die Anwendung in der Taskleiste
+        private AppConfig config;               // Konfigurationsdaten laden/speichern
+        private Icon iconGreen;                 // Statusicon: Grün (Standby)
+        private Icon iconRed;                   // Statusicon: Rot (Fehler)
+        private Icon iconYellow;                // Statusicon: Gelb (Syncing)
 
-        private string status = "Standby";
-        private bool lockfile = false;
-        private bool settingsMissingLogged = false;
-        private bool isSyncing = false; // Verhindert gleichzeitige Syncs
-        private readonly object syncLock = new object(); // Thread-Safety für isSyncing
-        // Speichert den aktuell ermittelten Katalognamen (ohne Extension)
-        private string currentCatalogName = null;
-        // UI Synchronization context captured on construction (UI thread)
-        private readonly SynchronizationContext uiContext;      
+        private readonly SynchronizationContext uiContext; // Sichert UI-Thread-Zugriff
 
+        // ==================== KONSTRUKTOR ====================
+        /// <summary>
+        /// Initialisiert die Anwendung: Logs, Config, Tray-Icon und Kontextmenü
+        /// </summary>
         public LRCatSync()
         {
+            // ========== INITIALISIERUNG ==========
+            // Logs im Verzeichnis data/logs erstellen
             Log.Initialize(GlobalData.BaseDir);
-            Log.Info("========= LR Catalog Sync gestartet =========");
+            Log.Info("LR Catalog Sync gestartet");
 
-            // Config laden
+            // Config aus Datei laden (falls vorhanden, sonst Standard-Einstellungen)
             config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
             Log.SetLogLevel(config.LogLevel);
 
-            // Falls Config nicht existiert, erstelle Ordner und speichere Standard-Config
-            if (!File.Exists(GlobalData.LRCatSyncConfigPath))
-            {
-                string configDir = Path.Combine(GlobalData.BaseDir, "data", "config");
-                if (!Directory.Exists(configDir))
-                    Directory.CreateDirectory(configDir);
-                Log.Debug("Neue LRCatSync.conf erstellt mit Standard-Einstellungen");
-            }
-
-            // Capture the current SynchronizationContext (should be the UI context)
+            // UI-Kontext speichern für Thread-sichere Updates
             uiContext = SynchronizationContext.Current;
 
-            // Icons
-            iconGreen = CreateColoredIcon(Color.Green);
-            iconRed = CreateColoredIcon(Color.Red);
-            iconBlue = CreateColoredIcon(Color.DodgerBlue);
-            iconYellow = CreateColoredIcon(Color.Orange);
-            iconWhite = CreateColoredIcon(Color.White);
+            // ========== ICONS ERSTELLEN ==========
+            // Erstelle farbige Kreisicons für verschiedene Status
+            iconGreen = CreateColoredIcon(Color.Green);   // Standby
+            iconRed = CreateColoredIcon(Color.Red);       // Fehler
+            iconYellow = CreateColoredIcon(Color.Orange); // Syncing
 
-            // Tray-Icon
+            // ========== TRAY-ICON EINRICHTEN ==========
             trayIcon = new NotifyIcon()
             {
                 Icon = iconGreen,
-                Text = "LR Catalog Sync - Start...",
+                Text = "LR Catalog Sync - Standby",
                 Visible = true
             };
 
-            // Context-Menü
-            ContextMenuStrip menu = new ContextMenuStrip();
-            ToolStripMenuItem statusItem = new ToolStripMenuItem("Status: Start...");
-            statusItem.Name = "statusItem";
-            statusItem.Enabled = false;
+            // ========== KONTEXTMENÜ ERSTELLEN ==========
+            var menu = new ContextMenuStrip();
+
+            // Status-Anzeige (nur anzeigen, nicht anklickbar)
+            var statusItem = new ToolStripMenuItem("Status: Standby") { Enabled = false, Name = "statusItem" };
             menu.Items.Add(statusItem);
             menu.Items.Add(new ToolStripSeparator());
-            ToolStripMenuItem settingsItem = new ToolStripMenuItem("Einstellungen");
+
+            // Menü-Eintrag: Einstellungen öffnen
+            var settingsItem = new ToolStripMenuItem("Einstellungen");
             settingsItem.Click += (s, e) =>
             {
-                // ================= PRÜFE OB SYNC LÄUFT =================
-                // Thread-safe überprüfen, ob gerade synchronisiert wird
-                lock (syncLock)
+                using (var form = new SettingsForm(config))
                 {
-                    if (isSyncing)
-                    {
-                        MessageBox.Show(
-                            "Die Einstellungen können nicht geöffnet werden, während ein Sync läuft.\n\nBitte warten Sie, bis der Sync abgeschlossen ist.",
-                            "Sync läuft",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-                        return;
-                    }
-                }
-
-                // ================= Timer pausieren =================
-                timer.Stop();
-                Log.Debug("Einstellungen geöffnet - Sync pausiert");
-
-                using (SettingsForm form = new SettingsForm(config))
-                {
+                    // Zeige Einstellungs-Dialog
                     if (form.ShowDialog() == DialogResult.OK)
                     {
-                        // Config neu laden
+                        // Config neu laden (wurde in SettingsForm gespeichert)
                         config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
                         Log.SetLogLevel(config.LogLevel);
-                        settingsMissingLogged = false; // Zurücksetzen
                         Log.Info("Einstellungen aktualisiert");
-                    }
-                    else
-                    {
-                        Log.Debug("Einstellungen abgebrochen");
+                        UpdateStatus("Standby");
                     }
                 }
-
-                // ================= Timer wieder starten =================
-                timer.Start();
-                Log.Debug("Einstellungen geschlossen - Sync fortgesetzt");
             };
             menu.Items.Add(settingsItem);
-            menu.Items.Add(new ToolStripSeparator());
-            ToolStripMenuItem exitItem = new ToolStripMenuItem("Beenden");
-            exitItem.Click += (s, e) =>
+
+            // Menü-Eintrag: Backup jetzt manuell starten
+            var backupNow = new ToolStripMenuItem("Backup jetzt");
+            backupNow.Click += (s, e) =>
             {
-                Log.Debug("Beendet durch Benutzer");
-                trayIcon.Visible = false;
-                Application.Exit();
-            };
-            menu.Items.Add(exitItem);
-            trayIcon.ContextMenuStrip = menu;
+                UpdateStatus("Syncing"); // Tray-Icon auf "Syncing" setzen
 
-            // Erster Sync-Check
-            MainSync();
-
-            // Timer für periodische Checks (läuft im UI-Thread, aber delegiert zu Background-Thread)
-            timer = new System.Windows.Forms.Timer();
-            timer.Interval = GlobalConst.CHECK_INTERVAL * 1000;
-            timer.Tick += Timer_Tick;
-            timer.Start();
-        }
-
-        private void Timer_Tick(object sender, EventArgs e)
-        {
-            // Delegiere zu Background-Thread um UI nicht zu blockieren
-            // Mit Thread-Safety: Nur starten wenn nicht bereits am Synchen
-            lock (syncLock)
-            {
-                if (!isSyncing)
+                // Backup in Background-Thread ausführen (UI nicht blockieren)
+                ThreadPool.QueueUserWorkItem(_ =>
                 {
-                    isSyncing = true;
-                    Task.Run(() => MainSync());
-                }
-            }
-        }
-
-        private void MainSync()
-        {
-            try
-            {
-                // ================= EINSTELLUNGEN PRÜFEN =================
-                if (!File.Exists(GlobalData.LRCatSyncConfigPath) || !File.Exists(GlobalData.RcloneConfigPath))
-                {
-                    if (!settingsMissingLogged)
+                    try
                     {
-                        Log.Error("Einstellungen fehlen! LRCatSync.conf oder rclone.conf nicht vorhanden.");
-                        Log.Error("Bitte öffnen Sie das Einstellungsmenü (Trayicon -> Einstellungen) und konfigurieren Sie das Programm.");
-                        settingsMissingLogged = true;
-                    }
-                    SetStatus("SettingsMissing");
-                    return;
-                }
-
-                // Prüfe ob notwendige Einstellungen vorhanden sind
-                if (string.IsNullOrEmpty(config.LocalPath) || string.IsNullOrEmpty(config.RemoteIP))
-                {
-                    if (!settingsMissingLogged)
-                    {
-                        Log.Error("Unvollständige Einstellungen! Bitte konfigurieren Sie alle erforderlichen Felder.");
-                        settingsMissingLogged = true;
-                    }
-                    SetStatus("SettingsMissing");
-                    return;
-                }
-
-                // Wenn wir hier sind, sind Einstellungen vorhanden
-                settingsMissingLogged = false;
-
-                bool CatalogSyncStart = false;
-                string SyncDirection = "";
-
-                // ================= 1. KATALOG LOKAL ERMITTELN UND LOCK PRÜFEN =================
-                DateTime? localDate = GetLocalCatalogDate(); // setzt currentCatalogName
-
-                if (!string.IsNullOrEmpty(currentCatalogName))
-                {
-                    string lockPath = Path.Combine(config.LocalPath, currentCatalogName + ".lrcat.lock");
-                    if (File.Exists(lockPath))
-                    {
-                        if (!lockfile)
+                        // ========== VALIDIERUNGEN ==========
+                        // Prüfe ob rclone.conf existiert
+                        if (!File.Exists(GlobalData.RcloneConfigPath))
                         {
-                            Log.Info("Lock erkannt");
-                            lockfile = true;
+                            Log.Error("rclone.conf fehlt. Bitte Einstellungen prüfen.");
+                            UpdateStatus("Error");
+                            return;
                         }
-                        SetStatus("Lock");
-                        return;
-                    }
 
-                    if (lockfile)
-                    {
-                        Log.Info("Lock entfernt - Sync wird fortgesetzt");
-                        lockfile = false;
-                    }
-                }
-                else
-                {
-                    // Kein lokaler Katalog gefunden - kein Lock möglich
-                    if (lockfile)
-                    {
-                        Log.Info("Lock entfernt - Sync wird fortgesetzt");
-                        lockfile = false;
-                    }
-                }
-
-                // ================= 2. Netzwerk Prüfen =================
-                string remoteFull = GlobalConst.REMOTE_NAME;
-                if (!string.IsNullOrEmpty(config.RemotePath))
-                    remoteFull += ":" + config.RemotePath;
-
-                // Nur prüfen ob rclone.exe existiert
-                if (!File.Exists(config.RclonePath))
-                {
-                    Log.Error("rclone.exe nicht gefunden!");
-                    SetStatus("rclone");
-                    return;
-                }
-
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsd \"{remoteFull}\"";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                using (Process p = Process.Start(psi))
-                {
-                    string output = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
-                    if (p.ExitCode != 0 || output.Length < 10)
-                    {
-                        Log.Notice("Samba-Verbindung fehlgeschlagen");
-                        Log.Debug($"rclone Pfad: {config.RclonePath}");
-                        Log.Debug($"rclone Config Pfad: {GlobalData.RcloneConfigPath}");
-                        Log.Debug($"Remote: {remoteFull}");
-                        SetStatus("rclone");
-                        return;
-                    }
-                }
-
-                // ================= 4. KATALOG PRÜFEN =================
-                // remoteDate ermitteln
-                DateTime? remoteDate = GetRemoteCatalogDate();
-
-                // Änderungszeit von den Katalogen
-                Log.Debug($"Catalog: Check: Lokal={Log.FormatDateTime(localDate)} | Remote={Log.FormatDateTime(remoteDate)}");                
-
-                // Wenn lokal ein Katalog existiert, dann...
-                if (localDate != null)
-                {
-                    // Wenn Remote kein Katalog exestiert, dann
-                    if (remoteDate == null)
-                    {
-                        Log.Info("Catalog: Kein Remote-Katalog - Upload");
-                        CatalogSyncStart = true;
-                        SyncDirection = "upload";
-                    }
-                    // Wenn beide Kataloge exestieren, dann...
-                    else
-                    {
-                        // Berechne die Differenz der Änderungszeiten in Sekunden
-                        double diff = Math.Round(((DateTime)localDate - (DateTime)remoteDate).TotalSeconds, 0);
-
-                        if (diff > GlobalConst.DIFF_SEC)
+                        // Prüfe ob rclone.exe existiert
+                        if (!File.Exists(config.RclonePath))
                         {
-                            Log.Debug("Catalog: PC New -> Upload");
-                            CatalogSyncStart = true;
-                            SyncDirection = "upload";
+                            Log.Error("rclone.exe nicht gefunden. Bitte Einstellungen prüfen.");
+                            UpdateStatus("rclone");
+                            return;
                         }
-                        else if (diff < -GlobalConst.DIFF_SEC)
+
+                        // ========== BACKUP STARTEN ==========
+                        if (config.EnableBackups)
                         {
-                            Log.Debug("Catalog: Remote New -> Download");
-                            CatalogSyncStart = true;
-                            SyncDirection = "download";
+                            try
+                            {
+                                // 1. CheckBackup(): Prüfe mit --dry-run ob Änderungen vorhanden sind
+                                if (CheckBackup())
+                                {
+                                    // 2. Wenn Änderungen gefunden: SyncBackups() ausführen
+                                    SyncBackups();
+                                }
+                                else
+                                {
+                                    Log.Info("Backup: Keine Änderungen gefunden");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Error($"Backup-Fehler: {ex.Message}");
+                            }
                         }
                         else
                         {
-                            CatalogSyncStart = false;
-                            Log.Debug("Catalog: kein Unterschied");
+                            Log.Info("Backup ist deaktiviert in den Einstellungen");
                         }
                     }
-                }
-                //Wenn lokal kein Katalog existiert, dann...
-                else
-                {
-                    // Wenn Remote ein Katalog exestiert, dann...
-                    if (remoteDate != null)
+                    finally
                     {
-                        Log.Info("Catalog: Kein Lokaler Katalog - Download");
-                        CatalogSyncStart = true;
-                        SyncDirection = "download";
+                        // Nach Backup immer zu "Standby" zurücksetzen
+                        UpdateStatus("Standby");
                     }
-                    else
-                    {
-                        Log.Error("Catalog: Keine Kataloge vorhanden");
-                        SetStatus("Error");
-                    }
-                }
+                });
+            };
+            menu.Items.Add(backupNow);
 
-                // ================= 4. SYNC KATALOG =================
-                if (CatalogSyncStart)
-                {
-                    Log.Debug("Catalog: Sync Start");
-                    SetStatus("Syncing");
+            // Menü-Trennlinie
+            menu.Items.Add(new ToolStripSeparator());
 
-                    // Katalog sync
-                    if (localDate != null && (SyncDirection == "upload" || SyncDirection == "download"))
-                    {
-                        SyncCatalog(SyncDirection);
-                    }
-                    CatalogSyncStart = false;
-                    Log.Debug("Catalog: Sync End");
-                    SetStatus("Standby");
-                }
+            // Menü-Eintrag: Programm beenden
+            var exitItem = new ToolStripMenuItem("Beenden");
+            exitItem.Click += (s, e) => { trayIcon.Visible = false; Application.Exit(); };
+            menu.Items.Add(exitItem);
 
-                // ================= 5. SYNC BACKUPS (nur wenn aktiviert) =================
-                if (config.EnableBackups)
-                {
-                    Log.Debug("Backup: Checking");
-
-                    if (CheckBackup())
-                    {
-                        Log.Debug("Backup: Check End");
-                        SetStatus("Syncing");
-                        Log.Debug("Backup: Sync Start");
-                        Thread.Sleep(1000);
-                        SyncBackups();
-                        Log.Debug("Backup: Sync End");
-                    }
-                    Log.Debug("Backup: Check End");
-                }
-                else
-                {
-                    Log.Debug("Backup: Deaktiviert - übersprungen");
-                }
-
-                Log.Debug("Sync loop End");
-                Log.Debug("===============================================");
-                SetStatus("Standby");
-
-                // ================= 7. Wenn ein Fehler passiert,... =================
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Fehler: {ex.Message}");
-                SetStatus("NoConnection");
-            }
-            finally
-            {
-                lock (syncLock)
-                {
-                    isSyncing = false;
-                }
-            }
+            // Menü an Tray-Icon binden
+            trayIcon.ContextMenuStrip = menu;
         }
 
-        private void SyncCatalog(string direction)
+        // ==================== STATUS-VERWALTUNG ====================
+        /// <summary>
+        /// Aktualisiert den Status im Tray-Icon (mit Thread-Safety)
+        /// </summary>
+        /// <param name="state">Neuer Status (Standby, Syncing, rclone, Error)</param>
+        private void UpdateStatus(string state)
         {
-            try
+            // Wenn kein UI-Kontext vorhanden, direkt setzen
+            if (uiContext == null)
             {
-                // Erstellt den kompletten Remote-Pfad, z.B. synology:Lightroom
-                string remoteFull = GlobalConst.REMOTE_NAME;
-                if (!string.IsNullOrEmpty(config.RemotePath))
-                    remoteFull += ":" + config.RemotePath; //synology:Lightroom
-
-                Log.Info($"Catalog: {direction} Start");
-
-                // Eindeutige Log-Datei für Katalog-Sync
-                string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_catalog_sync.log");
-                string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
-                if (!Directory.Exists(logsDir))
-                    Directory.CreateDirectory(logsDir);
-
-                // Alte Log-Datei löschen (sicher mit Retry) - warte gezielt, falls gesperrt
-                if (File.Exists(tempLog))
-                {
-                    if (WaitForFileUnlocked(tempLog, 5000, 200))
-                    {
-                        TryDeleteFileWithRetry(tempLog);
-                    }
-                    else
-                    {
-                        Log.Debug($"Catalog: Konnte Logdatei nicht freigeben zum Löschen: {tempLog}");
-                    }
-                }
-
-                // ================= ERSTELLE FILTER-DATEI =================
-                string filterFilePath = Path.Combine(logsDir, "rclone_catalog_filter.txt");
-                CreateCatalogFilterFile(filterFilePath);
-
-                // ================= VORHERIGE VERSIONEN SICHERN IN KATALOG.OLD =================
-                try
-                {
-                    BackupLocalCatalog(currentCatalogName);
-                }
-                catch (Exception exBackup)
-                {
-                    Log.Error($"Fehler beim Erstellen des lokalen Backups: {exBackup.Message}");
-                }
-
-                // ================= KATALOG SYNC =================
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-
-                // Bestimme rclone Argumente basierend auf Preview-Einstellung und Richtung
-                string baseArgs = $"--config \"{GlobalData.RcloneConfigPath}\" sync";
-                string filterArgs = $"--filter-from \"{filterFilePath}\"";
-                string logLevel = GetRcloneLogLevel();
-                string commonArgs = $"--update --metadata --log-file \"{tempLog}\" --log-level {logLevel}";
-
-                if (direction == "upload")
-                {
-                    psi.Arguments = $"{baseArgs} \"{config.LocalPath}\" {remoteFull} {filterArgs} {commonArgs}";
-                }
-                else
-                {
-                    psi.Arguments = $"{baseArgs} {remoteFull} \"{config.LocalPath}\" {filterArgs} {commonArgs}";
-                }
-
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                Log.Debug($"Catalog: rclone Kommando: {psi.FileName} {psi.Arguments}");
-
-                // ================= rclone Prozess =================
-                using (Process p = Process.Start(psi))
-                {
-                    p.WaitForExit();
-
-                    if (p.ExitCode != 0)
-                    {
-                        Log.Error($"Sync fehlgeschlagen mit Exit-Code: {p.ExitCode}");
-                    }
-                }
-
-                // Warte kurz, bis rclone die Datei komplett freigegeben hat
-                Thread.Sleep(500);
-
-                Log.Info($"Catalog: {direction} complete");
-
-                WriteRcloneStats(tempLog);
-
-                // Schreibschutz-Deaktivierung entfernt (kein Deaktivieren mehr)
-                // ================= Optional: Remote read-only Status aufheben =================
-                RemoveRemoteReadOnly();
+                SetTrayText(state);
+                return;
             }
-            catch (Exception ex)
+
+            // Prüfe ob bereits im UI-Thread
+            if (SynchronizationContext.Current == uiContext)
             {
-                Log.Error($"Sync-Fehler: {ex.Message}");
+                // Ja: direkt setzen
+                SetTrayText(state);
             }
-            finally
+            else
             {
-                // Schreibschutz-Deaktivierung entfernt - kein Vorgehen nötig
+                // Nein: Post in UI-Thread zum Setzen
+                uiContext.Post(_ => SetTrayText(state), null);
             }
         }
 
-        private void CreateCatalogFilterFile(string filterFilePath)
+        /// <summary>
+        /// Setzt Icon und Text des Tray-Icons basierend auf Status
+        /// </summary>
+        /// <param name="state">Status (Standby, Syncing, rclone, Error)</param>
+        private void SetTrayText(string state)
         {
-            try
+            switch (state)
             {
-                // Konvertiere LocalPath zu absolut Pfad mit Forward-Slashes
-                string absoluteLocalPath = Path.GetFullPath(config.LocalPath).Replace("\\", "/");
-
-                // Liste der Filter-Regeln
-                var filterLines = new System.Collections.Generic.List<string>();
-
-                if (!config.SyncPreviewData)
-                {
-                    // Wenn Preview-Daten NICHT synchronisiert werden sollen
-                    filterLines.Add("+ /*Smart Previews.lrdata/");
-                    filterLines.Add("- /*Previews.lrdata/**");
-                    Log.Debug("Catalog: Filter erstellt - *Previews.lrdata ausgeschlossen, *Smart Previews.lrdata wird synchronisiert");
-                }
-                else
-                {
-                    // Wenn Preview-Daten synchronisiert werden sollen
-                    Log.Debug("Catalog: Alle Preview-Daten werden synchronisiert - keine Filter für Previews");
-                }
-
-                // Exclude Backups Ordner immer
-                filterLines.Add($"- {absoluteLocalPath}");
-
-                // Schreibe Filter-Datei
-                File.WriteAllLines(filterFilePath, filterLines);
-                Log.Debug($"Catalog: Filter-Datei erstellt: {filterFilePath}");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Fehler beim Erstellen der Filter-Datei: {ex.Message}");
+                case "Standby":
+                    trayIcon.Icon = iconGreen;
+                    trayIcon.Text = "LR Catalog Sync - Standby";
+                    break;
+                case "Syncing":
+                    trayIcon.Icon = iconYellow;
+                    trayIcon.Text = "LR Catalog Sync - Synchronisiere...";
+                    break;
+                case "rclone":
+                    trayIcon.Icon = iconRed;
+                    trayIcon.Text = "LR Catalog Sync - rclone Fehler";
+                    break;
+                case "Error":
+                    trayIcon.Icon = iconRed;
+                    trayIcon.Text = "LR Catalog Sync - Fehler";
+                    break;
             }
         }
 
+        // ==================== BACKUP-FUNKTIONEN ====================
+        /// <summary>
+        /// Prüft mit rclone --dry-run ob Backup-Unterschiede vorhanden sind
+        /// Gibt true zurück wenn Änderungen gefunden, false wenn keine Änderungen
+        /// </summary>
         private bool CheckBackup()
         {
             try
             {
-                bool BackupChange = false;
-
+                // ========== REMOTE-PFAD ZUSAMMENSTELLEN ==========
+                // z.B. "synology:" + "/Lightroom/Backups" = "synology:/Lightroom/Backups"
                 string remoteFull = GlobalConst.REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.BackupsRemotePath))
                     remoteFull += ":" + config.BackupsRemotePath;
 
-                Log.Debug($"Backup: Pfad: {config.BackupsLocalPath} <-> {config.BackupsRemotePath}");
-
-                // Eindeutige Log-Datei für Backup-Check
+                // ========== LOG-DATEI VORBEREITEN ==========
+                // Speicherpfad für rclone Logdatei
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_check.log");
                 string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
+
+                // Erstelle Logs-Verzeichnis falls nicht vorhanden
                 if (!Directory.Exists(logsDir))
                     Directory.CreateDirectory(logsDir);
 
+                // Alte Log-Datei löschen
                 if (File.Exists(tempLog))
                     File.Delete(tempLog);
 
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-                string logLevel = GetRcloneLogLevel();
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {logLevel} --dry-run";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
+                // ========== RCLONE PROZESS STARTEN ==========
+                // Starte rclone mit bisync --dry-run (Probe ohne echte Änderungen)
+                var psi = new ProcessStartInfo
+                {
+                    FileName = config.RclonePath,
+                    // bisync: bidirektionale Sync-Prüfung
+                    // --dry-run: nur prüfen, nichts ändern
+                    // --log-level: Logging-Verbosität
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --dry-run",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
 
-                using (Process p = Process.Start(psi))
+                // Warte max. WATCHDOG_TIME Sekunden auf rclone
+                using (var p = Process.Start(psi))
                 {
                     p.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
                 }
-                
-                // Warte kurz, bis rclone die Datei komplett freigegeben hat
-                Thread.Sleep(500);
 
-                // Versuche die Log-Datei zu lesen (mit Retry)
-                string[] lines = ReadLogFileWithRetry(tempLog);
+                // Kurze Pause damit Log-Datei vollständig geschrieben wird
+                Thread.Sleep(300);
+
+                // ========== LOG-DATEI AUSLESEN ==========
+                var lines = ReadLogFileWithRetry(tempLog, 5, 200);
                 if (lines == null || lines.Length == 0)
+                    return false;
+
+                // ========== ERGEBNIS PRÜFEN ==========
+                // Suche nach Änderungen-Indikatoren in der rclone Log-Datei
+                foreach (var line in lines)
                 {
-                    Log.Debug("Backup: Keine Log-Datei gefunden oder Datei ist leer");
-                    return BackupChange;
+                    var t = line.Trim();
+
+                    // Keine Änderungen gefunden
+                    if (t.Contains("No changes found"))
+                        return false;
+
+                    // Änderungen gefunden (Copied, Deleted oder Skipped)
+                    if (t.Contains("Skipped") || t.Contains("Copied") || t.Contains("Deleted"))
+                        return true;
                 }
 
-                foreach (string line in lines)
-                {
-                    string trimmed = line.Trim();
-
-                    // DEBUG: Zeige alle ERROR-Zeilen
-                    if (trimmed.Contains("ERROR"))
-                    {
-                        Log.Debug($"DEBUG ERROR: '{trimmed}'");                        
-
-                        // Prüfe auf Resync-Fehler (flexibler)
-                        if (trimmed.Contains("Bisync aborted") &&
-                            trimmed.Contains("resync"))
-                        {                            
-                            Log.Debug("rclone: *.lck Files fehlen, Bisync abgebrochen, es muss mit --resync gestaret werden.");
-                            Log.Debug("Backup: resync Start");
-                            SetStatus("Syncing");
-
-                            ProcessStartInfo psi_resync = new ProcessStartInfo();
-                            psi_resync.FileName = config.RclonePath;
-                            string logLevelResync = GetRcloneLogLevel();
-                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --resync --metadata --log-file \"{tempLog}\" --log-level {logLevelResync}";
-                            psi_resync.UseShellExecute = false;
-                            psi_resync.RedirectStandardOutput = true;
-                            psi_resync.RedirectStandardError = true;
-                            psi_resync.CreateNoWindow = true;
-
-                            using (Process p = Process.Start(psi_resync))
-                            {
-                                p.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
-                                Thread.Sleep(500); // Auch hier warten
-                                if (p.ExitCode != 0)
-                                {
-                                    Log.Error("Sync fehlgeschlagen");
-                                }
-                            }
-                            Thread.Sleep(1000);
-                            SetStatus("Standby");
-                            Log.Debug("Backup: resync End");
-                            return false;
-                        }
-
-                        if (trimmed.Contains("too many deletes"))
-                        {
-                            Log.Debug("rclone: große Änderung >50%, es muss mit --force gestaret werden.");
-                            ProcessStartInfo psi_resync = new ProcessStartInfo();
-                            psi_resync.FileName = config.RclonePath;
-                            string logLevelForce = GetRcloneLogLevel();
-                            psi_resync.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --force --metadata --log-file \"{tempLog}\" --log-level {logLevelForce}";
-                            psi_resync.UseShellExecute = false;
-                            psi_resync.RedirectStandardOutput = true;
-                            psi_resync.RedirectStandardError = true;
-                            psi_resync.CreateNoWindow = true;
-
-                            using (Process p = Process.Start(psi_resync))
-                            {
-                                p.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
-                                Thread.Sleep(500); // Auch hier warten
-                                if (p.ExitCode != 0)
-                                {
-                                    Log.Error("Sync fehlgeschlagen");
-                                }
-                            }
-                            Thread.Sleep(1000);
-                            SetStatus("Standby");
-                            Log.Debug("Backup: resync End");
-                            return false;
-                        }
-                    }
-                }
-
-                // Nach dem Resync-Check, jetzt auf "No changes" prüfen
-                foreach (string line in lines)
-                {
-                    string trimmed = line.Trim();
-
-                    if (trimmed.Contains("No changes found"))
-                    {
-                        Log.Debug("Backup: Keine Änderungen gefunden");
-                        BackupChange = false;
-                        break;
-                    }
-                    else if (trimmed.Contains("Skipped"))
-                    {
-                        Log.Debug("Backup: Änderungen gefunden");
-                        BackupChange = true;
-                        break;
-                    }
-                }
-                return BackupChange;
+                return false;
             }
             catch (Exception ex)
             {
@@ -657,43 +290,20 @@ namespace LRCatalogSync
             }
         }
 
-        private string[] ReadLogFileWithRetry(string filePath, int maxRetries = 3, int delayMs = 200)
-        {
-            for (int i = 0; i < maxRetries; i++)
-            {
-                try
-                {
-                    if (!File.Exists(filePath))
-                        return new string[0];
-
-                    return File.ReadAllLines(filePath);
-                }
-                catch (IOException)
-                {
-                    if (i < maxRetries - 1)
-                    {
-                        Thread.Sleep(delayMs);
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-            }
-            return new string[0];
-        }
-
+        /// <summary>
+        /// Führt echten Backup-Sync durch (rclone bisync ohne --dry-run)
+        /// Überwacht Verbindung: Bricht ab wenn Remote 5 Sekunden nicht erreichbar
+        /// </summary>
         private void SyncBackups()
         {
             try
             {
+                // ========== REMOTE-PFAD ZUSAMMENSTELLEN ==========
                 string remoteFull = GlobalConst.REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.BackupsRemotePath))
                     remoteFull += ":" + config.BackupsRemotePath;
 
-                Log.Debug($"Backup: Pfad: {config.BackupsLocalPath} <-> {config.BackupsRemotePath}");
-
-                // Eindeutige Log-Datei für Backup-Sync
+                // ========== LOG-DATEI VORBEREITEN ==========
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_sync.log");
                 string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
                 if (!Directory.Exists(logsDir))
@@ -702,45 +312,49 @@ namespace LRCatalogSync
                 if (File.Exists(tempLog))
                     File.Delete(tempLog);
 
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-                string logLevel = GetRcloneLogLevel();
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {logLevel}";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                using (Process p = Process.Start(psi))
+                // ========== RCLONE PROZESS STARTEN ==========
+                // Starte rclone bisync (echte Synchronisation, OHNE --dry-run)
+                var psi = new ProcessStartInfo
                 {
-                    DateTime lastConnectedTime = DateTime.Now;
+                    FileName = config.RclonePath,
+                    // Unterschied zu CheckBackup: OHNE --dry-run, echte Änderungen werden durchgeführt
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFull} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
 
-                    // Wenn Prozess noch nicht beendet wurde, dann...
+                // Starte rclone und überwache Verbindung
+                using (var p = Process.Start(psi))
+                {
+                    DateTime lastConnected = DateTime.Now;
+
+                    // Solange rclone noch läuft...
                     while (!p.HasExited)
                     {
-                        // Remote ist erreichbar, dann...
+                        // Prüfe ob Remote (Samba-Server) noch erreichbar ist (Ping)
                         if (IsRemoteReachable())
                         {
-                            // Remote ist erreichbar - Zeitpunkt aktualisieren
-                            lastConnectedTime = DateTime.Now;
+                            // Ja: Aktualisiere letzten Verbindungszeitpunkt
+                            lastConnected = DateTime.Now;
                         }
-                        else
+                        else if ((DateTime.Now - lastConnected).TotalSeconds > 5)
                         {
-                            // Remote nicht erreichbar - prüfen, ob 5 Sekunden vergangen sind
-                            TimeSpan timeSinceLastConnection = DateTime.Now - lastConnectedTime;
-                            if (timeSinceLastConnection.TotalSeconds > 5)
-                            {
-                                Log.Debug("Samba nicht erreichbar für 5 Sekunden - Prozess wird beendet");
-                                SetStatus("NoConnection");
-                                p.Kill();
-                                break;
-                            }
+                            // Nein: Und länger als 5 Sekunden offline
+                            Log.Debug("Samba nicht erreichbar - breche ab");
+                            p.Kill(); // Stoppe rclone-Prozess
+                            break;
                         }
-                        Thread.Sleep(1000); // Warte 1 Sekunde
+
+                        Thread.Sleep(1000); // Prüfe jede Sekunde
                     }
-                    p.WaitForExit(); // Warte noch auf Ende, falls nicht gekillt wurde
+
+                    p.WaitForExit(); // Warte bis Prozess beendet ist
                 }
-                //Die Log-Datei auswerten und relevante Zeilen ins Log schreiben
+
+                // ========== LOG-STATISTIKEN AUSGEBEN ==========
+                // Lese rclone Logdatei und gebe Statistiken aus (Copied, Deleted, etc.)
                 WriteRcloneStats(tempLog);
             }
             catch (Exception ex)
@@ -749,38 +363,37 @@ namespace LRCatalogSync
             }
         }
 
+        /// <summary>
+        /// Liest rclone Logdatei und gibt wichtige Statistiken aus (Copied, Deleted, etc.)
+        /// </summary>
+        /// <param name="logFile">Pfad zur rclone Logdatei</param>
         private void WriteRcloneStats(string logFile)
         {
             try
             {
-                if (string.IsNullOrEmpty(logFile) || !File.Exists(logFile)) return;
+                // Prüfe ob Logdatei existiert
+                if (string.IsNullOrEmpty(logFile) || !File.Exists(logFile)) 
+                    return;
 
-                string[] lines = ReadLogFileWithRetry(logFile, 5, 200);
-                if (lines == null || lines.Length == 0) return;
+                // ========== LOG-DATEI LESEN ==========
+                var lines = ReadLogFileWithRetry(logFile, 5, 200);
+                if (lines == null || lines.Length == 0) 
+                    return;
 
-                foreach (string line in lines)
+                // ========== RELEVANTE ZEILEN FILTERN UND LOGGEN ==========
+                // Suche nach Statistik-Zeilen in rclone Logdatei
+                foreach (var line in lines)
                 {
-                    // Suche nach allen relevanten Zeilen
-                    string trimmed = line.Trim();
+                    var trimmed = line.Trim();
 
-                    // Copied ODER Deleted ODER Transferred (wenn nicht 0) ODER Elapsed
-                    if (trimmed.Contains("Copied") ||
-                        trimmed.Contains("Deleted") ||
-                        (trimmed.Contains("Transferred:") && !trimmed.Contains("0 B / 0 B")) ||
+                    // Gebe nur wichtige Zeilen aus (Copied, Deleted, Transferred, Elapsed)
+                    if (trimmed.Contains("Copied") || 
+                        trimmed.Contains("Deleted") || 
+                        (trimmed.Contains("Transferred:") && !trimmed.Contains("0 B / 0 B")) || 
                         trimmed.Contains("Elapsed time:"))
                     {
-                        // Prüfe ob es eine relevante Datei ist
-                        if (trimmed.Contains(".lrcat") ||
-                            trimmed.Contains("Backups/") ||
-                            trimmed.Contains("Lightroom-") ||
-                            trimmed.Contains("Options") ||
-                            trimmed.Contains("Manifest") ||
-                            trimmed.Contains("Database") ||
-                            trimmed.Contains("Deleted:") ||
-                            trimmed.Contains("Transferred:"))
-                        {
-                            Log.Debug("rclone: " + trimmed);
-                        }
+                        // Ausgabe ins Logfile mit rclone-Präfix
+                        Log.Debug("rclone: " + trimmed);
                     }
                 }
             }
@@ -790,451 +403,87 @@ namespace LRCatalogSync
             }
         }
 
-        private DateTime? GetLocalCatalogDate()
+        // ==================== HILFSFUNKTIONEN ====================
+        /// <summary>
+        /// Liest Datei mit Retry-Logik (falls Datei noch gesperrt ist)
+        /// </summary>
+        /// <param name="filePath">Pfad zur Datei</param>
+        /// <param name="maxRetries">Max. Anzahl Versuche</param>
+        /// <param name="delayMs">Wartezeit zwischen Versuchen in ms</param>
+        /// <returns>Array von Zeilen oder leeres Array wenn Fehler</returns>
+        private string[] ReadLogFileWithRetry(string filePath, int maxRetries = 3, int delayMs = 200)
         {
-            try
+            for (int i = 0; i < maxRetries; i++)
             {
-                // Sucht im lokalen Verzeichnis nach .lrcat Dateien (nur oberste Ebene)
-                string[] files = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
-
-                if (files.Length == 0)
+                try
                 {
-                    currentCatalogName = null;
-                    return null;
+                    if (!File.Exists(filePath))
+                        return new string[0];
+
+                    // Versuche Datei zu lesen
+                    return File.ReadAllLines(filePath);
                 }
-
-                // Finde die neueste Datei 
-                FileInfo newest = null;
-                foreach (string file in files)
+                catch (IOException)
                 {
-                    FileInfo fi = new FileInfo(file);
-                    if (newest == null || fi.LastWriteTime > newest.LastWriteTime)
-                        newest = fi;
-                }
-
-                if (newest != null)
-                {
-                    currentCatalogName = Path.GetFileNameWithoutExtension(newest.Name);
-                    return newest.LastWriteTime;
-                }
-
-                currentCatalogName = null;
-                return null;
-            }
-            catch
-            {
-                currentCatalogName = null;
-                return null;
-            }
-        }
-
-        private DateTime? GetRemoteCatalogDate()
-        {
-            try
-            {
-                string remoteFull = GlobalConst.REMOTE_NAME;
-                if (!string.IsNullOrEmpty(config.RemotePath))
-                    remoteFull += ":" + config.RemotePath;
-
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl {remoteFull} --include \"*.lrcat\"";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                using (Process p = Process.Start(psi))
-                {
-                    string output = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(5000);
-
-                    if (string.IsNullOrEmpty(output)) return null;
-
-                    string[] lines = output.Split('\n');
-                    DateTime? newestDate = null;
-
-                    foreach (string line in lines)
-                    {
-                        // Nur Hauptverzeichnis (kein /) und .lrcat Dateien
-                        if (line.Contains(".lrcat") && !line.Contains("/"))
-                        {
-                            // Regex sucht nach Datum im Format: yyyy-MM-dd HH:mm:ss
-                            // Das funktioniert für JEDES Jahr (2020, 2021, ... 2030, etc.)
-                            Match match = Regex.Match(line, @"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})");
-
-                            if (match.Success)
-                            {
-                                string datePart = match.Groups[1].Value;
-                                try
-                                {
-                                    DateTime dt = DateTime.ParseExact(datePart, "yyyy-MM-dd HH:mm:ss", null);
-                                    if (newestDate == null || dt > newestDate)
-                                        newestDate = dt;
-                                }
-                                catch { }
-                            }
-                        }
-                    }
-                    return newestDate;
+                    // Datei ist noch gesperrt, warte und versuche erneut
+                    if (i < maxRetries - 1) 
+                        Thread.Sleep(delayMs); 
+                    else 
+                        throw; // Nach max. Versuchen: Fehler werfen
                 }
             }
-            catch
-            {
-                return null;
-            }
+            return new string[0];
         }
 
-        public void SetStatus(string newStatus)
-        {
-            if (status == newStatus) return;
-            status = newStatus;
-
-            // Stelle sicher, dass UI-Updates im UI-Thread laufen.
-            // NotifyIcon ist kein Control und hat keine InvokeRequired/Invoke.
-            // Nutze stattdessen die captured SynchronizationContext, falls vorhanden.
-            if (uiContext == null)
-            {
-                // Kein Context bekannt: führe synchron aus
-                UpdateUI();
-                return;
-            }
-
-            if (SynchronizationContext.Current == uiContext)
-            {
-                UpdateUI();
-            }
-            else
-            {
-                uiContext.Post(_ => UpdateUI(), null);
-            }
-        }
-
-        private void UpdateUI()
-        {
-            switch (status)
-            {
-                case "Standby":
-                    trayIcon.Icon = iconGreen;
-                    trayIcon.Text = "LR Catalog Sync - Standby";
-                    break;
-                case "NoConnection":
-                    trayIcon.Icon = iconWhite;
-                    trayIcon.Text = "LR Catalog Sync - Keine Verbindung!";
-                    break;
-                case "Lock":
-                    trayIcon.Icon = iconBlue;
-                    trayIcon.Text = "LR Catalog Sync - Lightroom aktiv";
-                    break;
-                case "Syncing":
-                    trayIcon.Icon = iconYellow;
-                    trayIcon.Text = "LR Catalog Sync - Synchronisiere...";
-                    break;
-                case "Error":
-                    trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - Kein Katalog gefunden!";
-                    break;
-                case "SettingsMissing":
-                    trayIcon.Icon = iconWhite;
-                    trayIcon.Text = "LR Catalog Sync - Einstellungen fehlen!";
-                    break;
-                case "rclone":
-                    trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - rclone.exe Fehler!";
-                    break;
-            }
-        }
-
+        /// <summary>
+        /// Erstellt ein farbiges Kreis-Icon (32x32 Pixel) für Tray
+        /// </summary>
+        /// <param name="color">Farbe des Kreises</param>
+        /// <returns>Icon für Tray-Anzeige</returns>
         private Icon CreateColoredIcon(Color color)
         {
-            Bitmap bitmap = new Bitmap(32, 32);
-            using (Graphics g = Graphics.FromImage(bitmap))
+            // ========== BITMAP ERSTELLEN ==========
+            var bitmap = new Bitmap(32, 32);
+
+            using (var g = Graphics.FromImage(bitmap))
             {
+                // Transparent machen (Alpha-Kanal)
                 g.Clear(Color.Transparent);
-                using (Brush brush = new SolidBrush(color))
+
+                // ========== KREIS ZEICHNEN ==========
+                // Gefüllter Kreis (Ellipse) mit Farbe
+                using (var brush = new SolidBrush(color))
                     g.FillEllipse(brush, 2, 2, 28, 28);
-                using (Pen pen = new Pen(Color.White, 2))
+
+                // Weißer Rand um den Kreis
+                using (var pen = new Pen(Color.White, 2))
                     g.DrawEllipse(pen, 2, 2, 28, 28);
             }
+
+            // Konvertiere Bitmap zu Icon und gebe zurück
             return Icon.FromHandle(bitmap.GetHicon());
         }
 
+        /// <summary>
+        /// Prüft ob Remote (Samba-Server) mit Ping erreichbar ist
+        /// </summary>
+        /// <returns>true wenn Server antwortet, false wenn nicht erreichbar</returns>
         private bool IsRemoteReachable()
         {
             try
             {
-                // 1. Holt die Remote-IP aus der Konfiguration
-                string remoteIP = config.RemoteIP; // Falls das die IP ist, sonst z.B. "192.168.1.100"
-                // 2. Erstellt einen Ping-Objekt
-                System.Net.NetworkInformation.Ping ping = new System.Net.NetworkInformation.Ping();
-                // 3. Sendet einen Ping mit 2 Sekunden Timeout
-                System.Net.NetworkInformation.PingReply reply = ping.Send(remoteIP, 2000); // 2 Sekunden Timeout
-                // 4. Prüft ob der Ping erfolgreich war
+                // ========== PING SENDEN ==========
+                var ping = new System.Net.NetworkInformation.Ping();
+                // Sende Ping mit 2 Sekunden Timeout
+                var reply = ping.Send(config.RemoteIP, 2000);
+
+                // Prüfe ob Reply erfolgreich war
                 return reply?.Status == System.Net.NetworkInformation.IPStatus.Success;
             }
             catch
             {
-                // 5. Bei Fehler wird false zurückgegeben
-                Log.Debug("Ping auf die IP war nicht erfolgreich.");
+                Log.Debug("Ping fehlgeschlagen");
                 return false;
-            }
-        }
-
-        private string GetRcloneLogLevel()
-        {
-            // Konvertiere unsere Log-Level zu rclone-kompatiblen Leveln
-            return config.LogLevel switch
-            {
-                "Aus" => "ERROR",           // "Aus" = nur Fehler, entspricht ERROR
-                "DEBUG" => "DEBUG",
-                "INFO" => "INFO",
-                "NOTICE" => "NOTICE",
-                "ERROR" => "ERROR",
-                _ => "INFO"                 // Fallback auf INFO
-            };
-        }
-
-        // Schreibschutz-Handling entfernt: Methode bleibt leer für Rückwärtskompatibilität
-        private void SetCatalogReadOnly(bool readOnly)
-        {
-            // keine Operation
-        }
-
-        private void TryDeleteFileWithRetry(string path, int maxRetries = 5, int delayMs = 200)
-        {
-            try
-            {
-                for (int i = 0; i < maxRetries; i++)
-                {
-                    try
-                    {
-                        if (File.Exists(path)) File.Delete(path);
-                        return;
-                    }
-                    catch (IOException)
-                    {
-                        if (i < maxRetries - 1) Thread.Sleep(delayMs);
-                        else throw;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Debug($"TryDeleteFileWithRetry: konnte Datei nicht löschen {path}: {ex.Message}");
-            }
-        }
-
-        private bool WaitForFileUnlocked(string path, int timeoutMs = 5000, int pollMs = 200)
-        {
-            try
-            {
-                DateTime end = DateTime.Now.AddMilliseconds(timeoutMs);
-                while (DateTime.Now < end)
-                {
-                    try
-                    {
-                        using (var fs = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-                        {
-                            return true;
-                        }
-                    }
-                    catch (IOException)
-                    {
-                        Thread.Sleep(pollMs);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Debug($"WaitForFileUnlocked Fehler: {ex.Message}");
-            }
-            return false;
-        }
-
-        private void BackupLocalCatalog(string catalogName)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(catalogName))
-                {
-                    Log.Debug("Backup: Kein Katalogname verfügbar, Backup übersprungen");
-                    return;
-                }
-
-                string sourceDir = config.LocalPath;
-                string backupDir = Path.Combine(sourceDir, "Katalog.old");
-
-                // Wenn Backup-Ordner existiert, Inhalt löschen
-                if (Directory.Exists(backupDir))
-                {
-                    Log.Debug($"Backup: Vorhandener Backup-Ordner wird gelöscht: {backupDir}");
-                    try
-                    {
-                        Directory.Delete(backupDir, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Debug($"Backup: Fehler beim Löschen des bestehenden Backup-Ordners: {ex.Message}");
-                    }
-                }
-                Directory.CreateDirectory(backupDir);
-                Log.Debug($"Backup: Backup-Ordner erstellt: {backupDir}");
-
-                // Liste der zu sichernden Einträge
-                string[] dirsToCopy = new string[] {
-                    Path.Combine(sourceDir, catalogName + " Sync.lrdata"),
-                    Path.Combine(sourceDir, catalogName + ".lrcat-data"),
-                    Path.Combine(sourceDir, catalogName + " Helper.lrdata")
-                };
-
-                foreach (string d in dirsToCopy)
-                {
-                    if (Directory.Exists(d))
-                    {
-                        string dest = Path.Combine(backupDir, Path.GetFileName(d));
-                        DirectoryCopy(d, dest, true);
-                        Log.Debug($"Backup: Verzeichnis gesichert: {d} -> {dest}");
-                    }
-                    else
-                    {
-                        Log.Debug($"Backup: Verzeichnis nicht vorhanden und wurde übersprungen: {d}");
-                    }
-                }
-
-                // Katalog-Datei
-                string catalogFile = Path.Combine(sourceDir, catalogName + ".lrcat");
-                if (File.Exists(catalogFile))
-                {
-                    string destFile = Path.Combine(backupDir, Path.GetFileName(catalogFile));
-                    File.Copy(catalogFile, destFile, true);
-                    Log.Debug($"Backup: Datei gesichert: {catalogFile} -> {destFile}");
-                }
-                else
-                {
-                    Log.Debug($"Backup: Katalog-Datei nicht gefunden: {catalogFile}");
-                }
-
-                // ================= NACH BACKUP: ORIGINALE LÖSCHEN =================
-                Log.Debug("Backup: Lösche Originale nach erfolgreichem Backup");
-
-                foreach (string d in dirsToCopy)
-                {
-                    try
-                    {
-                        if (Directory.Exists(d))
-                        {
-                            Directory.Delete(d, true);
-                            Log.Debug($"Backup: Original-Verzeichnis gelöscht: {d}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"Backup: Fehler beim Löschen des Originals {d}: {ex.Message}");
-                    }
-                }
-
-                if (File.Exists(catalogFile))
-                {
-                    try
-                    {
-                        File.Delete(catalogFile);
-                        Log.Debug($"Backup: Original-Katalog-Datei gelöscht: {catalogFile}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"Backup: Fehler beim Löschen der Katalog-Datei {catalogFile}: {ex.Message}");
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Backup-Fehler: {ex.Message}");
-            }
-        }
-
-        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
-        {
-            // Get the subdirectories for the specified directory.
-            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-
-            if (!dir.Exists)
-            {
-                return;
-            }
-
-            DirectoryInfo[] dirs = dir.GetDirectories();
-            // If the destination directory doesn't exist, create it.
-            if (!Directory.Exists(destDirName))
-            {
-                Directory.CreateDirectory(destDirName);
-            }
-
-            // Get the files in the directory and copy them to the new location.
-            FileInfo[] files = dir.GetFiles();
-            foreach (FileInfo file in files)
-            {
-                string temppath = Path.Combine(destDirName, file.Name);
-                file.CopyTo(temppath, true);
-            }
-
-            // If copying subdirectories, copy them and their contents to new location.
-            if (copySubDirs)
-            {
-                foreach (DirectoryInfo subdir in dirs)
-                {
-                    string temppath = Path.Combine(destDirName, subdir.Name);
-                    DirectoryCopy(subdir.FullName, temppath, copySubDirs);
-                }
-            }
-        }
-
-        private void RemoveRemoteReadOnly()
-        {
-            try
-            {
-                string remoteFull = GlobalConst.REMOTE_NAME;
-                if (!string.IsNullOrEmpty(config.RemotePath))
-                    remoteFull += ":" + config.RemotePath;
-
-                // Finde die Remote *.lrcat Datei
-                ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = config.RclonePath;
-                psi.Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl {remoteFull} --include \"*.lrcat\"";
-                psi.UseShellExecute = false;
-                psi.RedirectStandardOutput = true;
-                psi.RedirectStandardError = true;
-                psi.CreateNoWindow = true;
-
-                using (Process p = Process.Start(psi))
-                {
-                    string output = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(5000);
-
-                    if (!string.IsNullOrEmpty(output))
-                    {
-                        string[] lines = output.Split('\n');
-                        foreach (string line in lines)
-                        {
-                            if (line.Contains(".lrcat") && !line.Contains("/"))
-                            {
-                                // Extrahiere den Dateinamen
-                                string[] parts = line.Split(new[] { " " }, System.StringSplitOptions.RemoveEmptyEntries);
-                                if (parts.Length > 0)
-                                {
-                                    string fileName = parts[parts.Length - 1];
-                                    Log.Debug($"Catalog: Samba-Server *.lrcat gefunden: {fileName}");
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                Log.Debug("Catalog: Samba-Server read-only Status überprüft");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Fehler beim Überprüfen des Samba-Server read-only Status: {ex.Message}");
             }
         }
     }

@@ -54,7 +54,7 @@ namespace LRCatalogSync
             AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth + 17);
             yPos += lineHeight;
             
-            AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "Aus", "DEBUG", "INFO", "NOTICE", "ERROR" }, config.LogLevel, labelWidth, controlWidth - 200);
+            AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "DEBUG", "INFO", "NOTICE", "ERROR" }, config.LogLevel, labelWidth, controlWidth - 200);
             yPos += lineHeight;
             
             AddInfoText(scrollPanel, "Lightroom Katalog", ref yPos, 10);

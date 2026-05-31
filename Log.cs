@@ -17,7 +17,6 @@ namespace LRCatalogSync
 
         private enum LogLevelValue
         {
-            Aus = -1,
             Debug = 0,
             Info = 1,
             Notice = 2,
@@ -47,21 +46,17 @@ namespace LRCatalogSync
             // Normalisiere zu enum-kompatiblen Namen (case-insensitiv)
             currentLogLevel = level?.ToUpper() switch
             {
-                "AUS" => "Aus",
                 "DEBUG" => "Debug",
                 "INFO" => "Info",
                 "NOTICE" => "Notice",
                 "ERROR" => "Error",
-                _ => level ?? "Info"  // Fallback auf Original oder Default
+                _ => "Info"  // Fallback auf INFO als Default
             };
         }
 
         // Prüft ob eine Nachricht geschrieben werden soll
         private static bool ShouldLog(string level)
         {
-            if (currentLogLevel == "Aus")
-                return false;
-
             if (!Enum.TryParse(currentLogLevel, out LogLevelValue configLevel))
                 configLevel = LogLevelValue.Info;
 
