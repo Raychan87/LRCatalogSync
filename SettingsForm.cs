@@ -113,7 +113,7 @@ namespace LRCatalogSync
                 Left = 265,
                 Top = 12
             };
-            btnSave.Click += BtnSave_Click;
+            btnSave.Click += (sender, e) => BtnSave_Click(sender, e);
             btnPanel.Controls.Add(btnSave);
 
             var btnCancel = new Button
@@ -334,13 +334,13 @@ namespace LRCatalogSync
                 dialog.Description = "Ordner auswählen";
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    return dialog.SelectedPath;
+                    return dialog.SelectedPath ?? string.Empty;
                 }
             }
-            return null;
+            return string.Empty;
         }
 
-        private void BtnSave_Click(object sender, EventArgs e)
+        private void BtnSave_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -506,14 +506,15 @@ namespace LRCatalogSync
             return false;
         }
 
-        private string ObscurePassword(string password, string rcloneExePath)
+        private string ObscurePassword(string? password, string rcloneExePath)
         {
             try
             {
+                string passwordArg = password ?? string.Empty;
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = rcloneExePath,
-                    Arguments = $"obscure \"{password}\"",
+                    Arguments = $"obscure \"{passwordArg}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
@@ -521,6 +522,9 @@ namespace LRCatalogSync
 
                 using (Process p = Process.Start(psi))
                 {
+                    if (p == null)
+                        return string.Empty;
+
                     string result = p.StandardOutput.ReadToEnd().Trim();
                     p.WaitForExit();
                     return result;

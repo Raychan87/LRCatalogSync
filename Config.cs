@@ -40,7 +40,7 @@ namespace LRCatalogSync
         public string SambaPassword = "";
 
         // Absolute Pfade (werden beim Laden berechnet)
-        public string RclonePath { get; private set; }
+        public string RclonePath { get; private set; } = null!;
 
         //Einstellung von LogLevel = DEBUG/INFO/NOTICE/ERROR
         public string LogLevel { get; set; } = "INFO";

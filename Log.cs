@@ -10,8 +10,8 @@ namespace LRCatalogSync
         private const long MAX_LOG_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
         private const int MAX_BACKUP_FILES = 3; // Behalte max X alte Log-Dateien
         
-        private static string logFilePath;
-        private static string logsDir;
+        private static string logFilePath = null!;
+        private static string logsDir = null!;
         private static object lockObj = new object();
         private static string currentLogLevel = "Info";
 
@@ -178,3 +178,4 @@ namespace LRCatalogSync
         }
     }
 }
+

@@ -5,7 +5,9 @@ namespace LRCatalogSync
 {
     static class Program
     {
+        /// <summary>
         /// Der Einsprungpunkt des Programms.
+        /// </summary>
         [STAThread]
         static void Main()
         {
@@ -20,3 +22,4 @@ namespace LRCatalogSync
         }
     }
 }
+
