@@ -10,14 +10,6 @@ namespace LRCatalogSync
     /// </summary>
     public class BackupManager
     {
-        // ==================== KONSTRUKTOR ====================
-        /// <summary>
-        /// BackupManager wird stateless verwendet - nur Utility-Funktionen
-        /// </summary>
-        public BackupManager()
-        {
-        }
-
         // ==================== ÖFFENTLICHE FUNKTIONEN ====================
         /// <summary>
         /// Prüft mit rclone --dry-run ob Backup-Unterschiede vorhanden sind
