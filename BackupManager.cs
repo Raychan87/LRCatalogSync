@@ -5,17 +5,13 @@ using System.Threading;
 
 namespace LRCatalogSync
 {
-    /// <summary>
-    /// Manager für alle Backup-Operationen (Check, Sync, Statistiken)
-    /// </summary>
+    // Manager für alle Backup-Operationen (Check, Sync, Statistiken)
     public static class BackupManager
     {
         // ==================== ÖFFENTLICHE FUNKTIONEN ====================
-        /// <summary>
-        /// Führt Backup-Sync durch (rclone bisync)
-        /// </summary>
-        /// <param name="config">App-Konfiguration</param>
-        /// <param name="remoteFullPath">Remote-Pfad</param>
+        // Führt Backup-Sync durch (rclone bisync)
+        // config: App-Konfiguration
+        // remoteFullPath: Remote-Pfad
         public static void SyncBackups(AppConfig config, string remoteFullPath)
         {
             try
@@ -67,10 +63,8 @@ namespace LRCatalogSync
         }
 
         // ==================== PRIVATE HILFSFUNKTIONEN ====================
-        /// <summary>
-        /// Liest rclone Logdatei und gibt wichtige Statistiken aus (Copied, Deleted, etc.)
-        /// </summary>
-        /// <param name="logFile">Pfad zur rclone Logdatei</param>
+        // Liest rclone Logdatei und gibt wichtige Statistiken aus (Copied, Deleted, etc.)
+        // logFile: Pfad zur rclone Logdatei
         private static void WriteRcloneStats(string logFile)
         {
             try
@@ -107,13 +101,11 @@ namespace LRCatalogSync
             }
         }
 
-        /// <summary>
         /// Liest Datei mit Retry-Logik (falls Datei noch gesperrt ist)
-        /// </summary>
-        /// <param name="filePath">Pfad zur Datei</param>
-        /// <param name="maxRetries">Max. Anzahl Versuche</param>
-        /// <param name="delayMs">Wartezeit zwischen Versuchen in ms</param>
-        /// <returns>Array von Zeilen oder leeres Array wenn Fehler</returns>
+        /// filePath: Pfad zur Datei
+        /// maxRetries: Max. Anzahl Versuche
+        /// delayMs: Wartezeit zwischen Versuchen in ms
+        /// returns: Array von Zeilen oder leeres Array wenn Fehler
         private static string[] ReadLogFileWithRetry(string filePath, int maxRetries = 5, int delayMs = 200)
         {
             for (int i = 0; i < maxRetries; i++)
@@ -139,12 +131,10 @@ namespace LRCatalogSync
         }
 
         // ==================== HAUPTMETHODE: BACKUP-PROZESS ====================
-        /// <summary>
         /// Führt kompletten Backup-Prozess aus: Validiert Konfiguration und startet SyncBackups().
         /// Aktualisiert Tray-Status.
-        /// </summary>
-        /// <param name="config">App-Konfiguration mit Pfaden und Einstellungen</param>
-        /// <param name="trayManager">TrayManager für Status-Updates (Syncing/Standby/Error)</param>
+        /// config: App-Konfiguration mit Pfaden und Einstellungen
+        /// trayManager: TrayManager für Status-Updates (Syncing/Standby/Error)
         public static void RunBackupProcess(AppConfig config, TrayManager trayManager)
         {
             try

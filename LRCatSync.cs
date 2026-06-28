@@ -5,11 +5,9 @@ using System.Windows.Forms;
 
 namespace LRCatalogSync
 {
-    /// <summary>
-    /// Hauptklasse: Startet und verwaltet die Anwendung
-    /// Delegiert Backup-Logik an BackupManager und UI an TrayManager
-    /// Startet automatischen Backup-Zyklus
-    /// </summary>
+    // Hauptklasse: Startet und verwaltet die Anwendung
+    // Delegiert Backup-Logik an BackupManager und UI an TrayManager
+    // Startet automatischen Backup-Zyklus
     public class LRCatSync : ApplicationContext
     {
         // ==================== EIGENSCHAFTEN ====================
@@ -20,9 +18,7 @@ namespace LRCatalogSync
         private bool isBackupRunning = false;               // Flag: Backup läuft gerade
 
         // ==================== KONSTRUKTOR - HAUPTEINSTIEGSPUNKT ====================
-        /// <summary>
-        /// Initialisiert die Anwendung: Logs, Config, Tray und Menü
-        /// </summary>
+        // Initialisiert die Anwendung: Logs, Config, Tray und Menü
         public LRCatSync()
         {
             // ========== INITIALISIERUNG ==========
@@ -49,9 +45,7 @@ namespace LRCatalogSync
         }
 
         // ==================== MENÜ-SETUP ====================
-        /// <summary>
-        /// Erstellt das Kontextmenü für das Tray-Icon
-        /// </summary>
+        // Erstellt das Kontextmenü für das Tray-Icon
         private void SetupContextMenu()
         {
             var menu = new ContextMenuStrip();
@@ -101,10 +95,8 @@ namespace LRCatalogSync
         }
 
         // ==================== TIMER-CALLBACK FÜR AUTOMATISCHE ÜBERPRÜFUNG ====================
-        /// <summary>
-        /// Timer-Callback: Prüft periodisch ob Backup-Änderungen vorhanden sind
-        /// Wird alle BACKUP_CHECK_INTERVAL Sekunden aufgerufen
-        /// </summary>
+        // Timer-Callback: Prüft periodisch ob Backup-Änderungen vorhanden sind
+        // Wird alle BACKUP_CHECK_INTERVAL Sekunden aufgerufen
         private void BackupTimerCallback(object? state)
         {
             // Thread-Sicherheit: Keine überlappenden Backup-Prozesse
@@ -139,9 +131,7 @@ namespace LRCatalogSync
         }
 
         // ==================== BEREINIGUNG ====================
-        /// <summary>
-        /// Cleanup: Beende Timer und gebe Ressourcen frei
-        /// </summary>
+        // Cleanup: Beende Timer und gebe Ressourcen frei
         protected override void Dispose(bool disposing)
         {
             if (disposing)

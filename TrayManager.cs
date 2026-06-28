@@ -5,9 +5,7 @@ using System.Windows.Forms;
 
 namespace LRCatalogSync
 {
-    /// <summary>
-    /// Manager für Tray-Icon Verwaltung und Status-Updates
-    /// </summary>
+    // Manager für Tray-Icon Verwaltung und Status-Updates
     public class TrayManager
     {
         // ==================== EIGENSCHAFTEN ====================
@@ -19,9 +17,7 @@ namespace LRCatalogSync
         private Icon iconWhite;                                 // Status: Keine Samba-Verbindung
         private readonly SynchronizationContext? uiContext = null!;      // Für Thread-sichere UI-Updates
         // ==================== KONSTRUKTOR ====================
-        /// <summary>
-        /// Initialisiert TrayManager mit Icons und Tray-Icon
-        /// </summary>
+        // Initialisiert TrayManager mit Icons und Tray-Icon
         public TrayManager()
         {
             // Speichere UI-Kontext für Thread-sichere Updates
@@ -45,19 +41,15 @@ namespace LRCatalogSync
         }
 
         // ==================== ÖFFENTLICHE FUNKTIONEN ====================
-        /// <summary>
-        /// Gibt das NotifyIcon zurück (für ContextMenuStrip Zuweisung)
-        /// </summary>
-        /// <returns>Das verwaltete Tray-Icon</returns>
+        // Gibt das NotifyIcon zurück (für ContextMenuStrip Zuweisung)
+        // returns: Das verwaltete Tray-Icon
         public NotifyIcon GetTrayIcon()
         {
             return trayIcon;
         }
 
-        /// <summary>
-        /// Aktualisiert den Status im Tray-Icon (mit Thread-Safety)
-        /// </summary>
-        /// <param name="state">Neuer Status (Standby, Syncing, rclone, Error)</param>
+        // Aktualisiert den Status im Tray-Icon (mit Thread-Safety)
+        // state: Neuer Status (Standby, Syncing, rclone, Error)
         public void UpdateStatus(string state)
         {
             // Wenn kein UI-Kontext vorhanden, direkt setzen
@@ -81,10 +73,8 @@ namespace LRCatalogSync
         }
 
         // ==================== PRIVATE HILFSFUNKTIONEN ====================
-        /// <summary>
-        /// Setzt Icon und Text des Tray-Icons basierend auf Status
-        /// </summary>
-        /// <param name="state">Status (Standby, Syncing, rclone, Error, Lockfile, NoSamba)</param>
+        // Setzt Icon und Text des Tray-Icons basierend auf Status
+        // state: Status (Standby, Syncing, rclone, Error, Lockfile, NoSamba)
         private void SetTrayText(string state)
         {
             switch (state)
@@ -116,11 +106,9 @@ namespace LRCatalogSync
             }
         }
 
-        /// <summary>
         /// Erstellt ein farbiges Kreis-Icon (32x32 Pixel) für Tray
-        /// </summary>
-        /// <param name="color">Farbe des Kreises</param>
-        /// <returns>Icon für Tray-Anzeige</returns>
+        /// color: Farbe des Kreises
+        /// returns: Icon für Tray-Anzeige
         private Icon CreateColoredIcon(Color color)
         {
             // ========== BITMAP ERSTELLEN ==========
@@ -146,9 +134,7 @@ namespace LRCatalogSync
         }
 
         // ==================== DISPOSE-MUSTER ====================
-        /// <summary>
         /// Gibt alle verwalteten Ressourcen frei
-        /// </summary>
         public void Dispose()
         {
             // Icons freigeben (GDI+ Ressourcen)
