@@ -31,11 +31,11 @@ using System.Runtime.InteropServices;
 //      Revision
 //
 // Version (wird in der Versionsnummer angezeigt)
-[assembly: AssemblyVersion("0.9.0.3")]
+[assembly: AssemblyVersion("0.9.1.0")]
 
 // Dateiversion (für Benutzer sichtbar)
-[assembly: AssemblyFileVersion("0.9.0.3")]
+[assembly: AssemblyFileVersion("0.9.1.0")]
 
 // Informational Version (z.B. für Beta-Hinweis)
-[assembly: AssemblyInformationalVersion("0.9.0-beta3")]
+[assembly: AssemblyInformationalVersion("0.9.1-beta1")]
 [assembly: NeutralResourcesLanguage("de-DE")]

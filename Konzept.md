@@ -64,105 +64,22 @@ Pfad und der ID Prozess "wahrscheinlich"
 
 ---
 
-## 3️⃣ Sync-Protokoll (Fassung 6.0 - **MIT SAFETY-FEATURES**)
+## 3️⃣ NAS-Erreichbarkeitstest (2-Stufen-Test)
 
-### 🔵 SyncCoordinator (Verhindert Race Conditions)
+**Zweck:** Verhindert unnötige SYNC-Versuche, wenn das NAS nicht erreichbar ist.
 
-```csharp
-public class SyncCoordinator
-{
-    // ==================== STATUS ====================
-    private static bool isBackupRunning = false;
-    private static bool isCatalogSyncRunning = false;
-    private static readonly object lockObj = new object();
-    
-    // ==================== ÖFFENTLICHE METHODEN ====================
-    
-    /// Prüft ob CatalogSync starten darf
-    public bool CanStartCatalogSync()
-    {
-        lock (lockObj)
-        {
-            // CatalogSync darf NICHT starten wenn:
-            // 1. Backup gerade läuft
-            // 2. Anderer CatalogSync bereits läuft
-            if (isBackupRunning || isCatalogSyncRunning)
-                return false;
-            
-            isCatalogSyncRunning = true;
-            return true;
-        }
-    }
-    
-    /// Prüft ob Backup starten darf
-    public bool CanStartBackup()
-    {
-        lock (lockObj)
-        {
-            // Backup darf NICHT starten wenn:
-            // 1. CatalogSync gerade läuft
-            // 2. Anderes Backup bereits läuft
-            if (isCatalogSyncRunning || isBackupRunning)
-                return false;
-            
-            isBackupRunning = true;
-            return true;
-        }
-    }
-    
-    /// Beendet CatalogSync
-    public void EndCatalogSync()
-    {
-        lock (lockObj)
-        {
-            isCatalogSyncRunning = false;
-        }
-    }
-    
-    /// Beendet Backup
-    public void EndBackup()
-    {
-        lock (lockObj)
-        {
-            isBackupRunning = false;
-        }
-    }
-    
-    /// Status für Tray-Icon
-    public string GetStatus()
-    {
-        if (isBackupRunning) return "Backup läuft...";
-        if (isCatalogSyncRunning) return "Katalog-Sync läuft...";
-        return "Bereit";
-    }
-}
-```
+**Design-Entscheidung:**  
+- Erreichbarkeitsprüfung wird in einer separaten Klasse `SmbChecker.cs` ausgelagert  
+- Wird in `LRCatSync.cs` *vor* Aufruf von `BackupManager.cs` und `CatalogManager.cs` durchgeführt  
+- Bei fehlgeschlagenem Test: Beide Prozesse blockiert, TrayIcon weiß mit Fehlermeldung "Keine Netzwerkverbindung"  
+- Logik nicht hardcodet, sondern konfigurierbar gestalten (z. B. per Feature-Flag `EnableNasCheck`)
 
-**WICHTIG:**
-- ✅ BackupManager und CatalogManager dürfen NIEMALS gleichzeitig laufen
-- ✅ SyncCoordinator ist ZENTRALE Instanz (Singleton)
-- ✅ Thread-sicher durch `lock`-Statement
-- ✅ Wird von BEIDEN Managern vor Start abgefragt
-
----
-
-### 🔵 Phase 0: Vorprüfung (Pre-Flight Check)
-
-| Schritt | Prüfung | Bei Fehler | Details |
-|---------|---------|------------|---------|
-| 0.1 | SyncCoordinator.CanStartCatalogSync()? | **Abbruch**, Retry in 30s | Verhindert Race Condition mit Backup |
-| 0.2 | Existiert `*.lrcat.lock`? (Lightroom läuft) | **Abbruch**, Retry in 30s | Alle 3 Lock-Dateien prüfen |
-| 0.3 | Existiert `*.lrcat-shm`? (Lightroom läuft) | **Abbruch**, Retry in 30s | SQLite entfernt sie nicht immer gleichzeitig |
-| 0.4 | Existiert `*.lrcat-wal`? (Lightroom läuft) | **Abbruch**, Retry in 30s | Crash-Recovery nötig? |
-| 0.5 | Ist NAS erreichbar? (Ping + SMB) | **Abbruch**, Retry in 30s | 3-Stufen-Test (siehe unten) |
-
-**❗ Wichtig:** Alle drei Lock-Dateien prüfen! Lightroom entfernt sie möglicherweise nicht alle gleichzeitig bei Crash.
-
-**❗ Wichtig:** Eigene Lock-Datei wird erst in Phase 2 erstellt (nach Versionsvergleich).
-
----
-
-### 🔵 NAS-Erreichbarkeitstest (3-Stufen-Test)
+**Ablauf:**
+1. `SmbChecker.IsNasReachable()` wird von `LRCatSync` aufgerufen  
+2. Prüft in zwei Stufen:  
+   - **STUFE 1: Ping-Test** (Timeout: 3 Sekunden) → prüft grundlegende Netzwerkverbindung  
+   - **STUFE 2: SMB-Freigabetest** (Timeout: 5 Sekunden) → prüft Zugriff auf UNC-Pfad (`\\IP\Path`)  
+3. Erst wenn beide Tests positiv sind, wird SYNC fortgesetzt  
 
 ```csharp
 bool IsNasReachable()
@@ -185,8 +102,37 @@ bool IsNasReachable()
     return true;
 }
 ```
-
 ---
+
+## 4️⃣ Ablaufsteuerung & Synchronisation (Coordinator.cs)
+
+Diese Komponente koordiniert den sequenziellen Ablauf zwischen Backupmanager und Catalogmanager. 
+Es ist entscheidend, dass beide Module **nacheinander** und **nicht parallel** ausgeführt werden, um Dateninkonsistenzen zu vermeiden.
+
+### Ablaufprinzip
+
+Der Prozess folgt einem klaren Muster:
+
+- **Backupmanager** wird zuerst ausgeführt und bearbeitet alle fotografischen Dateien.
+- Erst wenn der Backupmanager vollständig abgeschlossen ist, startet **Catalogmanager** mit der Synchronisation der Lightroom-Datenbank.
+- Danach beginnt der Zyklus von vorne mit dem Backupmanager.
+
+> **Hinweis für die Implementierung:** Es ist strikt darauf zu achten, dass jeweils nur ein Modul aktiv ist. Eine gleichzeitige oder überlappende Ausführung ist zu verhindern.
+---
+
+## 5️⃣ Catalogmanager.cs
+
+### 🔵 Phase 0: Vorbereitung
+
+Wenn eines der 3 Dateien exestiert:
+├── 📄 [Katalogname].lrcat.lock      ← Lock-Datei (Haupt-Lock)
+├── 📄 [Katalogname].lrcat-shm       ← temporäre Shared Memory
+└── 📄 [Katalogname].lrcat-wal       ← Journal-Datei um unvollständige Datensätze im Katalog zu verwalten
+Dann darf Catalog Sync nicht gestartet werden. Sondern wird in der Statemaschine übersprungen.
+Wenn die im nächsten zug immer noch da sind wieder überspringen bis keine der 3 Dateien mehr vorhanden ist.
+
+Wichtig, nur die von Lightroom erzeugte .lrcat.lock nicht die von Catalogmanager.cs erzeugte Datei.
+
 
 ### 🔵 Phase 1: Versionsvergleich (mit rclone)
 
@@ -318,10 +264,7 @@ bool IsNasReachable()
       
       HINWEIS: [BackupsLocalPath] ist der relative Pfad vom Katalog zum Backup-Ordner
       (wird dynamisch aus Config.BackupsLocalPath berechnet)
-      
-      WICHTIG: --force sorgt für automatisches Löschen auf Ziel!
-      → Kein manuelles Löschen in Phase 3.3 nötig!
-      
+          
       WICHTIG: --exclude "LRCatSync_last_katalog.zip" schützt das ZIP-Backup vor Löschung!
 
 4.2 → Extra Rclone sync für "[Katalogname] Previews.lrdata/"
@@ -383,7 +326,7 @@ WICHTIG: Phase 5.1-5.3 werden IMMER ausgeführt (auch bei Fehler in Phase 4)!
 
 ---
 
-## 4️⃣ Besondere Szenarien
+## 6️⃣ Besondere Szenarien
 
 ### Szenario A: Backup-Ordner LIEGT IM Katalog-Pfad
 
@@ -471,7 +414,7 @@ WICHTIG: Lock-Cleanup in try-finally Block implementieren!
 | # | Entscheidung | Umsetzung |
 |---|--------------|-----------|
 | 1 | **Sync-History auf NAS?** ❌ Nein | Nur lokales Log (DEBUG-Level) |
-| 2 | **Tray-Status für Katalog-Sync?** 🟡 Gleiche Icons wie BackupManager.cs | Grün=Standby, Gelb=rclone läuft (Phase 4), Rot=Error |
+| 2 | **Tray-Status für Katalog-Sync?** 🟡 Gleiche Icons wie BackupManager.cs | Grün=Standby, Gelb=rclone läuft (Phase 4), Rot=Error, weiß=keine verbindung| blau=Lightroom läuft (lock gefunden) |
 | 3 | **Logging?** 📄 Zusammengeführt | Alles in `LRCatalogSync.log` | Sinnvolle Aufteilung in DEBUG, INFO, NOTICE, ERROR (Wichtig log.cs verwenden) |
 | 4 | **Rollback?** ✋ Manuell | User kopiert LRCatSync_last_katalog.zip bei Bedarf zurück |
 | 5 | **GUID-Tracking?** ✅ Ja | Pro Sync-Durchlauf neue GUID generieren, im DEBUG-Log speichern |
@@ -508,89 +451,6 @@ public const int WATCHDOG_TIME = 30;            // Sekunden
 
 ---
 
-## 7️⃣ CatalogManager.cs - Klassen-Struktur
-
-```csharp
-public class CatalogManager
-{
-    // ==================== EIGENSCHAFTEN ====================
-    private AppConfig config;
-    private TrayManager trayManager;
-    private CancellationTokenSource heartbeatCts; // Für Heartbeat-Thread
-    
-    // ==================== ÖFFENTLICHE METHODEN ====================
-    
-    /// Phase 0-5 ausführen
-    public void RunCatalogSync();
-    
-    /// Prüfen ob Lightroom-Lock-Dateien existieren
-    public bool IsLightroomRunning();
-    
-    /// Programm-Lock erstellen/entfernen
-    public void CreateProgramLock();
-    public void RemoveProgramLock();
-    
-    /// ZIP-Backup auf NAS erstellen
-    public void CreateZipBackup();
-    
-    /// Versionsvergleich mit rclone
-    public string CheckVersion(); // "upload", "download", "none"
-    
-    /// Lock-Dateien erstellen (LRCatSync.lock + .lrcat.lock)
-    public void AcquireLocks();
-    
-    /// Lock-Dateien freigeben
-    public void ReleaseLocks();
-    
-    /// Heartbeat-Thread starten/stoppen
-    public void StartHeartbeat();
-    public void StopHeartbeat();
-    
-    /// Sync mit rclone ausführen
-    public void ExecuteSync(string direction);
-    
-    /// Cleanup nach Sync
-    public void Cleanup();
-}
-```
-
----
-
-## 8️⃣ Integration in LRCatSync.cs
-
-```csharp
-public class LRCatSync : ApplicationContext
-{
-    private CatalogManager catalogManager;
-    private BackupManager backupManager;
-    private TrayManager trayManager;
-    
-    // Timer für Katalog-Sync
-    private Timer catalogSyncTimer;
-    
-    public LRCatSync()
-    {
-        // Initialisierung
-        catalogManager = new CatalogManager(config, trayManager);
-        backupManager = new BackupManager(config, trayManager);
-        
-        // Timer starten
-        catalogSyncTimer = new Timer(CatalogSyncCallback, null, 
-            TimeSpan.FromSeconds(CATALOG_CHECK_INTERVAL), 
-            TimeSpan.FromSeconds(CATALOG_CHECK_INTERVAL));
-    }
-    
-    private void CatalogSyncCallback(object state)
-    {
-        // Prüfen ob Backup gerade läuft → Warten
-        if (backupManager.IsBackupRunning)
-            return;
-        
-        // Katalog-Sync ausführen
-        catalogManager.RunCatalogSync();
-    }
-}
-```
 
 **Dokument erstellt:** 2026-06-21  
 **Version:** 6.0
