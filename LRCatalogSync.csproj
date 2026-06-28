@@ -6,10 +6,20 @@
 	    <Nullable>enable</Nullable>
 	    <UseWindowsForms>true</UseWindowsForms>
 	    <ImplicitUsings>enable</ImplicitUsings>
-	    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+	    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 	    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
 	    <SignManifests>false</SignManifests>
 		<NoWarn>$(NoWarn);CA1416</NoWarn> <!--Ignorieren weil Windows only-->
+
+	    <!-- Assembly-Metadaten (vorher in Properties/AssemblyInfo.cs) -->
+	    <AssemblyTitle>LRCatalogSync</AssemblyTitle>
+	    <Description>Synchronisiert ein Katalog von Adobe Lightroom Classic.</Description>
+	    <Company>Fototour-und-Technik.de</Company>
+	    <Product>LRCatalogSync</Product>
+	    <Copyright>Copyright © 2026 Fototour-und-Technik.de</Copyright>
+	    <AssemblyVersion>0.9.1.0</AssemblyVersion>
+	    <FileVersion>0.9.1.0</FileVersion>
+	    <Version>0.9.1-beta1</Version>
     </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
