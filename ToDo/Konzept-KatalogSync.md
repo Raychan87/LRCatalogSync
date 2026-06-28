@@ -63,37 +63,6 @@ C:\Program Files\Adobe\Adobe Lightroom Classic\Lightroom.exe
 
 ---
 
-## 3️⃣ NAS-Erreichbarkeitstest (2-Stufen-Test)
-
-**Zweck:** Verhindert unnötige SYNC-Versuche, wenn das NAS nicht erreichbar ist.
-
-**Design-Entscheidung:**  
-- Erreichbarkeitsprüfung wird in einer separaten Klasse `SmbChecker.cs` ausgelagert  
-- Wird in `LRCatSync.cs` *vor* Aufruf von `BackupManager.cs` und `CatalogManager.cs` durchgeführt  
-- Bei fehlgeschlagenem Test: Beide Prozesse blockiert, TrayIcon weiß mit Fehlermeldung "Keine Netzwerkverbindung"  
-- Logik nicht hardcodet, sondern konfigurierbar gestalten (z. B. per Feature-Flag `EnableNasCheck`)
-
-**Ablauf:**
-1. `SmbChecker.IsNasReachable()` wird von `LRCatSync` aufgerufen  
-2. Prüft SMB-Freigabe (Timeout: 5 Sekunden) → prüft Zugriff auf UNC-Pfad (`\\IP\Path`)  
-3. Erst wenn der Test positiv ist, wird SYNC fortgesetzt  
-
-```csharp
-bool IsNasReachable()
-{
-    // SMB-Freigabe test (max 5 Sekunden)
-    if (!TestSmbShare($"\\\\{config.RemoteIP}\\{config.RemotePath}", 5000))
-    {
-        Log.Debug("NAS: SMB-Test fehlgeschlagen");
-        return false;
-    }
-    
-    Log.Debug("NAS: Test bestanden");
-    return true;
-}
-```
----
-
 ## 4️⃣ Ablaufsteuerung & Synchronisation (Coordinator.cs)
 
 Diese Komponente koordiniert den sequenziellen Ablauf zwischen Backupmanager und Catalogmanager. 
@@ -103,7 +72,7 @@ Es ist entscheidend, dass beide Module **nacheinander** und **nicht parallel** a
 
 Der Prozess folgt einem klaren Muster:
 
-- **Backupmanager** wird zuerst ausgeführt und bearbeitet alle fotografischen Dateien.
+- **Backupmanager** wird zuerst ausgeführt und bearbeitet alle Backups Dateien.
 - Erst wenn der Backupmanager vollständig abgeschlossen ist, startet **Catalogmanager** mit der Synchronisation der Lightroom-Datenbank.
 - Danach beginnt der Zyklus von vorne mit dem Backupmanager.
 
@@ -123,6 +92,7 @@ Wenn die im nächsten zug immer noch da sind wieder überspringen bis keine der 
 
 **❗ Wichtig:** nur die von Lightroom erzeugte .lrcat.lock nicht die von Catalogmanager.cs erzeugte Datei.
 
+** Hinweis:** Trayicon auf Blau, wenn erkannt wird, das eine .lrcat.lock Datei schon da liegt, die von Lightroom erzeugt wurde. Damit nutzer sieht, das LRCatSync paussiert ist. Gib auch ein DEBUG log aus das Programm auf Lightroom wartet bis Lock entfernt wird.
 
 ### 🔵 Phase 1: Versionsvergleich (mit rclone)
 
@@ -362,36 +332,20 @@ string relativeBackupPath = Path.GetRelativePath(CatalogLocalPath, BackupsLocalP
 - Bei verschachtelter Struktur (Backup IN Katalog) → Automatisch ausschließen
 - **Ordnername ist beliebig** (was in `BackupsLocalPath` konfiguriert ist)
 
----
-
-### Szenario B: Lightroom wird WÄHREND Sync gestartet
-
-```
-Problem: User öffnet Lightroom während Sync läuft
-Risiko: SQLite-Korruption!
-
-Lösung:
-1. Programm-Lock (.lrcat.lock) verhindert Öffnen in Lightroom
-2. Lightroom zeigt Fehler: "Katalog wird bereits verwendet"
-3. User muss warten bis Sync fertig ist
-4. Tray-Icon zeigt "Syncing" (gelb) → User sieht Status
-   WICHTIG: Gelb nur wenn rclone sync läuft (Phase 4), nicht während Lock-Akquise (Phase 2)
-```
 
 ---
 
-### Szenario C: Programm-Crash während Sync
+### Szenario B: Programm-Crash während Sync
 
 ```
 Problem: Programm stürzt ab, .lrcat.lock bleibt bestehen
 Risiko: User kann Katalog nicht öffnen, Sync hängt
 
 Lösung:
-1. Beim Programm-Start: Prüfe ob eigene .lrcat.lock existiert
-2. Wenn ja und die LRCatSync.lock älter als 30min ist → Löschen (war von abgestürzter Instanz)
+1. Beim Programm-Start: Prüfe ob eigene .lrcat.lock und LRCatSync.lock existiert
+2. Wenn ja und die LRCatSync.lock älter als 30min ist → beide lock Files Löschen 
 3. LRCatSync.lock auf NAS hat 30-Min-Timeout → Automatisch bereinigt
-4. LRCatSync.lock auf LOKAL wird beim Neustart auch gelöscht
-5. LRCatSync_last_katalog.zip bleibt als manuelle Recovery-Option
+4. LRCatSync_last_katalog.zip bleibt als manuelle Recovery-Option
 
 WICHTIG: Lock-Cleanup in try-finally Block implementieren!
 → Auch bei Programm-Fehler werden Locks sicher entfernt
@@ -423,14 +377,14 @@ WICHTIG: Lock-Cleanup in try-finally Block implementieren!
 │  RemotePath        → CatalogRemotePath (Katalog Remote)      │
 │  SyncPreviewData   → Steuert Previews.lrdata Behandlung      │
 └──────────────────────────────────────────────────────────────┘
+
+WICHTIG Umbennen und wiederverwenden!
 ```
 
 ### In `GlobalData.cs` (GlobalConst):
 
 ```csharp
 public const int SYNC_LOCK_TIMEOUT_MIN = 30;    // Globale Konstante
-public const int CATALOG_CHECK_INTERVAL = 10;   // Sekunden
-public const int WATCHDOG_TIME = 30;            // Sekunden
 ```
 
 ---
