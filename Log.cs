@@ -17,10 +17,10 @@ namespace LRCatalogSync
 
         private enum LogLevelValue
         {
-            Debug = 0,
-            Info = 1,
-            Notice = 2,
-            Error = 3
+            DEBUG = 0,
+            INFO = 1,
+            NOTICE = 2,
+            ERROR = 3
         }
 
         public static void Initialize(string baseDir, string logLevel = "Info")
@@ -43,22 +43,15 @@ namespace LRCatalogSync
 
         public static void SetLogLevel(string level)
         {
-            // Normalisiere zu enum-kompatiblen Namen (case-insensitiv)
-            currentLogLevel = level?.ToUpper() switch
-            {
-                "DEBUG" => "Debug",
-                "INFO" => "Info",
-                "NOTICE" => "Notice",
-                "ERROR" => "Error",
-                _ => "Info"  // Fallback auf INFO als Default
-            };
+            // Speichere Level in Großbuchstaben (für Konsistenz mit Config und rclone)
+            currentLogLevel = string.IsNullOrWhiteSpace(level) ? "INFO" : level.ToUpper();
         }
 
         // Prüft ob eine Nachricht geschrieben werden soll
         private static bool ShouldLog(string level)
         {
             if (!Enum.TryParse(currentLogLevel, out LogLevelValue configLevel))
-                configLevel = LogLevelValue.Info;
+                configLevel = LogLevelValue.INFO;
 
             if (!Enum.TryParse(level, out LogLevelValue messageLevel))
                 return false;
@@ -165,10 +158,10 @@ namespace LRCatalogSync
         }
 
         // Convenience-Methoden für verschiedene Stufen
-        public static void Debug(string message) => Write(message, "Debug");
-        public static void Info(string message) => Write(message, "Info");
-        public static void Notice(string message) => Write(message, "Notice");
-        public static void Error(string message) => Write(message, "Error");
+        public static void Debug(string message) => Write(message, "DEBUG");
+        public static void Info(string message) => Write(message, "INFO");
+        public static void Notice(string message) => Write(message, "NOTICE");
+        public static void Error(string message) => Write(message, "ERROR");
 
         /// Formatiert eine Zeit als String
         public static string FormatDateTime(DateTime? dt)
