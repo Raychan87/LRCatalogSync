@@ -8,7 +8,7 @@ namespace LRCatalogSync
     /// <summary>
     /// Manager für alle Backup-Operationen (Check, Sync, Statistiken)
     /// </summary>
-    public class BackupManager
+    public static class BackupManager
     {
         // ==================== ÖFFENTLICHE FUNKTIONEN ====================
         /// <summary>
@@ -18,7 +18,7 @@ namespace LRCatalogSync
         /// <param name="config">App-Konfiguration mit Pfaden und rclone-Pfad</param>
         /// <param name="remoteFullPath">Remote-Pfad z.B. "synology:/Lightroom/Backups"</param>
         /// <returns>true wenn Änderungen, false wenn keine</returns>
-        public bool CheckBackup(AppConfig config, string remoteFullPath)
+        public static bool CheckBackup(AppConfig config, string remoteFullPath)
         {
             try
             {
@@ -55,10 +55,8 @@ namespace LRCatalogSync
                     p?.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
                 }
 
-                // Kurze Pause damit Log-Datei vollständig geschrieben wird
-                Thread.Sleep(300);
-
                 // ========== LOG-DATEI AUSLESEN ==========
+                // Retry-Logik wartet automatisch falls Datei noch gesperrt ist
                 var lines = ReadLogFileWithRetry(tempLog, 5, 200);
                 if (lines == null || lines.Length == 0)
                     return false;
@@ -92,7 +90,7 @@ namespace LRCatalogSync
         /// </summary>
         /// <param name="config">App-Konfiguration</param>
         /// <param name="remoteFullPath">Remote-Pfad</param>
-        public void SyncBackups(AppConfig config, string remoteFullPath)
+        public static void SyncBackups(AppConfig config, string remoteFullPath)
         {
             try
             {
@@ -142,7 +140,7 @@ namespace LRCatalogSync
         /// Liest rclone Logdatei und gibt wichtige Statistiken aus (Copied, Deleted, etc.)
         /// </summary>
         /// <param name="logFile">Pfad zur rclone Logdatei</param>
-        private void WriteRcloneStats(string logFile)
+        private static void WriteRcloneStats(string logFile)
         {
             try
             {
@@ -185,7 +183,7 @@ namespace LRCatalogSync
         /// <param name="maxRetries">Max. Anzahl Versuche</param>
         /// <param name="delayMs">Wartezeit zwischen Versuchen in ms</param>
         /// <returns>Array von Zeilen oder leeres Array wenn Fehler</returns>
-        private string[] ReadLogFileWithRetry(string filePath, int maxRetries = 3, int delayMs = 200)
+        private static string[] ReadLogFileWithRetry(string filePath, int maxRetries = 5, int delayMs = 200)
         {
             for (int i = 0; i < maxRetries; i++)
             {
@@ -200,13 +198,13 @@ namespace LRCatalogSync
                 catch (IOException)
                 {
                     // Datei ist noch gesperrt, warte und versuche erneut
-                    if (i < maxRetries - 1) 
-                        Thread.Sleep(delayMs); 
-                    else 
-                        throw; // Nach max. Versuchen: Fehler werfen
+                    if (i < maxRetries - 1)
+                        Thread.Sleep(delayMs);
+                    else
+                        return Array.Empty<string>(); // Nach max. Versuchen: leeres Array zurückgeben
                 }
             }
-            return new string[0];
+            return Array.Empty<string>();
         }
 
         // ==================== HAUPTMETHODE: BACKUP-PROZESS ====================
@@ -216,7 +214,7 @@ namespace LRCatalogSync
         /// </summary>
         /// <param name="config">App-Konfiguration mit Pfaden und Einstellungen</param>
         /// <param name="trayManager">TrayManager für Status-Updates (Syncing/Standby/Error)</param>
-        public void RunBackupProcess(AppConfig config, TrayManager trayManager)
+        public static void RunBackupProcess(AppConfig config, TrayManager trayManager)
         {
             try
             {

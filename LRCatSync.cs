@@ -15,7 +15,6 @@ namespace LRCatalogSync
         // ==================== EIGENSCHAFTEN ====================
         private AppConfig config;                           // Konfigurationsdaten laden/speichern
         private TrayManager trayManager;                    // Manager für Tray-Icon und Status
-        private BackupManager backupManager;                // Manager für Backup-Operationen
         private System.Threading.Timer backupTimer;         // Timer für periodische Backup-Überprüfung
         private readonly object backupLock = new object();  // Lock für Thread-Sicherheit
         private bool isBackupRunning = false;               // Flag: Backup läuft gerade
@@ -38,9 +37,6 @@ namespace LRCatalogSync
             // ========== MANAGER INITIALISIEREN ==========
             // Erstelle TrayManager für UI-Verwaltung
             trayManager = new TrayManager();
-
-            // Erstelle BackupManager für Backup-Operationen
-            backupManager = new BackupManager();
 
             // ========== KONTEXTMENÜ AUFBAUEN ==========
             SetupContextMenu();
@@ -127,7 +123,7 @@ namespace LRCatalogSync
             try
             {
                 // Führe automatischen Backup-Check aus (delegiert an BackupManager)
-                backupManager.RunBackupProcess(config, trayManager);
+                BackupManager.RunBackupProcess(config, trayManager);
             }
             catch (Exception ex)
             {
@@ -157,10 +153,11 @@ namespace LRCatalogSync
                     Log.Info("Backup-Timer beendet");
                 }
 
-                // Verstecke Tray-Icon
+                // Verstecke Tray-Icon und gebe Ressourcen frei
                 if (trayManager != null)
                 {
                     trayManager.GetTrayIcon().Visible = false;
+                    trayManager.Dispose();
                 }
             }
 

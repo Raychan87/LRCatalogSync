@@ -15,6 +15,8 @@ namespace LRCatalogSync
         private Icon iconGreen;                                 // Status: Standby
         private Icon iconRed;                                   // Status: Fehler
         private Icon iconYellow;                                // Status: Syncing
+        private Icon iconBlue;                                  // Status: Lockfile erkannt
+        private Icon iconWhite;                                 // Status: Keine Samba-Verbindung
         private readonly SynchronizationContext? uiContext = null!;      // Für Thread-sichere UI-Updates
         // ==================== KONSTRUKTOR ====================
         /// <summary>
@@ -30,6 +32,8 @@ namespace LRCatalogSync
             iconGreen = CreateColoredIcon(Color.Green);   // Standby
             iconRed = CreateColoredIcon(Color.Red);       // Fehler
             iconYellow = CreateColoredIcon(Color.Orange); // Syncing
+            iconBlue = CreateColoredIcon(Color.Blue);     // Lockfile erkannt
+            iconWhite = CreateColoredIcon(Color.White);   // Keine Samba-Verbindung
 
             // ========== TRAY-ICON EINRICHTEN ==========
             trayIcon = new NotifyIcon()
@@ -80,7 +84,7 @@ namespace LRCatalogSync
         /// <summary>
         /// Setzt Icon und Text des Tray-Icons basierend auf Status
         /// </summary>
-        /// <param name="state">Status (Standby, Syncing, rclone, Error)</param>
+        /// <param name="state">Status (Standby, Syncing, rclone, Error, Lockfile, NoSamba)</param>
         private void SetTrayText(string state)
         {
             switch (state)
@@ -100,6 +104,14 @@ namespace LRCatalogSync
                 case "Error":
                     trayIcon.Icon = iconRed;
                     trayIcon.Text = "LR Catalog Sync - Fehler";
+                    break;
+                case "Lockfile":
+                    trayIcon.Icon = iconBlue;
+                    trayIcon.Text = "LR Catalog Sync - Lightroom Lockfile erkannt";
+                    break;
+                case "NoSamba":
+                    trayIcon.Icon = iconWhite;
+                    trayIcon.Text = "LR Catalog Sync - Keine Verbindung zum Samba Server";
                     break;
             }
         }
@@ -131,6 +143,23 @@ namespace LRCatalogSync
 
             // Konvertiere Bitmap zu Icon und gebe zurück
             return Icon.FromHandle(bitmap.GetHicon());
+        }
+
+        // ==================== DISPOSE-MUSTER ====================
+        /// <summary>
+        /// Gibt alle verwalteten Ressourcen frei
+        /// </summary>
+        public void Dispose()
+        {
+            // Icons freigeben (GDI+ Ressourcen)
+            iconGreen?.Dispose();
+            iconRed?.Dispose();
+            iconYellow?.Dispose();
+            iconBlue?.Dispose();
+            iconWhite?.Dispose();
+            
+            // Tray-Icon entfernen und freigeben
+            trayIcon?.Dispose();
         }
     }
 }
