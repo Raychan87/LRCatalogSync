@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
 
+using LRCatalogSync.Core;    // ← für LRCatSync
+
 namespace LRCatalogSync
 {
     static class Program

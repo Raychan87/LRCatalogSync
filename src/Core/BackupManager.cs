@@ -3,7 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
-namespace LRCatalogSync
+using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, GlobalData
+using LRCatalogSync.UI;                // ← für TrayManager
+
+namespace LRCatalogSync.Core
 {
     // Manager für alle Backup-Operationen (Check, Sync, Statistiken)
     public static class BackupManager

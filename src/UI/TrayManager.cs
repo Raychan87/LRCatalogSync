@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace LRCatalogSync
+namespace LRCatalogSync.UI
 {
     // Manager für Tray-Icon Verwaltung und Status-Updates
     public class TrayManager

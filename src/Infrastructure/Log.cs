@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace LRCatalogSync
+namespace LRCatalogSync.Infrastructure
 {
     // Logging-Funktion für die Anwendung
     // Schreibt in Log-Datei im Programm-Verzeichnis mit automatischer Rotation

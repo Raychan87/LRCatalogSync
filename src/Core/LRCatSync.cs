@@ -3,7 +3,10 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace LRCatalogSync
+using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, GlobalData
+using LRCatalogSync.UI;                // ← für TrayManager
+
+namespace LRCatalogSync.Core
 {
     // Hauptklasse: Startet und verwaltet die Anwendung
     // Delegiert Backup-Logik an BackupManager und UI an TrayManager

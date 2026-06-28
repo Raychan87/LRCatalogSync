@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
-namespace LRCatalogSync
+using LRCatalogSync.Infrastructure;    // ← für AppConfig
+
+namespace LRCatalogSync.UI
 {
     public partial class SettingsForm : Form
     {

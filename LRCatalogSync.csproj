@@ -48,7 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="SettingsForm.cs">
+    <Compile Update="src\UI\SettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>
