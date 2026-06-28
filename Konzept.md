@@ -14,12 +14,11 @@ Wenn Lightroom einen Katalog öffnet, erstellt es **drei SQLite-Lock-Dateien**:
 └── 📄 [Katalogname].lrcat-wal       ← Journal-Datei um unvollständige Datensätze im Katalog zu verwalten
 ```
 
-### Beispiel Inhalt der .lrcat.lock von Lightroom:
+### Beispiel Inhalt der .lrcat.lock die von Lightroom erzeugt wird:
 ```
 C:\Program Files\Adobe\Adobe Lightroom Classic\Lightroom.exe
 25616
 ```
-Pfad und der ID Prozess "wahrscheinlich"
 
 ### Verhalten:
 
@@ -76,29 +75,20 @@ Pfad und der ID Prozess "wahrscheinlich"
 
 **Ablauf:**
 1. `SmbChecker.IsNasReachable()` wird von `LRCatSync` aufgerufen  
-2. Prüft in zwei Stufen:  
-   - **STUFE 1: Ping-Test** (Timeout: 3 Sekunden) → prüft grundlegende Netzwerkverbindung  
-   - **STUFE 2: SMB-Freigabetest** (Timeout: 5 Sekunden) → prüft Zugriff auf UNC-Pfad (`\\IP\Path`)  
-3. Erst wenn beide Tests positiv sind, wird SYNC fortgesetzt  
+2. Prüft SMB-Freigabe (Timeout: 5 Sekunden) → prüft Zugriff auf UNC-Pfad (`\\IP\Path`)  
+3. Erst wenn der Test positiv ist, wird SYNC fortgesetzt  
 
 ```csharp
 bool IsNasReachable()
 {
-    // STUFE 1: Ping (max 3 Sekunden)
-    if (!PingHost(config.RemoteIP, 3000))
-    {
-        Log.Debug("NAS: Ping fehlgeschlagen");
-        return false;
-    }
-    
-    // STUFE 2: SMB-Freigabe test (max 5 Sekunden)
+    // SMB-Freigabe test (max 5 Sekunden)
     if (!TestSmbShare($"\\\\{config.RemoteIP}\\{config.RemotePath}", 5000))
     {
         Log.Debug("NAS: SMB-Test fehlgeschlagen");
         return false;
     }
     
-    Log.Debug("NAS: Alle Tests bestanden");
+    Log.Debug("NAS: Test bestanden");
     return true;
 }
 ```
@@ -131,7 +121,7 @@ Wenn eines der 3 Dateien exestiert:
 Dann darf Catalog Sync nicht gestartet werden. Sondern wird in der Statemaschine übersprungen.
 Wenn die im nächsten zug immer noch da sind wieder überspringen bis keine der 3 Dateien mehr vorhanden ist.
 
-Wichtig, nur die von Lightroom erzeugte .lrcat.lock nicht die von Catalogmanager.cs erzeugte Datei.
+**❗ Wichtig:** nur die von Lightroom erzeugte .lrcat.lock nicht die von Catalogmanager.cs erzeugte Datei.
 
 
 ### 🔵 Phase 1: Versionsvergleich (mit rclone)
@@ -427,17 +417,11 @@ WICHTIG: Lock-Cleanup in try-finally Block implementieren!
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Umbenennung/Klärung                                         │
+│  Umbenennung                                                 │
 ├──────────────────────────────────────────────────────────────┤
 │  LocalPath         → CatalogLocalPath (Katalog-Pfad)         │
 │  RemotePath        → CatalogRemotePath (Katalog Remote)      │
-│  BackupsLocalPath  → Für BackupManager (separat!)            │
-│  BackupsRemotePath → Für BackupManager (separat!)            │
 │  SyncPreviewData   → Steuert Previews.lrdata Behandlung      │
-├──────────────────────────────────────────────────────────────┤
-│  HELPER (nicht in Config-Datei)                              │
-├──────────────────────────────────────────────────────────────┤
-│  ■ IsBackupInsideCatalogPath() (bool, berechnet)             │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -451,6 +435,4 @@ public const int WATCHDOG_TIME = 30;            // Sekunden
 
 ---
 
-
-**Dokument erstellt:** 2026-06-21  
-**Version:** 6.0
+**Dokument erstellt:** 2026-06-28

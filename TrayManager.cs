@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Net.NetworkInformation;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -74,30 +73,6 @@ namespace LRCatalogSync
             {
                 // Nein: Post in UI-Thread zum Setzen
                 uiContext.Post(_ => SetTrayText(state), null);
-            }
-        }
-
-        /// <summary>
-        /// Prüft ob Remote (Samba-Server) mit Ping erreichbar ist
-        /// </summary>
-        /// <param name="remoteIP">IP-Adresse oder Hostname des Servers</param>
-        /// <returns>true wenn Server antwortet, false wenn nicht erreichbar</returns>
-        public bool IsRemoteReachable(string remoteIP)
-        {
-            try
-            {
-                // ========== PING SENDEN ==========
-                var ping = new Ping();
-                // Sende Ping mit 2 Sekunden Timeout
-                var reply = ping.Send(remoteIP, 2000);
-
-                // Prüfe ob Reply erfolgreich war
-                return reply?.Status == IPStatus.Success;
-            }
-            catch
-            {
-                Log.Debug("Ping fehlgeschlagen");
-                return false;
             }
         }
 

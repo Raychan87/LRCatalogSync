@@ -172,10 +172,9 @@ Zu prüfen ob .NET 4.8 installiert ist:
 4. IP-Adresse ist falsch
 
 **Lösung:**
-1. Testen Sie die Netzwerkverbindung (Ping zum Server)
-2. Überprüfen Sie Benutzername und Passwort
-3. Überprüfen Sie die Server-IP-Adresse
-4. Schauen Sie in die Logs für mehr Informationen
+1. Überprüfen Sie Benutzername und Passwort
+2. Überprüfen Sie die Server-IP-Adresse
+3. Schauen Sie in die Logs für mehr Informationen
 
 ### Problem: "Keine *.lrcat Datei gefunden"
 

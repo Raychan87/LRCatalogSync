@@ -97,12 +97,10 @@ namespace LRCatalogSync
 
         /// <summary>
         /// Führt echten Backup-Sync durch (rclone bisync ohne --dry-run)
-        /// Überwacht Verbindung: Bricht ab wenn Remote 5 Sekunden nicht erreichbar
         /// </summary>
         /// <param name="config">App-Konfiguration</param>
         /// <param name="remoteFullPath">Remote-Pfad</param>
-        /// <param name="isRemoteReachable">Funktion zur Netzwerk-Prüfung</param>
-        public void SyncBackups(AppConfig config, string remoteFullPath, Func<bool> isRemoteReachable)
+        public void SyncBackups(AppConfig config, string remoteFullPath)
         {
             try
             {
@@ -128,33 +126,11 @@ namespace LRCatalogSync
                     CreateNoWindow = true
                 };
 
-                // Starte rclone und überwache Verbindung
+                // Starte rclone und warte bis Prozess beendet ist
                 using (var p = Process.Start(psi))
                 {
                     if (p == null)
                         return;
-
-                    DateTime lastConnected = DateTime.Now;
-
-                    // Solange rclone noch läuft...
-                    while (!p.HasExited)
-                    {
-                        // Prüfe ob Remote (Samba-Server) noch erreichbar ist
-                        if (isRemoteReachable())
-                        {
-                            // Ja: Aktualisiere letzten Verbindungszeitpunkt
-                            lastConnected = DateTime.Now;
-                        }
-                        else if ((DateTime.Now - lastConnected).TotalSeconds > 5)
-                        {
-                            // Nein: Und länger als 5 Sekunden offline
-                            Log.Debug("Samba nicht erreichbar - breche ab");
-                            p.Kill(); // Stoppe rclone-Prozess
-                            break;
-                        }
-
-                        Thread.Sleep(1000); // Prüfe jede Sekunde
-                    }
 
                     p.WaitForExit(); // Warte bis Prozess beendet ist
                 }
@@ -286,8 +262,7 @@ namespace LRCatalogSync
                     trayManager.UpdateStatus("Syncing");
 
                     // 3. Führe echten Sync durch mit SyncBackups()
-                    SyncBackups(config, remoteFullPath, 
-                        () => trayManager.IsRemoteReachable(config.RemoteIP));
+                    SyncBackups(config, remoteFullPath);
                 }
                 else
                 {
