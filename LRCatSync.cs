@@ -44,7 +44,7 @@ namespace LRCatalogSync
             // ========== STARTE AUTOMATISCHEN BACKUP-ZYKLUS ==========
             // Timer prüft alle BACKUP_CHECK_INTERVAL Sekunden ob Backup-Änderungen vorhanden sind
             // Startet automatisch, wenn Änderungen gefunden werden
-            Log.Info($"Starte automatischen Backup-Zyklus ({GlobalConst.BACKUP_CHECK_INTERVAL}sec Intervall)");
+            Log.Info($"Backup: Starte automatischen Backup-Zyklus ({GlobalConst.BACKUP_CHECK_INTERVAL}sec Intervall)");
             backupTimer = new System.Threading.Timer(BackupTimerCallback, null, 0, GlobalConst.BACKUP_CHECK_INTERVAL * 1000);
         }
 
@@ -77,7 +77,7 @@ namespace LRCatalogSync
                         // Config neu laden (wurde in SettingsForm gespeichert)
                         config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
                         Log.SetLogLevel(config.LogLevel);
-                        Log.Info("Einstellungen aktualisiert");
+                        Log.Info("Config: Einstellungen aktualisiert");
                         trayManager.UpdateStatus("Standby");
                     }
                 }

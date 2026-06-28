@@ -12,81 +12,7 @@ namespace LRCatalogSync
     {
         // ==================== ÖFFENTLICHE FUNKTIONEN ====================
         /// <summary>
-        /// Prüft mit rclone --dry-run ob Backup-Unterschiede vorhanden sind
-        /// Gibt true zurück wenn Änderungen gefunden, false wenn keine Änderungen
-        /// </summary>
-        /// <param name="config">App-Konfiguration mit Pfaden und rclone-Pfad</param>
-        /// <param name="remoteFullPath">Remote-Pfad z.B. "synology:/Lightroom/Backups"</param>
-        /// <returns>true wenn Änderungen, false wenn keine</returns>
-        public static bool CheckBackup(AppConfig config, string remoteFullPath)
-        {
-            try
-            {
-                // ========== LOG-DATEI VORBEREITEN ==========
-                string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_check.log");
-                string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
-
-                // Erstelle Logs-Verzeichnis falls nicht vorhanden
-                if (!Directory.Exists(logsDir))
-                    Directory.CreateDirectory(logsDir);
-
-                // Alte Log-Datei löschen
-                if (File.Exists(tempLog))
-                    File.Delete(tempLog);
-
-                // ========== RCLONE PROZESS STARTEN (--dry-run) ==========
-                // Starte rclone mit bisync --dry-run (Probe ohne echte Änderungen)
-                var psi = new ProcessStartInfo
-                {
-                    FileName = config.RclonePath,
-                    // bisync: bidirektionale Sync-Prüfung
-                    // --dry-run: nur prüfen, nichts ändern
-                    // --log-level: Logging-Verbosität
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --dry-run",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-
-                // Warte max. WATCHDOG_TIME Sekunden auf rclone
-                using (var p = Process.Start(psi))
-                {
-                    p?.WaitForExit(GlobalConst.WATCHDOG_TIME * 1000);
-                }
-
-                // ========== LOG-DATEI AUSLESEN ==========
-                // Retry-Logik wartet automatisch falls Datei noch gesperrt ist
-                var lines = ReadLogFileWithRetry(tempLog, 5, 200);
-                if (lines == null || lines.Length == 0)
-                    return false;
-
-                // ========== ERGEBNIS PRÜFEN ==========
-                // Suche nach Änderungen-Indikatoren in der rclone Log-Datei
-                foreach (var line in lines)
-                {
-                    var t = line.Trim();
-
-                    // Keine Änderungen gefunden
-                    if (t.Contains("No changes found"))
-                        return false;
-
-                    // Änderungen gefunden (Copied, Deleted oder Skipped)
-                    if (t.Contains("Skipped") || t.Contains("Copied") || t.Contains("Deleted"))
-                        return true;
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Backups-Check-Fehler: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Führt echten Backup-Sync durch (rclone bisync ohne --dry-run)
+        /// Führt Backup-Sync durch (rclone bisync)
         /// </summary>
         /// <param name="config">App-Konfiguration</param>
         /// <param name="remoteFullPath">Remote-Pfad</param>
@@ -94,6 +20,9 @@ namespace LRCatalogSync
         {
             try
             {
+                // ========== LOG-EINTRAG: START ==========
+                Log.Debug($"Backup: gestartet {config.BackupsLocalPath} -> {remoteFullPath}");
+
                 // ========== LOG-DATEI VORBEREITEN ==========
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_sync.log");
                 string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
@@ -103,12 +32,11 @@ namespace LRCatalogSync
                 if (File.Exists(tempLog))
                     File.Delete(tempLog);
 
-                // ========== RCLONE PROZESS STARTEN (echter Sync) ==========
-                // Starte rclone bisync (echte Synchronisation, OHNE --dry-run)
+                // ========== RCLONE PROZESS STARTEN ==========
+                // Starte rclone bisync (Synchronisation)
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    // Unterschied zu CheckBackup: OHNE --dry-run, echte Änderungen werden durchgeführt
                     Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -128,10 +56,13 @@ namespace LRCatalogSync
                 // ========== LOG-STATISTIKEN AUSGEBEN ==========
                 // Lese rclone Logdatei und gebe Statistiken aus (Copied, Deleted, etc.)
                 WriteRcloneStats(tempLog);
+
+                // ========== LOG-EINTRAG: ENDE ==========
+                Log.Debug("Backup: abgeschlossen");
             }
             catch (Exception ex)
             {
-                Log.Error($"Backups-Fehler: {ex.Message}");
+                Log.Error($"Backup/Fehler: {ex.Message}");
             }
         }
 
@@ -166,13 +97,13 @@ namespace LRCatalogSync
                         trimmed.Contains("Elapsed time:"))
                     {
                         // Ausgabe ins Logfile mit rclone-Präfix
-                        Log.Debug("rclone: " + trimmed);
+                        Log.Debug("Backup/rclone: " + trimmed);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Log.Debug($"WriteRcloneStats Fehler: {ex.Message}");
+                Log.Debug($"Backup/rclone/Fehler: {ex.Message}");
             }
         }
 
@@ -209,8 +140,8 @@ namespace LRCatalogSync
 
         // ==================== HAUPTMETHODE: BACKUP-PROZESS ====================
         /// <summary>
-        /// Führt kompletten Backup-Prozess aus: Validiert Konfiguration, prüft auf Änderungen mit CheckBackup(),
-        /// und startet SyncBackups() wenn Änderungen gefunden werden. Aktualisiert Tray-Status.
+        /// Führt kompletten Backup-Prozess aus: Validiert Konfiguration und startet SyncBackups().
+        /// Aktualisiert Tray-Status.
         /// </summary>
         /// <param name="config">App-Konfiguration mit Pfaden und Einstellungen</param>
         /// <param name="trayManager">TrayManager für Status-Updates (Syncing/Standby/Error)</param>
@@ -233,10 +164,10 @@ namespace LRCatalogSync
                     return;
                 }
 
-                // ========== BACKUP PRÜFUNG ==========
+                // ========== BACKUP AUSFÜHREN ==========
                 if (!config.EnableBackups)
                 {
-                    Log.Debug("Backup ist deaktiviert");
+                    Log.Debug("Backup: deaktiviert");
                     return;
                 }
 
@@ -245,23 +176,15 @@ namespace LRCatalogSync
                 if (!string.IsNullOrEmpty(config.BackupsRemotePath))
                     remoteFullPath += ":" + config.BackupsRemotePath;
 
-                // 1. Prüfe mit CheckBackup() ob Änderungen vorhanden sind
-                if (CheckBackup(config, remoteFullPath))
-                {
-                    // 2. Änderungen gefunden - Setze Tray auf "Syncing" und starte Sync
-                    trayManager.UpdateStatus("Syncing");
+                // Setze Tray auf "Syncing" und starte Sync
+                trayManager.UpdateStatus("Syncing");
 
-                    // 3. Führe echten Sync durch mit SyncBackups()
-                    SyncBackups(config, remoteFullPath);
-                }
-                else
-                {
-                    Log.Debug("Backup: Keine Änderungen gefunden");
-                }
+                // Führe Sync durch
+                SyncBackups(config, remoteFullPath);
             }
             catch (Exception ex)
             {
-                Log.Error($"Backup-Fehler: {ex.Message}");
+                Log.Error($"Backup/Fehler: {ex.Message}");
                 trayManager.UpdateStatus("Error");
             }
             finally

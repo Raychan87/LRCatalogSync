@@ -529,7 +529,7 @@ namespace LRCatalogSync
             }
             catch (Exception ex)
             {
-                Log.Error($"Fehler beim Verschlüsseln des Passworts: {ex.Message}");
+                Log.Error($"Config/Fehler: Verschlüsseln des Passworts: {ex.Message}");
                 throw;
             }
         }
@@ -546,7 +546,7 @@ namespace LRCatalogSync
             };
 
             File.WriteAllLines(GlobalData.RcloneConfigPath, lines);
-            Log.Debug("rclone.conf erfolgreich erstellt");
+            Log.Debug("Config: rclone.conf erfolgreich erstellt");
         }
 
         private void InitializeComponent()
