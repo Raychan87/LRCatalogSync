@@ -11,7 +11,7 @@
 	    <SignManifests>false</SignManifests>
 		<NoWarn>$(NoWarn);CA1416</NoWarn> <!--Ignorieren weil Windows only-->
 
-	    <!-- Assembly-Metadaten (vorher in Properties/AssemblyInfo.cs) -->
+	    <!-- Assembly-Metadaten  -->
 	    <AssemblyTitle>LRCatalogSync</AssemblyTitle>
 	    <Description>Synchronisiert ein Katalog von Adobe Lightroom Classic.</Description>
 	    <Company>Fototour-und-Technik.de</Company>
@@ -51,27 +51,6 @@
     <Compile Update="SettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Update="SettingsForm.resx">
-      <DependentUpon>SettingsForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-    <Compile Update="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
-    <None Update="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-    </None>
   </ItemGroup>
 
 </Project>
