@@ -520,11 +520,8 @@ namespace LRCatalogSync
                     CreateNoWindow = true
                 };
 
-                using (Process p = Process.Start(psi))
+                using (Process p = Process.Start(psi)!)
                 {
-                    if (p == null)
-                        return string.Empty;
-
                     string result = p.StandardOutput.ReadToEnd().Trim();
                     p.WaitForExit();
                     return result;
