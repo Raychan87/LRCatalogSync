@@ -16,9 +16,7 @@ namespace LRCatalogSync.Core
         // ==================== EIGENSCHAFTEN ====================
         private AppConfig config;                           // Konfigurationsdaten laden/speichern
         private TrayManager trayManager;                    // Manager für Tray-Icon und Status
-        private System.Threading.Timer backupTimer;         // Timer für periodische Backup-Überprüfung
-        private readonly object backupLock = new object();  // Lock für Thread-Sicherheit
-        private bool isBackupRunning = false;               // Flag: Backup läuft gerade
+        private System.Threading.Timer syncCycleTimer;      // Timer für Sync-Zyklus (Backup + Katalog)
 
         // ==================== KONSTRUKTOR - HAUPTEINSTIEGSPUNKT ====================
         // Initialisiert die Anwendung: Logs, Config, Tray und Menü
@@ -37,14 +35,17 @@ namespace LRCatalogSync.Core
             // Erstelle TrayManager für UI-Verwaltung
             trayManager = new TrayManager();
 
+            // ========== CRASH-RECOVERY: Verwaiste Locks bereinigen ==========
+            // Prüfe beim Programmstart ob verwaiste Locks existieren (>30 min alt)
+            CleanupStaleLocks(config);
+
             // ========== KONTEXTMENÜ AUFBAUEN ==========
             SetupContextMenu();
 
-            // ========== STARTE AUTOMATISCHEN BACKUP-ZYKLUS ==========
-            // Timer prüft alle BACKUP_CHECK_INTERVAL Sekunden ob Backup-Änderungen vorhanden sind
-            // Startet automatisch, wenn Änderungen gefunden werden
-            Log.Info($"Backup: Starte automatischen Backup-Zyklus ({GlobalConst.BACKUP_CHECK_INTERVAL}sec Intervall)");
-            backupTimer = new System.Threading.Timer(BackupTimerCallback, null, 0, GlobalConst.BACKUP_CHECK_INTERVAL * 1000);
+            // ========== STARTE AUTOMATISCHEN SYNC-ZYKLUS ==========
+            // Timer führt alle CATALOG_SYNC_CHECK_INTERVAL Sekunden kompletten Zyklus aus (Backup → Katalog)
+            Log.Info($"Coordinator: Starte Sync-Zyklus ({GlobalConst.CATALOG_SYNC_CHECK_INTERVAL}sec Intervall)");
+            syncCycleTimer = new System.Threading.Timer(SyncCycleCallback, null, 0, GlobalConst.CATALOG_SYNC_CHECK_INTERVAL * 1000);
         }
 
         // ==================== MENÜ-SETUP ====================
@@ -98,38 +99,61 @@ namespace LRCatalogSync.Core
         }
 
         // ==================== TIMER-CALLBACK FÜR AUTOMATISCHE ÜBERPRÜFUNG ====================
-        // Timer-Callback: Prüft periodisch ob Backup-Änderungen vorhanden sind
-        // Wird alle BACKUP_CHECK_INTERVAL Sekunden aufgerufen
-        private void BackupTimerCallback(object? state)
+        // Timer-Callback: Führt kompletten Sync-Zyklus aus (Backup → Katalog-Sync)
+        // Wird alle CATALOG_SYNC_CHECK_INTERVAL Sekunden aufgerufen
+        private void SyncCycleCallback(object? state)
         {
-            // Thread-Sicherheit: Keine überlappenden Backup-Prozesse
-            lock (backupLock)
-            {
-                // Wenn bereits ein Backup läuft, diese Iteration überspringen
-                if (isBackupRunning)
-                {
-                    Log.Debug("Backup läuft noch, überspringe diese Überprüfung");
-                    return;
-                }
+            // Coordinator übernimmt die sequenzielle Ausführung
+            Coordinator.RunSyncCycle(config, trayManager);
+        }
 
-                isBackupRunning = true;
-            }
-
+        /// <summary>
+        /// Bereinigt verwaiste Locks beim Programmstart (Crash-Recovery)
+        /// </summary>
+        private void CleanupStaleLocks(AppConfig config)
+        {
             try
             {
-                // Führe automatischen Backup-Check aus (delegiert an BackupManager)
-                BackupManager.RunBackupProcess(config, trayManager);
+                string localLockPath = Path.Combine(config.CatalogLocalPath, "LRCatSync.lock");
+                
+                if (File.Exists(localLockPath))
+                {
+                    FileInfo lockFile = new FileInfo(localLockPath);
+                    TimeSpan age = DateTime.Now - lockFile.LastWriteTime;
+                    
+                    if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
+                    {
+                        // Lock ist älter als Timeout → Crash-Recovery
+                        File.Delete(localLockPath);
+                        Log.Info($"Crash-Recovery: Verwaiste Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                    }
+                    else
+                    {
+                        // Lock ist noch aktiv → Info
+                        Log.Info($"Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                    }
+                }
+                
+                // Prüfe auch Remote-Lock (auf NAS)
+                string remoteLockPath = Path.Combine(config.CatalogRemotePath, "LRCatSync.lock");
+                if (Directory.Exists(Path.GetDirectoryName(remoteLockPath)))
+                {
+                    if (File.Exists(remoteLockPath))
+                    {
+                        FileInfo lockFile = new FileInfo(remoteLockPath);
+                        TimeSpan age = DateTime.Now - lockFile.LastWriteTime;
+                        
+                        if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
+                        {
+                            File.Delete(remoteLockPath);
+                            Log.Info($"Crash-Recovery: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Log.Error($"Fehler in BackupTimerCallback: {ex.Message}");
-            }
-            finally
-            {
-                lock (backupLock)
-                {
-                    isBackupRunning = false;
-                }
+                Log.Error($"Crash-Recovery: Fehler beim Bereinigen: {ex.Message}");
             }
         }
 
@@ -140,10 +164,10 @@ namespace LRCatalogSync.Core
             if (disposing)
             {
                 // Stoppe und dispose Timer
-                if (backupTimer != null)
+                if (syncCycleTimer != null)
                 {
-                    backupTimer.Dispose();
-                    Log.Info("Backup-Timer beendet");
+                    syncCycleTimer.Dispose();
+                    Log.Info("Sync-Zyklus Timer beendet");
                 }
 
                 // Verstecke Tray-Icon und gebe Ressourcen frei

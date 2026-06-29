@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using LRCatalogSync.Core;
 
 namespace LRCatalogSync.Infrastructure
 {
@@ -9,8 +10,8 @@ namespace LRCatalogSync.Infrastructure
     {
         // ==================== EIGENSCHAFTEN ====================
 
-        // Lokaler Pfad zum Lightroom Ordner
-        public string LocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom";
+        // Lokaler Pfad zur Lightroom Katalog-Datei (.lrcat)
+        public string CatalogLocalFile = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname]/[Katalogname].lrcat";
 
         // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge) 
         public string BackupsLocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname]/Backups/";
@@ -27,8 +28,8 @@ namespace LRCatalogSync.Infrastructure
         // IP von Remote Pfad (Samba Server)
         public string RemoteIP = "xxx.xxx.xxx.xxx";
 
-        // Pfad auf dem Remote (z.B. "Lightroom")
-        public string RemotePath = "/Ordnername/";
+        // Remote Pfad zum Lightroom Katalog-Ordner (auf dem Samba Server)
+        public string CatalogRemotePath = "/Ordnername/";
 
         // Ordner in dem rclone.exe liegt (z.B. "./rclone" oder "C:\Program Files\rclone")
         public string RcloneFolder = "./rclone";
@@ -44,6 +45,17 @@ namespace LRCatalogSync.Infrastructure
 
         //Einstellung von LogLevel = DEBUG/INFO/NOTICE/ERROR
         public string LogLevel { get; set; } = "INFO";
+
+        // ==================== BERECHNETE EIGENSCHAFTEN (Read-Only) ====================
+        
+        // Extrahiert den Ordnerpfad aus CatalogLocalFile (z.B. "C:\Kataloge\MeineFotos" aus "C:\Kataloge\MeineFotos\MeineFotos.lrcat")
+        public string CatalogLocalPath => Path.GetDirectoryName(CatalogLocalFile) ?? string.Empty;
+        
+        // Extrahiert den Dateinamen (z.B. "MeineFotos.lrcat")
+        public string CatalogFileName => Path.GetFileName(CatalogLocalFile);
+        
+        // Extrahiert den Katalognamen ohne Endung (z.B. "MeineFotos")
+        public string CatalogName => Path.GetFileNameWithoutExtension(CatalogLocalFile);
 
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.
@@ -68,12 +80,26 @@ namespace LRCatalogSync.Infrastructure
                         string value = line.Split('=')[1].Trim();    // Rechte Seite (z.B. "15")
 
                         // Weise die Werte den Eigenschaften zu
-                        if (key == "LocalPath") LocalPath = value;
+                        if (key == "CatalogLocalFile") CatalogLocalFile = value;
+                        // Migration: Altes CatalogLocalPath zu CatalogLocalFile konvertieren
+                        if (key == "CatalogLocalPath") 
+                        {
+                            // Wenn CatalogLocalPath ein Ordner ist, suche nach .lrcat Datei
+                            if (Directory.Exists(value))
+                            {
+                                string[] lrcatFiles = Directory.GetFiles(value, "*.lrcat", SearchOption.TopDirectoryOnly);
+                                if (lrcatFiles.Length > 0)
+                                {
+                                    CatalogLocalFile = lrcatFiles[0];
+                                    Log.Debug($"Config: Migration von CatalogLocalPath zu CatalogLocalFile: {CatalogLocalFile}");
+                                }
+                            }
+                        }
                         if (key == "BackupsLocalPath") BackupsLocalPath = value;
                         if (key == "BackupsRemotePath") BackupsRemotePath = value;
                         if (key == "EnableBackups") EnableBackups = bool.TryParse(value, out bool result) && result;
                         if (key == "SyncPreviewData") SyncPreviewData = bool.TryParse(value, out bool result2) && result2;
-                        if (key == "RemotePath") RemotePath = value;
+                        if (key == "CatalogRemotePath") CatalogRemotePath = value;
                         if (key == "RcloneFolder") RcloneFolder = value;
                         if (key == "RemoteIP") RemoteIP = value;
                         if (key == "SambaUser") SambaUser = value;
@@ -113,12 +139,12 @@ namespace LRCatalogSync.Infrastructure
             // Erstelle Array mit allen Einstellungen
             string[] lines = new string[]
             {
-                "LocalPath=" + LocalPath,
+                "CatalogLocalFile=" + CatalogLocalFile,
                 "BackupsLocalPath=" + BackupsLocalPath,
                 "BackupsRemotePath=" + BackupsRemotePath,
                 "EnableBackups=" + EnableBackups,
                 "SyncPreviewData=" + SyncPreviewData,
-                "RemotePath=" + RemotePath,
+                "CatalogRemotePath=" + CatalogRemotePath,
                 "RcloneFolder=" + RcloneFolder,
                 "RemoteIP=" + RemoteIP,
                 "SambaUser=" + SambaUser,
@@ -128,6 +154,29 @@ namespace LRCatalogSync.Infrastructure
 
             // Schreibe in die Datei
             File.WriteAllLines(path, lines);
+        }
+
+        // Prüft ob der Backup-Pfad innerhalb des Katalog-Pfads liegt
+        public bool IsBackupInsideCatalogPath()
+        {
+            if (string.IsNullOrEmpty(BackupsLocalPath) || 
+                string.IsNullOrEmpty(CatalogLocalPath))
+                return false;
+            
+            string backupNormalized = Path.GetFullPath(BackupsLocalPath).ToLower();
+            string catalogNormalized = Path.GetFullPath(CatalogLocalPath).ToLower();
+            
+            return backupNormalized.StartsWith(catalogNormalized);
+        }
+
+        // Gibt das relative Exclude-Pattern für rclone zurück, wenn Backup im Katalog-Pfad liegt
+        public string GetRelativeBackupExcludePattern()
+        {
+            if (!IsBackupInsideCatalogPath())
+                return string.Empty;
+            
+            string relativeBackupPath = Path.GetRelativePath(CatalogLocalPath, BackupsLocalPath);
+            return relativeBackupPath.Replace("\\", "/");  // Unix-Pfade für rclone
         }
 
         // Statische Methode um Config zu laden (Komfort-Methode)

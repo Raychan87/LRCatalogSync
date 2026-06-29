@@ -89,7 +89,7 @@ Zu prüfen ob .NET 4.8 installiert ist:
 #### Lightroom Katalog
 | Feld | Beschreibung | Beispiel |
 |------|-------------|---------|
-| **Lokaler Pfad** | Pfad zu Ihrem Lightroom Katalog | `C:\Benutzer\Max\Bilder\Lightroom` |
+| **Katalog-Datei** | Pfad zur .lrcat Katalog-Datei | `C:\Benutzer\Max\Bilder\Lightroom\MeinKatalog\MeinKatalog.lrcat` |
 | **Remote Pfad** | Pfad auf dem Samba-Server | `/Lightroom` oder `/NAS/Kataloge` |
 
 #### Backup (optional)

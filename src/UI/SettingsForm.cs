@@ -65,9 +65,9 @@ namespace LRCatalogSync.UI
             yPos += lineHeight - 5;
             AddCheckBox(scrollPanel, "*Previews.lrdata syncen (Nicht sinnvoll)", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Lokaler Pfad:", ref yPos, "txtLocalPath", config.LocalPath, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "Katalog-Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtRemotePath", config.RemotePath, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
             yPos += lineHeight;
             
             AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
@@ -218,7 +218,18 @@ namespace LRCatalogSync.UI
                 };
                 btnBrowse.Click += (s, e) =>
                 {
-                    string path = BrowseFolder();
+                    string path = "";
+                    
+                    // Für Katalog-Datei: File-Dialog verwenden
+                    if (controlName == "txtCatalogLocalFile")
+                    {
+                        path = BrowseFile("Lightroom Katalog-Datei (*.lrcat)|*.lrcat|Alle Dateien (*.*)|*.*");
+                    }
+                    else
+                    {
+                        path = BrowseFolder();
+                    }
+                    
                     if (!string.IsNullOrEmpty(path))
                     {
                         textBox.Text = path;
@@ -342,18 +353,32 @@ namespace LRCatalogSync.UI
             return string.Empty;
         }
 
+        private string BrowseFile(string filter = "Alle Dateien (*.*)|*.*")
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Datei auswählen";
+                dialog.Filter = filter;
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    return dialog.FileName ?? string.Empty;
+                }
+            }
+            return string.Empty;
+        }
+
         private void BtnSave_Click(object? sender, EventArgs e)
         {
             try
             {
                 config.RcloneFolder = GetControlValue("txtRcloneFolder");
-                config.LocalPath = GetControlValue("txtLocalPath");
+                config.CatalogLocalFile = GetControlValue("txtCatalogLocalFile");
                 config.BackupsLocalPath = GetControlValue("txtBackupsLocalPath");
                 config.BackupsRemotePath = GetControlValue("txtBackupsRemotePath");
                 config.EnableBackups = GetCheckBoxValue("chkEnableBackups");
                 config.SyncPreviewData = GetCheckBoxValue("chkSyncPreviewData");
                 config.RemoteIP = GetControlValue("txtRemoteIP");
-                config.RemotePath = GetControlValue("txtRemotePath");
+                config.CatalogRemotePath = GetControlValue("txtCatalogRemotePath");
                 config.SambaUser = GetControlValue("txtSambaUser");
                 config.LogLevel = GetControlValue("cmbLogLevel");
 
@@ -380,34 +405,33 @@ namespace LRCatalogSync.UI
                     return;
                 }
 
-                // ================= VALIDIERUNG 2: Lokaler Pfad und *.lrcat prüfen =================
-                if (string.IsNullOrEmpty(config.LocalPath))
+                // ================= VALIDIERUNG 2: Katalog-Datei prüfen =================
+                if (string.IsNullOrEmpty(config.CatalogLocalFile))
                 {
                     MessageBox.Show(
-                        "Fehler: Der lokale Pfad ist erforderlich!",
-                        "Lokaler Pfad fehlt",
+                        "Fehler: Die Katalog-Datei ist erforderlich!",
+                        "Katalog-Datei fehlt",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
                 }
 
-                if (!Directory.Exists(config.LocalPath))
+                if (!File.Exists(config.CatalogLocalFile))
                 {
                     MessageBox.Show(
-                        $"Fehler: Der lokale Pfad existiert nicht!\n\nPfad: {config.LocalPath}",
-                        "Lokaler Pfad existiert nicht",
+                        $"Fehler: Die Katalog-Datei existiert nicht!\n\nPfad: {config.CatalogLocalFile}",
+                        "Katalog-Datei existiert nicht",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
                 }
 
-                // Prüfe auf *.lrcat Datei
-                string[] lrcatFiles = Directory.GetFiles(config.LocalPath, "*.lrcat", SearchOption.TopDirectoryOnly);
-                if (lrcatFiles.Length == 0)
+                // Prüfe ob es eine .lrcat Datei ist
+                if (!config.CatalogLocalFile.EndsWith(".lrcat", StringComparison.OrdinalIgnoreCase))
                 {
                     MessageBox.Show(
-                        $"Fehler: Keine Lightroom Katalog (*.lrcat) in diesem Verzeichnis gefunden!\n\nPfad: {config.LocalPath}\n\nBitte wählen Sie den korrekten Lightroom Katalog Ordner.",
-                        "Lightroom Katalog nicht gefunden",
+                        $"Fehler: Die ausgewählte Datei ist keine Lightroom Katalog-Datei!\n\nDatei: {config.CatalogLocalFile}\n\nBitte wählen Sie eine *.lrcat Datei.",
+                        "Keine .lrcat Datei",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error);
                     return;
