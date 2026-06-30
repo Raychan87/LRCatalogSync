@@ -27,6 +27,9 @@ namespace LRCatalogSync
         
         // Katalog-Sync Intervall (Sekunden) - Häufigkeit der Prüfzyklen
         public const int CATALOG_SYNC_CHECK_INTERVAL = 30;
+        
+        // Backup-Dateiname für Katalog-Sync (Ringspeicher mit 1 Slot)
+        public const string BACKUP_FILENAME = "LRCatSync_last_katalog.zip";
     }
     
 }

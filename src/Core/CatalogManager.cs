@@ -83,7 +83,7 @@ namespace LRCatalogSync.Core
                     }
                     
                     // Erstelle Lightroom-Lock-Datei um Lightroom zu blockieren
-                    CreateLightroomLock(config.CatalogLocalPath);
+                    CreateLightroomLock(config);
                 }
                 else if (syncDirection == SyncDirection.Download)
                 {
@@ -92,7 +92,7 @@ namespace LRCatalogSync.Core
                 
                 // ========== PHASE 3: ZIP BACKUP ERSTELLEN (Zielort abhängig von Richtung) ==========
                 Log.Info($"CatalogManager: Erstelle ZIP-Backup für {syncDirection}");
-                CreateZipBackup(config, remoteFullPath, syncDirection);
+                CreateZipBackup(config, syncDirection);
                 
                 // ========== PHASE 4: RCLONE SYNC AUSFÜHREN ==========
                 Log.Info($"CatalogManager: Starte rclone {syncDirection.ToString().ToLower()}");
@@ -264,26 +264,14 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Erstellt Lightroom-Lock-Datei um Lightroom zu blockieren
-        /// Verwendet festen Namen [Katalogname].lrcat.lock (nicht GUID!)
-        /// </summary>
-        private static void CreateLightroomLock(string catalogPath)
+        // geprüft!!
+        // Erstellt Lightroom-Lock-Datei um Lightroom zu blockieren
+        // Verwendet festen Namen [Katalogname].lrcat.lock
+        private static void CreateLightroomLock(AppConfig config)
         {
             try
             {
-                // Finde erste .lrcat Datei im Katalog
-                string[] lrcatFiles = Directory.GetFiles(catalogPath, "*.lrcat", SearchOption.TopDirectoryOnly);
-                
-                if (lrcatFiles.Length == 0)
-                {
-                    Log.Error("CatalogManager: Keine .lrcat Datei gefunden, kann Lock nicht erstellen");
-                    return;
-                }
-                
-                // Extrahiere Katalogname aus Dateiname
-                string catalogName = Path.GetFileNameWithoutExtension(lrcatFiles[0]);
-                string lockPath = Path.Combine(catalogPath, $"{catalogName}.lrcat.lock");
+                string lockPath = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat.lock");
                 
                 // Speichere Pfad für Cleanup
                 _createdLightroomLockPath = lockPath;
@@ -299,15 +287,13 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Erstellt ZIP-Backup des Katalogs am Zielort (Upload=NAS, Download=Lokal)
-        /// Verwendet festen Namen LRCatSync_last_katalog.zip (Ringspeicher mit 1 Slot)
-        /// </summary>
-        private static void CreateZipBackup(AppConfig config, string remoteFullPath, SyncDirection direction)
+        // geprüft!!
+        // Erstellt ein gefiltertes ZIP-Backup des Katalogs vor dem Sync
+        // Nur kritische Dateien gemäß Konzept-KatalogSync.md
+        private static void CreateZipBackup(AppConfig config, SyncDirection direction)
         {
             try
             {
-                const string backupFileName = "LRCatSync_last_katalog.zip";
                 string backupPath;
                 string sourcePath;
                 
@@ -315,15 +301,15 @@ namespace LRCatalogSync.Core
                 if (direction == SyncDirection.Upload)
                 {
                     // Upload: Backup auf NAS erstellen (Quelle = Lokal)
-                    backupPath = Path.Combine(remoteFullPath, backupFileName);
+                    backupPath = Path.Combine(config.CatalogRemotePath, GlobalConst.BACKUP_FILENAME);
                     sourcePath = config.CatalogLocalPath;
                     Log.Info($"CatalogManager: Erstelle Upload-Backup auf NAS: {backupPath}");
                 }
                 else if (direction == SyncDirection.Download)
                 {
                     // Download: Backup Lokal erstellen (Quelle = NAS)
-                    backupPath = Path.Combine(config.CatalogLocalPath, backupFileName);
-                    sourcePath = remoteFullPath;
+                    backupPath = Path.Combine(config.CatalogLocalPath, GlobalConst.BACKUP_FILENAME);
+                    sourcePath = config.CatalogRemotePath;
                     Log.Info($"CatalogManager: Erstelle Download-Backup Lokal: {backupPath}");
                 }
                 else
@@ -338,68 +324,54 @@ namespace LRCatalogSync.Core
                     Log.Debug($"CatalogManager: Altes Backup gelöscht: {backupPath}");
                 }
                 
-                // Erstelle ZIP-Datei mit System.IO.Compression
-                string tempZipPath = Path.Combine(GlobalData.BaseDir, "data", "temp", backupFileName);
-                
-                // Erstelle temp Verzeichnis
-                string tempDir = Path.Combine(GlobalData.BaseDir, "data", "temp");
-                if (!Directory.Exists(tempDir))
-                    Directory.CreateDirectory(tempDir);
-                
-                // Lösche alte ZIP-Datei falls vorhanden
-                if (File.Exists(tempZipPath))
-                    File.Delete(tempZipPath);
-                
-                // Erstelle ZIP-Archiv
-                ZipFile.CreateFromDirectory(sourcePath, tempZipPath, CompressionLevel.Optimal, includeBaseDirectory: false);
-                
-                // Bei Upload: Kopiere ZIP auf NAS mit rclone
-                if (direction == SyncDirection.Upload)
+                // Erstelle ZIP-Datei DIREKT am Zielort
+                // ZIP wird direkt in backupPath erstellt (Zielort = Backup-Ort)
+                using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Create))
                 {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = config.RclonePath,
-                        Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" copy \"{tempZipPath}\" \"{remoteFullPath}\" --log-level {config.LogLevel}",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    };
+                    // Katalog-Hauptdatei (.lrcat)
+                    string catalogFile = Path.Combine(sourcePath, $"{config.CatalogName}.lrcat");
+                    if (File.Exists(catalogFile))
+                        zip.CreateEntryFromFile(catalogFile, $"{config.CatalogName}.lrcat");
                     
-                    using (var p = Process.Start(psi))
-                    {
-                        if (p == null)
-                            return;
-                        
-                        p.WaitForExit();
-                        
-                        if (p.ExitCode == 0)
-                        {
-                            Log.Info($"CatalogManager: Backup erfolgreich erstellt: {backupPath}");
-                            
-                            // Lösche temp ZIP-Datei
-                            if (File.Exists(tempZipPath))
-                                File.Delete(tempZipPath);
-                        }
-                        else
-                        {
-                            Log.Error($"CatalogManager: Backup fehlgeschlagen (ExitCode: {p.ExitCode})");
-                        }
-                    }
-                }
-                else if (direction == SyncDirection.Download)
-                {
-                    // Bei Download: ZIP bleibt lokal
-                    Log.Info($"CatalogManager: Backup lokal erstellt: {backupPath}");
+                    // Katalog-Datenordner (.lrcat-data)
+                    string catalogDataDir = Path.Combine(sourcePath, $"{config.CatalogName}.lrcat-data");
+                    if (Directory.Exists(catalogDataDir))
+                        AddDirectoryToZip(zip, catalogDataDir, $"{config.CatalogName}.lrcat-data");
                     
-                    // Lösche temp ZIP-Datei (ist schon am Zielort)
-                    if (File.Exists(tempZipPath) && tempZipPath != backupPath)
-                        File.Delete(tempZipPath);
+                    // Helper.lrdata
+                    string helperDir = Path.Combine(sourcePath, $"{config.CatalogName} Helper.lrdata");
+                    if (Directory.Exists(helperDir))
+                        AddDirectoryToZip(zip, helperDir, $"{config.CatalogName} Helper.lrdata");
+                    
+                    // Sync.lrdata
+                    string syncDir = Path.Combine(sourcePath, $"{config.CatalogName} Sync.lrdata");
+                    if (Directory.Exists(syncDir))
+                        AddDirectoryToZip(zip, syncDir, $"{config.CatalogName} Sync.lrdata");
+                    
+                    // Smart Previews.lrdata
+                    string smartPreviewsDir = Path.Combine(sourcePath, $"{config.CatalogName} Smart Previews.lrdata");
+                    if (Directory.Exists(smartPreviewsDir))
+                        AddDirectoryToZip(zip, smartPreviewsDir, $"{config.CatalogName} Smart Previews.lrdata");                    
                 }
+                
+                Log.Info($"CatalogManager: Backup erfolgreich erstellt: {backupPath}");
             }
             catch (Exception ex)
             {
                 Log.Error($"CatalogManager: Backup-Fehler: {ex.Message}");
+            }
+        }
+        
+        // geprüft!!
+        // Fügt Dateien aus einem Verzeichnis rekursiv in das ZIP-Archiv ein
+        private static void AddDirectoryToZip(ZipArchive zip, string sourceDir, string entryPath)
+        {
+            foreach (var file in Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories))
+            {
+                // Erstelle relativen Pfad innerhalb des Ordners
+                string relativePath = Path.GetRelativePath(sourceDir, file);
+                string entryName = Path.Combine(entryPath, relativePath).Replace('\\', '/');
+                zip.CreateEntryFromFile(file, entryName);
             }
         }
         
