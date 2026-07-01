@@ -25,73 +25,68 @@ namespace LRCatalogSync.Core
         // Speichert Pfad der erstellten Lightroom-Lock für Cleanup
         private static string? _createdLightroomLockPath = null;
         
-        // ==================== ÖFFENTLICHE METHODEN ====================
-        
-        /// <summary>
-        /// Führt die Katalog-Synchronisation aus
-        /// Phase 0: Prüfe ob Lightroom läuft (.lrcat.lock vorhanden?)
-        /// Phase 1: rclone check – Versionsvergleich lokal vs remote + Upload/Download Entscheidung
-        /// Phase 2: Lock akquirieren (NUR bei Upload!)
-        /// Phase 3: ZIP Backup erstellen (Zielort: Upload=NAS, Download=Lokal)
-        /// Phase 4: rclone sync ausführen (Upload oder Download)
-        /// Phase 5: Cleanup (IMMER im finally!)
-        /// </summary>
+        // geprüft!!
+        // Führt die Katalog-Synchronisation aus
+        // Phase 0: Prüfe ob Lightroom läuft (.lrcat.lock vorhanden?) – VOR try!
+        // Phase 1: rclone check – Versionsvergleich lokal vs remote + Upload/Download Entscheidung
+        // Phase 2: Lock akquirieren (NUR bei Upload!)
+        // Phase 3: ZIP Backup erstellen (Zielort: Upload=NAS, Download=Lokal)
+        // Phase 4: rclone sync ausführen (Upload oder Download)
+        // Phase 5: Cleanup (IMMER im finally!)
         public static void RunCatalogSync(AppConfig config, TrayManager trayManager)
         {
+            // ========== PHASE 0: LIGHTROOM-LOCK-ERKENNUNG (vor try!) ==========
+            if (IsLightroomRunning(config))
+            {
+                Log.Debug("CatalogManager: Lightroom läuft (.lrcat.lock erkannt), warte auf Sync-Ende");
+                trayManager.UpdateStatus("Lockfile");  // 🔵 Blau
+                return; // Kein try/finally nötig – wir haben nichts erstellt
+            }
+
             LockManager? lockManager = null;
             SyncDirection syncDirection = SyncDirection.None;
-            
+
             try
             {
-                // ========== PHASE 0: LIGHTROOM-LOCK-ERKENNUNG ==========
-                if (IsLightroomRunning(config.CatalogLocalPath, config.CatalogName))
-                {
-                    Log.Debug("CatalogManager: Lightroom läuft (.lrcat.lock erkannt), warte auf Sync-Ende");
-                    trayManager.UpdateStatus("Lockfile");  // 🔵 Blau
-                    return; // Warte auf nächsten Zyklus
-                }
-                
                 // ========== PHASE 1: VERSIONSVERGLEICH + RICHTUNGSBESTIMMUNG ==========
-                Log.Info("CatalogManager: Starte Versionsvergleich (lokal vs remote)");
+                Log.Debug("CatalogManager: Starte Versionsvergleich (lokal vs remote)");
                 
-                // Verwende CatalogFileName Property statt Path.GetFileName
-                string remoteFullPath = Path.Combine(config.CatalogRemotePath, config.CatalogFileName);
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_catalog_check.log");
                 
-                syncDirection = CheckSyncDirection(config, remoteFullPath, tempLog);
+                syncDirection = CheckSyncDirection(config, tempLog);
                 
                 if (syncDirection == SyncDirection.None)
                 {
-                    Log.Info("CatalogManager: Katalog ist bereits synchron (kein Sync nötig)");
+                    Log.Debug("CatalogManager: Katalog ist bereits synchron (kein Sync nötig)");
                     trayManager.UpdateStatus("Standby");  // 🟢 Grün
                     return;
                 }
                 
-                Log.Info($"CatalogManager: Sync-Richtung erkannt: {syncDirection}");
+                Log.Debug($"CatalogManager: Sync-Richtung erkannt: {syncDirection}");
                 
                 // ========== PHASE 2: LOCK AKQUIRIEREN (NUR BEI UPLOAD!) ==========
                 if (syncDirection == SyncDirection.Upload)
                 {
-                    Log.Info("CatalogManager: Akquiere Locks für Upload-Synchronisation");
+                    Log.Debug("CatalogManager: Akquiere Locks für Upload-Synchronisation");
                     lockManager = new LockManager();
                     
                     if (!lockManager.AcquireLocks(config))
                     {
-                        Log.Info("CatalogManager: Konnte Locks nicht akquirieren, breche Sync ab");
+                        Log.Debug("CatalogManager: Konnte Locks nicht akquirieren, breche Sync ab");
                         trayManager.UpdateStatus("Standby");  // 🟢 Grün
                         return;
                     }
-                    
-                    // Erstelle Lightroom-Lock-Datei um Lightroom zu blockieren
-                    CreateLightroomLock(config);
                 }
                 else if (syncDirection == SyncDirection.Download)
                 {
-                    Log.Info("CatalogManager: Download-Sync benötigt keine Lock-Akquise");
+                    Log.Debug("CatalogManager: Download-Sync benötigt keine Lock-Akquise");
                 }
+
+                // Erstelle Lightroom-Lock-Datei um Lightroom zu blockieren
+                CreateLightroomLock(config);
                 
                 // ========== PHASE 3: ZIP BACKUP ERSTELLEN (Zielort abhängig von Richtung) ==========
-                Log.Info($"CatalogManager: Erstelle ZIP-Backup für {syncDirection}");
+                Log.Debug($"CatalogManager: Erstelle ZIP-Backup für {syncDirection}");
                 CreateZipBackup(config, syncDirection);
                 
                 // ========== PHASE 4: RCLONE SYNC AUSFÜHREN ==========
@@ -100,15 +95,15 @@ namespace LRCatalogSync.Core
                 
                 if (syncDirection == SyncDirection.Upload)
                 {
-                    RunRcloneSync(config, remoteFullPath, SyncDirection.Upload);
+                    RunRcloneSync(config, SyncDirection.Upload);
                 }
                 else if (syncDirection == SyncDirection.Download)
                 {
-                    RunRcloneSync(config, remoteFullPath, SyncDirection.Download);
+                    RunRcloneSync(config, SyncDirection.Download);
                 }
                 
                 // ========== PHASE 5: CLEANUP ==========
-                Log.Info("CatalogManager: Cleanup - Locks freigeben");
+                Log.Debug("CatalogManager: Cleanup - Locks freigeben");
             }
             catch (Exception ex)
             {
@@ -121,28 +116,37 @@ namespace LRCatalogSync.Core
                 lockManager?.ReleaseLocks();
                 
                 // Lightroom-Lock-Dateien löschen (nur die von uns erstellten)
-                CleanupLightroomLocks(config.CatalogLocalPath);
+                CleanupLightroomLocks(config);
                 
                 // Tray-Status zurücksetzen
                 trayManager.UpdateStatus("Standby");  // 🟢 Grün
-                Log.Info("CatalogManager: Sync abgeschlossen, Status zurückgesetzt");
+                Log.Debug("CatalogManager: Sync abgeschlossen");
             }
         }
         
-        /// <summary>
-        /// Löscht die von uns erstellte Lightroom-Lock-Datei
-        /// </summary>
-        private static void CleanupLightroomLocks(string catalogPath)
+        // geprüft!!
+        // Löscht die von uns erstellte Lightroom-Lock-Datei
+        // Erkennung NUR am Inhalt: Unsere enthält "LRCatSync=", Lightrooms enthält Prozesspfad
+        private static void CleanupLightroomLocks(AppConfig config)
         {
             try
             {
-                // Lösche gespeicherte Lock-Datei
-                if (!string.IsNullOrEmpty(_createdLightroomLockPath) && File.Exists(_createdLightroomLockPath))
+                string lockPath = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat.lock");
+
+                if (File.Exists(lockPath))
                 {
-                    File.Delete(_createdLightroomLockPath);
-                    Log.Debug($"CatalogManager: Lightroom-Lock gelöscht: {_createdLightroomLockPath}");
-                    _createdLightroomLockPath = null;
+                    string content = File.ReadAllText(lockPath);
+                    if (content.StartsWith("LRCatSync="))
+                    {
+                        File.Delete(lockPath);
+                        Log.Debug($"CatalogManager: LRCatSync Lock-Datei gelöscht: {lockPath}");
+                    }
+                    else
+                    {
+                        Log.Debug($"CatalogManager: Lightrooms Lock-Datei, NICHT löschen: {lockPath}");
+                    }
                 }
+                _createdLightroomLockPath = null;
             }
             catch (Exception ex)
             {
@@ -150,25 +154,23 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // ==================== PRIVATE HILFSMETHODEN ====================
-        
         // Geprüft!!
         // Prüft ob Lightroom läuft (sucht nach [Katalogname].lrcat.lock, [Katalogname].lrcat-shm, [Katalogname].lrcat-wal)
-        private static bool IsLightroomRunning(string catalogPath, string catalogName)
+        private static bool IsLightroomRunning(AppConfig config)
         {
             try
             {
                 // Erstelle Array mit möglichen Lock-Dateinamen 
                 string[] lockFiles = {
-                    $"{catalogName}.lrcat.lock",
-                    $"{catalogName}.lrcat-shm",
-                    $"{catalogName}.lrcat-wal"
+                    $"{config.CatalogName}.lrcat.lock",
+                    $"{config.CatalogName}.lrcat-shm",
+                    $"{config.CatalogName}.lrcat-wal"
                 };
                 
                 // Suche nach Lightroom-Lock-Dateien mit vollständigem Dateinamen
                 foreach (string lockFile in lockFiles)
                 {
-                    string fullPath = Path.Combine(catalogPath, lockFile);
+                    string fullPath = Path.Combine(config.CatalogLocalPath, lockFile);
                     if (File.Exists(fullPath))
                     {
                         Log.Debug($"CatalogManager: Lightroom-Lock erkannt: {fullPath}");
@@ -186,7 +188,7 @@ namespace LRCatalogSync.Core
         
         // geprüft!!
         // Prüft die Sync-Richtung basierend auf rclone check Ausgabe
-        private static SyncDirection CheckSyncDirection(AppConfig config, string remoteFullPath, string logFile)
+        private static SyncDirection CheckSyncDirection(AppConfig config, string logFile)
         {
             try
             {
@@ -194,7 +196,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" check \"{config.CatalogLocalPath}\" \"{remoteFullPath}\" --filter \"+ {config.CatalogFileName}\" --filter \"- *\" --log-file \"{logFile}\" --log-level INFO",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" check \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFullPath}\" --filter \"+ {config.CatalogFileName}\" --filter \"- *\" --log-file \"{logFile}\" --log-level INFO",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -375,10 +377,9 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Führt rclone sync aus (Upload oder Download) mit dynamischen Excludes
-        /// </summary>
-        private static void RunRcloneSync(AppConfig config, string remoteFullPath, SyncDirection direction)
+        // geprüft!!
+        // Führt rclone sync aus (Upload oder Download) mit dynamischen Excludes
+        private static void RunRcloneSync(AppConfig config, SyncDirection direction)
         {
             try
             {
@@ -391,12 +392,12 @@ namespace LRCatalogSync.Core
                 if (direction == SyncDirection.Upload)
                 {
                     sourcePath = config.CatalogLocalPath;
-                    destPath = remoteFullPath;
+                    destPath = config.CatalogRemoteFullPath;
                     Log.Info("CatalogManager: Starte rclone upload (lokal → NAS)");
                 }
                 else if (direction == SyncDirection.Download)
                 {
-                    sourcePath = remoteFullPath;
+                    sourcePath = config.CatalogRemoteFullPath;
                     destPath = config.CatalogLocalPath;
                     Log.Info("CatalogManager: Starte rclone download (NAS → lokal)");
                 }
@@ -405,15 +406,16 @@ namespace LRCatalogSync.Core
                     return;
                 }
                 
-                // Baue Exclude-Filter dynamisch
+                // Baue Exclude-Filter mit vollen Ornder-/Dateinamen
                 var excludes = new System.Collections.Generic.List<string>
                 {
-                    "--exclude \"*.lrcat.lock\"",
-                    "--exclude \"*.lrcat-shm\"",
-                    "--exclude \"*.lrcat-wal\"",
-                    "--exclude \"LRCatSync_*.zip\"",
+                    $"--exclude \"{config.CatalogName}.lrcat.lock\"",
+                    $"--exclude \"{config.CatalogName}.lrcat-shm\"",
+                    $"--exclude \"{config.CatalogName}.lrcat-wal\"",
+                    $"--exclude \"{GlobalConst.BACKUP_FILENAME}\"",
+                    $"--exclude \"{config.CatalogName} Previews.lrdata/\"",
                 };
-                
+
                 // BackupsLocalPath ausschließen wenn im Katalog-Pfad
                 if (config.IsBackupInsideCatalogPath())
                 {
@@ -424,13 +426,8 @@ namespace LRCatalogSync.Core
                         Log.Debug($"CatalogManager: Schließe Backup-Ordner aus: {relativeBackupPath}");
                     }
                 }
-                
-                // Previews ausschließen wenn nicht aktiviert
-                if (!config.SyncPreviewData)
-                {
-                    excludes.Add("--exclude \"*Previews.lrdata/\"");
-                }
-                
+
+                // Kombiniere Excludes in einen String für rclone
                 string excludeArgs = string.Join(" ", excludes);
                 
                 var psi = new ProcessStartInfo
@@ -480,7 +477,7 @@ namespace LRCatalogSync.Core
                 // Separater Sync für Previews.lrdata (nur wenn SyncPreviewData=true)
                 if (config.SyncPreviewData)
                 {
-                    SyncPreviewsData(config, sourcePath, destPath, direction);
+                    SyncPreviewsData(config);
                 }
             }
             catch (Exception ex)
@@ -489,9 +486,8 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Parst Transfer-Statistiken aus rclone Output
-        /// </summary>
+        // geprüft!!
+        // Parst Transfer-Statistiken aus rclone Output
         private static (int Files, long Bytes) ParseRcloneStats(string output)
         {
             int files = 0;
@@ -543,45 +539,19 @@ namespace LRCatalogSync.Core
             return (files, bytes);
         }
         
-        /// <summary>
-        /// Führt separaten Sync für Previews.lrdata durch (nur wenn SyncPreviewData=true)
-        /// </summary>
-        private static void SyncPreviewsData(AppConfig config, string sourcePath, string destPath, SyncDirection direction)
+        // geprüft!!
+        // Führt separaten Sync für Previews.lrdata durch (nur wenn SyncPreviewData=true)
+        private static void SyncPreviewsData(AppConfig config)
         {
             try
             {
-                Log.Info($"CatalogManager: Starte separaten Sync für Previews.lrdata ({direction})");
-                
-                // Baue Exclude-Filter für Previews-Sync (alle anderen kritischen Dateien ausschließen)
-                var excludes = new System.Collections.Generic.List<string>
-                {
-                    "--exclude \"*.lrcat.lock\"",
-                    "--exclude \"*.lrcat-shm\"",
-                    "--exclude \"*.lrcat-wal\"",
-                    "--exclude \"*.lrcat\"",
-                    "--exclude \"*.lrcat-data/\"",
-                    "--exclude \"*Helper.lrdata/\"",
-                    "--exclude \"*Sync.lrdata/\"",
-                    "--exclude \"*Smart Previews.lrdata/\"",
-                    "--exclude \"LRCatSync_*.zip\"",
-                };
-                
-                // BackupsLocalPath ausschließen wenn im Katalog-Pfad
-                if (config.IsBackupInsideCatalogPath())
-                {
-                    string relativeBackupPath = config.GetRelativeBackupExcludePattern();
-                    if (!string.IsNullOrEmpty(relativeBackupPath))
-                    {
-                        excludes.Add($"--exclude \"{relativeBackupPath}/**\"");
-                    }
-                }
-                
-                string excludeArgs = string.Join(" ", excludes);
-                
+                Log.Info("CatalogManager: Starte separaten Sync für Previews.lrdata");
+
+                // Nur den spezifischen Previews-Ordner inkludieren
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" sync \"{sourcePath}\" \"{destPath}\" --include \"*/\" --include \"*Previews.lrdata/**\" {excludeArgs} --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFullPath}\" --include \"{config.CatalogName} Previews.lrdata/**\" --log-level {config.LogLevel}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

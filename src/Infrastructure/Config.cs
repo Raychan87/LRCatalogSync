@@ -57,6 +57,9 @@ namespace LRCatalogSync.Infrastructure
         // Extrahiert den Katalognamen ohne Endung (z.B. "MeineFotos")
         public string CatalogName => Path.GetFileNameWithoutExtension(CatalogLocalFile);
 
+        // Remote: Vollständiger Pfad (RemotePath + Dateiname)
+        public string CatalogRemoteFullPath => Path.Combine(CatalogRemotePath, CatalogFileName);
+
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.
         // "path" --> Pfad zur config.txt
