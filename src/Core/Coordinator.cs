@@ -8,20 +8,16 @@ using LRCatalogSync.UI;
 
 namespace LRCatalogSync.Core
 {
-    /// <summary>
-    /// Koordinator für sequenzielle Ausführung von Backup und Katalog-Sync
-    /// Stellt sicher dass BackupManager und CatalogManager NACHEINANDER laufen
-    /// </summary>
+    // Koordinator für sequenzielle Ausführung von Backup und Katalog-Sync
+    // Stellt sicher dass BackupManager und CatalogManager NACHEINANDER laufen
     public static class Coordinator
     {
         // Lock gegen parallele Ausführung
         private static readonly object cycleLock = new object();
         private static bool isCycleRunning = false;
 
-        /// <summary>
-        /// Führt kompletten Sync-Zyklus aus: Backup → Katalog-Sync
-        /// Wird vom Timer in LRCatSync aufgerufen
-        /// </summary>
+        // Führt kompletten Sync-Zyklus aus: Backup → Katalog-Sync
+        // Wird vom Timer in LRCatSync aufgerufen
         public static void RunSyncCycle(AppConfig config, TrayManager trayManager)
         {
             // Verhindere parallele Ausführung
@@ -38,17 +34,13 @@ namespace LRCatalogSync.Core
 
             try
             {
-                Log.Debug("Coordinator: Starte Sync-Zyklus (Backup → Katalog)");
-
                 // ========== SCHRITT 1: BackupManager ausführen ==========
                 // BackupManager synchronisiert BackupsLocalPath → NAS
-                Log.Info("Coordinator: Starte BackupManager");
-                trayManager.UpdateStatus("Syncing");
-                
+                Log.Debug("Coordinator: Starte BackupManager");                
                 try
                 {
                     BackupManager.RunBackupProcess(config, trayManager);
-                    Log.Info("Coordinator: BackupManager abgeschlossen");
+                    Log.Debug("Coordinator: BackupManager abgeschlossen");
                 }
                 catch (Exception ex)
                 {
@@ -59,13 +51,12 @@ namespace LRCatalogSync.Core
 
                 // ========== SCHRITT 2: Katalog-Sync ausführen ==========
                 // CatalogManager synchronisiert CatalogLocalPath → NAS (oder umgekehrt)
-                Log.Info("Coordinator: Starte CatalogManager");
-                trayManager.UpdateStatus("Syncing");
+                Log.Debug("Coordinator: Starte CatalogManager");
                 
                 try
                 {
                     CatalogManager.RunCatalogSync(config, trayManager);
-                    Log.Info("Coordinator: CatalogManager abgeschlossen");
+                    Log.Debug("Coordinator: CatalogManager abgeschlossen");
                 }
                 catch (Exception ex)
                 {
