@@ -65,6 +65,60 @@ namespace LRCatalogSync.Core
             }
         }
 
+        // ==================== HAUPTMETHODE: BACKUP-PROZESS ====================
+        /// Führt kompletten Backup-Prozess aus: Validiert Konfiguration und startet SyncBackups().
+        /// Aktualisiert Tray-Status.
+        /// config: App-Konfiguration mit Pfaden und Einstellungen
+        /// trayManager: TrayManager für Status-Updates (Syncing/Standby/Error)
+        public static void RunBackupProcess(AppConfig config, TrayManager trayManager)
+        {
+            try
+            {
+                // ========== VALIDIERUNGEN ==========
+                if (!File.Exists(GlobalData.RcloneConfigPath))
+                {
+                    Log.Error("rclone.conf fehlt. Bitte Einstellungen prüfen.");
+                    trayManager.UpdateStatus("Error");
+                    return;
+                }
+
+                if (!File.Exists(config.RclonePath))
+                {
+                    Log.Error("rclone.exe nicht gefunden. Bitte Einstellungen prüfen.");
+                    trayManager.UpdateStatus("rclone");
+                    return;
+                }
+
+                // ========== BACKUP AUSFÜHREN ==========
+                if (!config.EnableBackups)
+                {
+                    Log.Debug("Backup: deaktiviert");
+                    return;
+                }
+
+                // Zusammenstellung des Remote-Pfads (z.B. "synology:/Lightroom/Backups")
+                string remoteFullPath = GlobalConst.REMOTE_NAME;
+                if (!string.IsNullOrEmpty(config.BackupsRemotePath))
+                    remoteFullPath += ":" + config.BackupsRemotePath;
+
+                // Setze Tray auf "Syncing" und starte Sync
+                trayManager.UpdateStatus("Syncing");
+
+                // Führe Sync durch
+                SyncBackups(config, remoteFullPath);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Backup/Fehler: {ex.Message}");
+                trayManager.UpdateStatus("Error");
+            }
+            finally
+            {
+                // Nach Backup immer zu "Standby" zurücksetzen
+                trayManager.UpdateStatus("Standby");
+            }
+        }
+
         // ==================== PRIVATE HILFSFUNKTIONEN ====================
         // Liest rclone Logdatei und gibt wichtige Statistiken aus (Copied, Deleted, etc.)
         // logFile: Pfad zur rclone Logdatei
@@ -131,60 +185,6 @@ namespace LRCatalogSync.Core
                 }
             }
             return Array.Empty<string>();
-        }
-
-        // ==================== HAUPTMETHODE: BACKUP-PROZESS ====================
-        /// Führt kompletten Backup-Prozess aus: Validiert Konfiguration und startet SyncBackups().
-        /// Aktualisiert Tray-Status.
-        /// config: App-Konfiguration mit Pfaden und Einstellungen
-        /// trayManager: TrayManager für Status-Updates (Syncing/Standby/Error)
-        public static void RunBackupProcess(AppConfig config, TrayManager trayManager)
-        {
-            try
-            {
-                // ========== VALIDIERUNGEN ==========
-                if (!File.Exists(GlobalData.RcloneConfigPath))
-                {
-                    Log.Error("rclone.conf fehlt. Bitte Einstellungen prüfen.");
-                    trayManager.UpdateStatus("Error");
-                    return;
-                }
-
-                if (!File.Exists(config.RclonePath))
-                {
-                    Log.Error("rclone.exe nicht gefunden. Bitte Einstellungen prüfen.");
-                    trayManager.UpdateStatus("rclone");
-                    return;
-                }
-
-                // ========== BACKUP AUSFÜHREN ==========
-                if (!config.EnableBackups)
-                {
-                    Log.Debug("Backup: deaktiviert");
-                    return;
-                }
-
-                // Zusammenstellung des Remote-Pfads (z.B. "synology:/Lightroom/Backups")
-                string remoteFullPath = GlobalConst.REMOTE_NAME;
-                if (!string.IsNullOrEmpty(config.BackupsRemotePath))
-                    remoteFullPath += ":" + config.BackupsRemotePath;
-
-                // Setze Tray auf "Syncing" und starte Sync
-                trayManager.UpdateStatus("Syncing");
-
-                // Führe Sync durch
-                SyncBackups(config, remoteFullPath);
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Backup/Fehler: {ex.Message}");
-                trayManager.UpdateStatus("Error");
-            }
-            finally
-            {
-                // Nach Backup immer zu "Standby" zurücksetzen
-                trayManager.UpdateStatus("Standby");
-            }
         }
     }
 }

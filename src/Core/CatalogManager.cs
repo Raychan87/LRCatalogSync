@@ -8,10 +8,8 @@ using LRCatalogSync.UI;                // ← für TrayManager
 
 namespace LRCatalogSync.Core
 {
-    /// <summary>
-    /// CatalogManager für die Katalog-Synchronisation
-    /// Führt sequenziell Backup, rclone sync und Cleanup aus
-    /// </summary>
+    // CatalogManager für die Katalog-Synchronisation
+    // Führt sequenziell Backup, rclone sync und Cleanup aus
     public static class CatalogManager
     {
         // Enum für Sync-Richtung
@@ -21,9 +19,6 @@ namespace LRCatalogSync.Core
             Upload,    // Lokal → NAS
             Download   // NAS → Lokal
         }
-        
-        // Speichert Pfad der erstellten Lightroom-Lock für Cleanup
-        private static string? _createdLightroomLockPath = null;
         
         // geprüft!!
         // Führt die Katalog-Synchronisation aus
@@ -131,22 +126,19 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                string lockPath = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat.lock");
-
-                if (File.Exists(lockPath))
+                if (File.Exists(config.CatalogLockFile))
                 {
-                    string content = File.ReadAllText(lockPath);
+                    string content = File.ReadAllText(config.CatalogLockFile);
                     if (content.StartsWith("LRCatSync="))
                     {
-                        File.Delete(lockPath);
-                        Log.Debug($"CatalogManager: LRCatSync Lock-Datei gelöscht: {lockPath}");
+                        File.Delete(config.CatalogLockFile);
+                        Log.Debug($"CatalogManager: LRCatSync Lock-Datei gelöscht: {config.CatalogLockFile}");
                     }
                     else
                     {
-                        Log.Debug($"CatalogManager: Lightrooms Lock-Datei, NICHT löschen: {lockPath}");
+                        Log.Debug($"CatalogManager: Lightrooms Lock-Datei, NICHT löschen: {config.CatalogLockFile}");
                     }
                 }
-                _createdLightroomLockPath = null;
             }
             catch (Exception ex)
             {
@@ -273,15 +265,10 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                string lockPath = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat.lock");
-                
-                // Speichere Pfad für Cleanup
-                _createdLightroomLockPath = lockPath;
-                
                 // Schreibe Sync-Info in Lock-Datei (Lightroom ignoriert Inhalt, prüft nur Existenz)
-                File.WriteAllText(lockPath, $"LRCatSync={DateTime.Now:yyyy-MM-dd HH:mm:ss}\nSyncGuid={Guid.NewGuid():N}");
+                File.WriteAllText(config.CatalogLockFile, $"LRCatSync={DateTime.Now:yyyy-MM-dd HH:mm:ss}\nSyncGuid={Guid.NewGuid():N}");
                 
-                Log.Debug($"CatalogManager: Lightroom-Lock erstellt: {lockPath}");
+                Log.Debug($"CatalogManager: Lightroom-Lock erstellt: {config.CatalogLockFile}");
             }
             catch (Exception ex)
             {
