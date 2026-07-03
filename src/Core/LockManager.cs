@@ -1,9 +1,10 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Diagnostics;
 
-using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig
+using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, SMBConnectionManager
 
 namespace LRCatalogSync.Core
 {
@@ -17,8 +18,6 @@ namespace LRCatalogSync.Core
                 
         // Lokale Lock-Datei
         private FileStream? _localLockStream;
-        
-        private FileStream? _remoteLockStream;
         
         // Heartbeat Thread
         private Thread? _heartbeatThread;
@@ -76,45 +75,63 @@ namespace LRCatalogSync.Core
                 writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
                 // ========== REMOTE LOCK AKQUIRIEREN ==========
-                // Prüfe ob Remote-Pfad existiert (Samba-Verbindung)
-                if (!Directory.Exists(Path.GetDirectoryName(config.SyncRemoteLockFile)))
+                // Stelle SMB-Verbindung her
+                if (!SMBConnectionManager.Instance.EnsureConnected(config))
                 {
-                    Log.Info($"LockManager: Remote-Pfad existiert nicht: {Path.GetDirectoryName(config.SyncRemoteLockFile)}");
-                    // Kein Fehler, aber kein Remote-Lock möglich
+                    Log.Info($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
                     _locksAcquired = true;
                     return true;
                 }
                 
-                if (File.Exists(config.SyncRemoteLockFile))
+                // Berechne relativen Pfad zur Lock-Datei innerhalb der Freigabe
+                string lockRelativePath = GetRelativePath(config.CatalogRemotePath, config.SyncRemoteLockFile);
+                
+                // Prüfe ob Lock-Datei existiert via SMB
+                var existingFiles = SMBConnectionManager.Instance.ListFiles(Path.GetDirectoryName(lockRelativePath) ?? "");
+                string lockFileName = Path.GetFileName(lockRelativePath);
+                
+                if (existingFiles.Contains(lockFileName))
                 {
-                    // Prüfe ob Lock stale ist
-                    FileInfo lockInfo = new FileInfo(config.SyncRemoteLockFile);
-                    if (lockInfo.LastWriteTimeUtc.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
+                    // Lies Lock-Inhalt um Alter zu prüfen
+                    byte[]? lockData = SMBConnectionManager.Instance.ReadFile(lockRelativePath);
+                    if (lockData != null)
                     {
-                        Log.Info($"LockManager: Stale remote Lock erkannt, überschreibe {config.SyncRemoteLockFile}");
-                        File.Delete(config.SyncRemoteLockFile);
-                    }
-                    else
-                    {
-                        Log.Info($"LockManager: Remote Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
-                        // Release lokalen Lock
-                        _localLockStream?.Close();
-                        _localLockStream = null;
-                        File.Delete(config.SyncLocalLockFile);
-                        return false;
+                        string lockContent = Encoding.UTF8.GetString(lockData);
+                        
+                        // Parse Timestamp aus Lock-Datei
+                        DateTime lockTimestamp;
+                        if (TryParseLockTimestamp(lockContent, out lockTimestamp))
+                        {
+                            if (lockTimestamp.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
+                            {
+                                Log.Info($"LockManager: Stale remote Lock erkannt, überschreibe {config.SyncRemoteLockFile}");
+                                SMBConnectionManager.Instance.DeleteFile(lockRelativePath);
+                            }
+                            else
+                            {
+                                Log.Info($"LockManager: Remote Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
+                                // Release lokalen Lock
+                                _localLockStream?.Close();
+                                _localLockStream = null;
+                                File.Delete(config.SyncLocalLockFile);
+                                return false;
+                            }
+                        }
                     }
                 }
                 
-                // Erstelle remote Lock-Datei
-                _remoteLockStream = new FileStream(config.SyncRemoteLockFile, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                // Erstelle remote Lock-Datei via SMB
+                string lockContentNew = $"SyncGuid={SyncGuid}\nTimestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                byte[] lockBytes = Encoding.UTF8.GetBytes(lockContentNew);
                 
-                // Schreibe Sync-GUID in Lock-Datei
-                // WICHTIG: StreamWriter disposed nicht den underlying Stream!
-                var remoteWriter = new StreamWriter(_remoteLockStream);
-                remoteWriter.WriteLine($"SyncGuid={SyncGuid}");
-                remoteWriter.WriteLine($"Timestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                remoteWriter.Flush();
-                remoteWriter.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
+                if (!SMBConnectionManager.Instance.WriteFile(lockRelativePath, lockBytes))
+                {
+                    Log.Error($"LockManager: Schreiben der remote Lock-Datei fehlgeschlagen");
+                    _localLockStream?.Close();
+                    _localLockStream = null;
+                    File.Delete(config.SyncLocalLockFile);
+                    return false;
+                }
                 
                 _locksAcquired = true;
                 Log.Info($"LockManager: Beide Locks akquiriert (SyncGuid: {SyncGuid})");
@@ -187,14 +204,26 @@ namespace LRCatalogSync.Core
                     _localLockStream.Flush();
                 }
                 
-                if (_remoteLockStream != null && _remoteLockStream.CanWrite)
+                // Remote Heartbeat via SMB
+                if (_config != null && SMBConnectionManager.Instance.IsConnected)
                 {
-                    _remoteLockStream.Seek(0, SeekOrigin.End);
-                    using (var writer = new StreamWriter(_remoteLockStream))
+                    try
                     {
-                        writer.WriteLine($"Heartbeat={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                        string lockRelativePath = GetRelativePath(_config.CatalogRemotePath, _config.SyncRemoteLockFile);
+                        byte[]? existingData = SMBConnectionManager.Instance.ReadFile(lockRelativePath);
+                        
+                        if (existingData != null)
+                        {
+                            string content = Encoding.UTF8.GetString(existingData);
+                            content += $"\nHeartbeat={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
+                            byte[] updatedData = Encoding.UTF8.GetBytes(content);
+                            SMBConnectionManager.Instance.WriteFile(lockRelativePath, updatedData);
+                        }
                     }
-                    _remoteLockStream.Flush();
+                    catch (Exception ex)
+                    {
+                        Log.Error($"LockManager: Remote Heartbeat fehlgeschlagen: {ex.Message}");
+                    }
                 }
             }
             catch (Exception ex)
@@ -242,27 +271,20 @@ namespace LRCatalogSync.Core
                     }
                 }
                 
-                // Release remote Lock
-                if (_remoteLockStream != null)
+                // Lösche remote Lock-Datei via SMB
+                if (!string.IsNullOrEmpty(config.SyncRemoteLockFile))
                 {
                     try
                     {
-                        _remoteLockStream.Close();
-                        _remoteLockStream = null;
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"LockManager: Fehler beim Schließen des remote Locks: {ex.Message}");
-                    }
-                }
-                
-                // Lösche remote Lock-Datei
-                if (!string.IsNullOrEmpty(config.SyncRemoteLockFile) && File.Exists(config.SyncRemoteLockFile))
-                {
-                    try
-                    {
-                        File.Delete(config.SyncRemoteLockFile);
-                        Log.Debug($"LockManager: Remote Lock-Datei gelöscht: {config.SyncRemoteLockFile}");
+                        // Stelle SMB-Verbindung her falls nicht vorhanden
+                        if (SMBConnectionManager.Instance.EnsureConnected(config))
+                        {
+                            string lockRelativePath = GetRelativePath(config.CatalogRemotePath, config.SyncRemoteLockFile);
+                            if (SMBConnectionManager.Instance.DeleteFile(lockRelativePath))
+                            {
+                                Log.Debug($"LockManager: Remote Lock-Datei gelöscht via SMB");
+                            }
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -305,6 +327,60 @@ namespace LRCatalogSync.Core
         /// Prüft ob Locks akquiriert wurden
         /// </summary>
         public bool AreLocksAcquired => _locksAcquired;
+        
+        // ==================== HILFSMETHODEN ====================
+        
+        /// <summary>
+        /// Berechnet den relativen Pfad innerhalb der SMB-Freigabe
+        /// </summary>
+        private string GetRelativePath(string basePath, string fullPath)
+        {
+            // Entferne führenden UNC-Prefix \\Server\Share von basePath
+            string baseNormalized = basePath.TrimEnd('\\', '/');
+            if (baseNormalized.StartsWith(@"\\"))
+            {
+                // Finde Position nach \\Server\Share
+                int startIndex = baseNormalized.IndexOf('\\', 2);
+                if (startIndex > 0)
+                {
+                    baseNormalized = baseNormalized.Substring(startIndex + 1);
+                }
+            }
+            
+            // Vergleiche und extrahiere relativen Teil
+            string fullNormalized = fullPath.Replace('/', '\\');
+            if (fullNormalized.StartsWith(baseNormalized, StringComparison.OrdinalIgnoreCase))
+            {
+                string relative = fullNormalized.Substring(baseNormalized.Length);
+                return relative.TrimStart('\\');
+            }
+            
+            // Fallback: Annahme dass es bereits relativ ist
+            return fullPath;
+        }
+        
+        /// <summary>
+        /// Parst den Timestamp aus einer Lock-Datei
+        /// </summary>
+        private bool TryParseLockTimestamp(string content, out DateTime timestamp)
+        {
+            timestamp = DateTime.MinValue;
+            try
+            {
+                var lines = content.Split('\n');
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("Timestamp="))
+                    {
+                        string dateStr = line.Substring("Timestamp=".Length);
+                        if (DateTime.TryParse(dateStr, out timestamp))
+                            return true;
+                    }
+                }
+            }
+            catch { }
+            return false;
+        }
         
         // ==================== DISPOSE ====================
         public void Dispose()

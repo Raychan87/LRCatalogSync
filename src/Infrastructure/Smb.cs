@@ -1,5 +1,13 @@
 // SMBLibrary from https://github.com/TalAloni/SMBLibrary
 // Verwaltung von SMB-Verbindungen f�r Remote-Dateizugriff
+// Step	Funktion	Status
+// 1	Connect/Disconnect	✅ Implementiert
+// 2	Login/Logoff	✅ Implementiert
+// 3	TreeConnect/TreeDisconnect	✅ Implementiert
+// 4	ListFiles (Dateiauflistung)	✅ Implementiert
+// 5a	ReadFile (Datei lesen)	✅ Implementiert
+// 5b	WriteFile (Datei schreiben)	✅ Implementiert
+// 6	DeleteFile (Datei löschen)	✅ Implementiert
 
 using SMBLibrary;
 using SMBLibrary.Client;
@@ -474,4 +482,133 @@ public class SmbClient
             return false;
         }
     }
+}
+
+// ============================================================
+// SMBConnectionManager - Singleton für zentrale SMB-Verbindungsverwaltung
+// Schritt 1 der SMB-Integration
+// ============================================================
+
+/// <summary>
+/// Singleton-Klasse für die zentrale Verwaltung einer SMB-Verbindung
+/// Stellt sicher, dass nur eine einzige SMB-Verbindung gleichzeitig existiert
+/// </summary>
+public sealed class SMBConnectionManager
+{
+    private static readonly Lazy<SMBConnectionManager> _instance = 
+        new Lazy<SMBConnectionManager>(() => new SMBConnectionManager());
+    
+    public static SMBConnectionManager Instance => _instance.Value;
+    
+    private SmbClient _client = new SmbClient();
+    private AppConfig? _lastConfig = null;
+    private bool _ownsConnection = false;
+    
+    private SMBConnectionManager() { }
+    
+    /// <summary>
+    /// Stellt sicher, dass eine aktive SMB-Verbindung besteht
+    /// </summary>
+    /// <param name="config">AppConfig mit RemoteIP, SambaUser, SambaPassword, CatalogRemotePath</param>
+    /// <returns>true wenn verbunden, sonst false</returns>
+    public bool EnsureConnected(AppConfig config)
+    {
+        // Prüfe ob bereits verbunden mit gleichen Parametern
+        if (_client.IsConnected && _client.IsTreeConnected && _lastConfig != null)
+        {
+            if (_lastConfig.RemoteIP == config.RemoteIP && 
+                _lastConfig.SambaUser == config.SambaUser &&
+                _lastConfig.CatalogRemotePath == config.CatalogRemotePath)
+            {
+                return true; // Bereits verbunden
+            }
+            // Parameter unterschiedlich -> neu verbinden
+            Disconnect();
+        }
+        
+        // Extrahiere Share-Name aus CatalogRemotePath (z.B. "\\NAS\Freigabe\subdir" -> "Freigabe")
+        string shareName = ExtractShareName(config.CatalogRemotePath);
+        string serverIP = config.RemoteIP;
+        
+        // Verbinde mit Server
+        if (!_client.Connect(serverIP))
+        {
+            Log.Error($"[SMB] Verbindung zum Server {serverIP} fehlgeschlagen");
+            return false;
+        }
+        
+        // Anmelden
+        if (!_client.Login(string.Empty, config.SambaUser, config.SambaPassword))
+        {
+            Log.Error($"[SMB] Anmeldung als {config.SambaUser} fehlgeschlagen");
+            _client.Disconnect();
+            return false;
+        }
+        
+        // Mit Freigabe verbinden
+        if (!_client.TreeConnect(shareName))
+        {
+            Log.Error($"[SMB] TreeConnect zu Freigabe '{shareName}' fehlgeschlagen");
+            _client.Logoff();
+            _client.Disconnect();
+            return false;
+        }
+        
+        _lastConfig = config;
+        _ownsConnection = true;
+        Log.Info($"[SMB] Verbunden mit {serverIP}/{shareName}");
+        return true;
+    }
+    
+    /// <summary>
+    /// Extrahiert den Share-Namen aus einem UNC-Pfad
+    /// </summary>
+    private string ExtractShareName(string uncPath)
+    {
+        // Erwartet: \\Server\Share\subdir oder \\Server\Share
+        if (uncPath.StartsWith(@"\\"))
+        {
+            var parts = uncPath.Substring(2).Split('\\');
+            if (parts.Length >= 1)
+            {
+                return parts[0]; // Share-Name ist erster Teil nach \\
+            }
+        }
+        return uncPath; // Fallback
+    }
+    
+    /// <summary>
+    /// Prüft ob aktuell verbunden
+    /// </summary>
+    public bool IsConnected => _client.IsConnected && _client.IsTreeConnected;
+    
+    /// <summary>
+    /// Trennt die SMB-Verbindung
+    /// </summary>
+    public void Disconnect()
+    {
+        if (_ownsConnection)
+        {
+            if (_client.IsTreeConnected)
+                _client.TreeDisconnect();
+            if (_client.IsConnected)
+            {
+                _client.Logoff();
+                _client.Disconnect();
+            }
+            _ownsConnection = false;
+            _lastConfig = null;
+            Log.Info("[SMB] Verbindung getrennt");
+        }
+    }
+    
+    // Wrapper für Dateioperationen (Step 5)
+    
+    public byte[]? ReadFile(string relativePath) => _client.ReadFile(relativePath);
+    
+    public bool WriteFile(string relativePath, byte[]? data) => _client.WriteFile(relativePath, data);
+    
+    public bool DeleteFile(string relativePath) => _client.DeleteFile(relativePath);
+    
+    public List<string> ListFiles(string relativePath) => _client.ListFiles(relativePath);
 }
