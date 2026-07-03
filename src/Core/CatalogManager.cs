@@ -178,83 +178,142 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // geprüft!!
-        // Prüft die Sync-Richtung basierend auf rclone check Ausgabe
+        // Prüft die Sync-Richtung basierend auf Modifikationszeit (via rclone lsl)
+        // Vergleicht die letzte Änderungszeit von lokalem und remote Katalog
         private static SyncDirection CheckSyncDirection(AppConfig config, string logFile)
         {
             try
             {
-                // WICHTIG: --filter filtert nach exaktem Dateinamen
-                var psi = new ProcessStartInfo
+                // Hole Modifikationszeit der lokalen Datei
+                DateTime? localModTime = GetFileModificationTime(config.CatalogLocalFile);
+                if (localModTime == null)
                 {
-                    FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" check \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFullPath}\" --filter \"+ {config.CatalogFileName}\" --filter \"- *\" --log-file \"{logFile}\" --log-level INFO",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
+                    Log.Error($"CatalogManager: Lokale Katalog-Datei nicht gefunden: {config.CatalogLocalFile}");
+                    return SyncDirection.None;
+                }
                 
-                // Starte rclone check Prozess
-                using (var p = Process.Start(psi))
-                {   // Prüfe ob Prozess gestartet wurde
-                    if (p == null)
-                        return SyncDirection.None;
-                    
-                    p.WaitForExit();
-                    string output = p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
-                    
-                    // rclone check ExitCodes:
-                    // 0 = Keine Unterschiede
-                    // 1 = Unterschiede vorhanden
-                    // 2+ = Fehler
-                    
-                    if (p.ExitCode == 0)
-                    {
-                        Log.Debug("CatalogManager: Keine Unterschiede erkannt (ExitCode 0)");
-                        return SyncDirection.None;
-                    }
-                    else if (p.ExitCode == 1)
-                    {
-                        // Unterschiede vorhanden - analysiere die Ausgabe
-                        // Format: "X files missing on remote" oder "Y files missing on local"
-                        bool diffOnRemote = output.Contains("missing on remote") || output.Contains("differ on remote");
-                        bool diffOnLocal = output.Contains("missing on local") || output.Contains("differ on local");
-                        
-                        if (diffOnRemote && !diffOnLocal)
-                        {
-                            Log.Debug("CatalogManager: Lokale Datei ist neuer/unterschiedlich → UPLOAD");
-                            return SyncDirection.Upload;
-                        }
-                        else if (diffOnLocal && !diffOnRemote)
-                        {
-                            Log.Debug("CatalogManager: Remote Datei ist neuer/unterschiedlich → DOWNLOAD");
-                            return SyncDirection.Download;
-                        }
-                        else if (diffOnRemote && diffOnLocal)
-                        {
-                            Log.Notice("CatalogManager: Beide Seiten haben Unterschiede (Konflikt!)");
-                            // Bei Konflikt: Lokale Version hat Priorität (Upload)
-                            return SyncDirection.Upload;
-                        }
-                        else
-                        {
-                            // Fallback: Wenn unklar, lokale Version bevorzugen
-                            Log.Debug("CatalogManager: Unklarer Zustand, bevorzuge Upload");
-                            return SyncDirection.Upload;
-                        }
-                    }
-                    else
-                    {
-                        Log.Error($"CatalogManager: rclone check fehlgeschlagen (ExitCode: {p.ExitCode})");
-                        return SyncDirection.None;
-                    }
+                // Hole Modifikationszeit der remote Datei via rclone lsl
+                DateTime? remoteModTime = GetRemoteFileModificationTime(config, config.CatalogFileName);
+                if (remoteModTime == null)
+                {
+                    // Remote-Datei existiert nicht -> Upload
+                    Log.Debug($"CatalogManager: Remote-Katalog nicht vorhanden → UPLOAD");
+                    return SyncDirection.Upload;
+                }
+                
+                // Vergleiche Modifikationszeiten
+                TimeSpan difference = localModTime.Value - remoteModTime.Value;
+                
+                if (Math.Abs(difference.TotalSeconds) < 2)
+                {
+                    // Weniger als 2 Sekunden Differenz -> als gleich betrachten
+                    Log.Debug("CatalogManager: Kataloge sind zeitlich synchron (Delta < 2s)");
+                    return SyncDirection.None;
+                }
+                else if (difference.TotalSeconds > 0)
+                {
+                    Log.Debug($"CatalogManager: Lokaler Katalog ist neuer ({difference.TotalMinutes:F1} Min) → UPLOAD");
+                    return SyncDirection.Upload;
+                }
+                else
+                {
+                    Log.Debug($"CatalogManager: Remote-Katalog ist neuer ({Math.Abs(difference.TotalMinutes):F1} Min) → DOWNLOAD");
+                    return SyncDirection.Download;
                 }
             }
             catch (Exception ex)
             {
                 Log.Error($"CatalogManager: Fehler bei Sync-Richtungsbestimmung: {ex.Message}");
                 return SyncDirection.None;
+            }
+        }
+        
+        // geprüft!!
+        // Holt das Änderungsdatum einer lokalen Datei
+        private static DateTime? GetFileModificationTime(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                    return null;
+                
+                return File.GetLastWriteTimeUtc(filePath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        
+        // Holt das Änderungsdatum einer remote Datei via rclone lsl
+        private static DateTime? GetRemoteFileModificationTime(AppConfig config, string fileName)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = config.RclonePath,
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl \"{GlobalConst.REMOTE_NAME}:{config.CatalogRemoteFullPath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                
+                using (var p = Process.Start(psi))
+                {
+                    if (p == null)
+                        return null;
+                    
+                    p.WaitForExit();
+                    string output = p.StandardOutput.ReadToEnd().Trim();
+                    
+                    // Format von rclone lsl:
+                    // "5042262016 2026-05-29 14:06:35.534552200 Lightroom-Katalog-v15.lrcat"
+                    
+                    if (p.ExitCode != 0 || string.IsNullOrEmpty(output))
+                        return null;
+                    
+                    // Splitte Output in Teile (Größe Datum Zeit Dateiname)
+                    string[] parts = output.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 3)
+                    {
+                        // Konstruiere Datum/Zeit String und parse ihn
+                        string dateStr = parts[1] + " " + parts[2];
+                        
+                        // Versuche多种 Datumsformat zu parsen
+                        string[] formats = new[]
+                        {
+                            "yyyy-MM-dd HH:mm:ss.fffffff",
+                            "yyyy-MM-dd HH:mm:ss.ffffff",
+                            "yyyy-MM-dd HH:mm:ss.fffff",
+                            "yyyy-MM-dd HH:mm:ss.ffff",
+                            "yyyy-MM-dd HH:mm:ss.fff",
+                            "yyyy-MM-dd HH:mm:ss"
+                        };
+                        
+                        foreach (string fmt in formats)
+                        {
+                            if (DateTime.TryParseExact(dateStr, fmt, 
+                                System.Globalization.CultureInfo.InvariantCulture,
+                                System.Globalization.DateTimeStyles.AssumeUniversal,
+                                out DateTime result))
+                            {
+                                return result.ToUniversalTime();
+                            }
+                        }
+                        
+                        // Fallback: Standard Parse
+                        if (DateTime.TryParse(dateStr, out DateTime fallbackResult))
+                            return fallbackResult.ToUniversalTime();
+                    }
+                    
+                    return null;
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
         

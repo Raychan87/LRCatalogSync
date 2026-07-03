@@ -65,12 +65,12 @@ namespace LRCatalogSync.Core
                 _localLockStream = new FileStream(_localLockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 
                 // Schreibe Sync-GUID in Lock-Datei für Tracking
-                using (var writer = new StreamWriter(_localLockStream))
-                {
-                    writer.WriteLine($"SyncGuid={SyncGuid}");
-                    writer.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
-                }
-                _localLockStream.Flush();
+                // WICHTIG: StreamWriter disposed nicht den underlying Stream!
+                var writer = new StreamWriter(_localLockStream);
+                writer.WriteLine($"SyncGuid={SyncGuid}");
+                writer.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                writer.Flush();
+                writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
                 // ========== REMOTE LOCK AKQUIRIEREN ==========
                 // Prüfe ob Remote-Pfad existiert (Samba-Verbindung)
@@ -106,12 +106,12 @@ namespace LRCatalogSync.Core
                 _remoteLockStream = new FileStream(_remoteLockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 
                 // Schreibe Sync-GUID in Lock-Datei
-                using (var writer = new StreamWriter(_remoteLockStream))
-                {
-                    writer.WriteLine($"SyncGuid={SyncGuid}");
-                    writer.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
-                }
-                _remoteLockStream.Flush();
+                // WICHTIG: StreamWriter disposed nicht den underlying Stream!
+                var remoteWriter = new StreamWriter(_remoteLockStream);
+                remoteWriter.WriteLine($"SyncGuid={SyncGuid}");
+                remoteWriter.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                remoteWriter.Flush();
+                remoteWriter.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
                 _locksAcquired = true;
                 Log.Info($"LockManager: Beide Locks akquiriert (SyncGuid: {SyncGuid})");
