@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Diagnostics;
 
 using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig
 
@@ -13,13 +14,10 @@ namespace LRCatalogSync.Core
         // ==================== EIGENSCHAFTEN ====================
         // Eindeutige Sync-GUID für Tracking
         public string SyncGuid { get; private set; } = Guid.NewGuid().ToString();
-        
+                
         // Lokale Lock-Datei
-        private string _localLockPath = null!;
         private FileStream? _localLockStream;
         
-        // Remote Lock-Datei (auf NAS)
-        private string _remoteLockPath = null!;
         private FileStream? _remoteLockStream;
         
         // Heartbeat Thread
@@ -28,6 +26,15 @@ namespace LRCatalogSync.Core
         
         // Lock-Status
         private bool _locksAcquired = false;
+        
+        // AppConfig für Lock-Pfade
+        private AppConfig? _config;
+
+        // ==================== KONSTRUKTOR ====================
+        public LockManager(AppConfig config)
+        {
+            _config = config;
+        }
 
         // ==================== ÖFFENTLICHE METHODEN ====================
         
@@ -39,20 +46,16 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                // Pfade initialisieren
-                _localLockPath = Path.Combine(config.CatalogLocalPath, "LRCatSync.lock");
-                _remoteLockPath = Path.Combine(config.CatalogRemotePath, "LRCatSync.lock");
-                
                 // ========== LOKALER LOCK AKQUIRIEREN ==========
                 // Erstelle lokale Lock-Datei mit FileShare.None (exklusiver Zugriff)
-                if (File.Exists(_localLockPath))
+                if (File.Exists(config.SyncLocalLockFile))
                 {
-                    // Prüfe ob Lock stale ist (älter als SYNC_LOCK_TIMEOUT_MIN Minuten)
-                    FileInfo lockInfo = new FileInfo(_localLockPath);
-                    if (lockInfo.LastWriteTimeUtc.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
+                    // Prüfe ob Lock veraltet ist (älter als SYNC_LOCK_TIMEOUT_MIN Minuten)
+                    FileInfo lockInfo = new FileInfo(config.SyncLocalLockFile);
+                    if (lockInfo.LastWriteTime.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.Now)
                     {
-                        Log.Info($"LockManager: Stale lokaler Lock erkannt, überschreibe {_localLockPath}");
-                        File.Delete(_localLockPath);
+                        Log.Info($"LockManager: veraltete lokale Lock File erkannt, überschreibe {config.SyncLocalLockFile}");
+                        File.Delete(config.SyncLocalLockFile);
                     }
                     else
                     {
@@ -62,34 +65,34 @@ namespace LRCatalogSync.Core
                 }
                 
                 // Erstelle lokale Lock-Datei mit exklusivem Zugriff
-                _localLockStream = new FileStream(_localLockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                _localLockStream = new FileStream(config.SyncLocalLockFile, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 
                 // Schreibe Sync-GUID in Lock-Datei für Tracking
                 // WICHTIG: StreamWriter disposed nicht den underlying Stream!
                 var writer = new StreamWriter(_localLockStream);
                 writer.WriteLine($"SyncGuid={SyncGuid}");
-                writer.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                writer.WriteLine($"Timestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 writer.Flush();
                 writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
                 // ========== REMOTE LOCK AKQUIRIEREN ==========
                 // Prüfe ob Remote-Pfad existiert (Samba-Verbindung)
-                if (!Directory.Exists(Path.GetDirectoryName(_remoteLockPath)))
+                if (!Directory.Exists(Path.GetDirectoryName(config.SyncRemoteLockFile)))
                 {
-                    Log.Info($"LockManager: Remote-Pfad existiert nicht: {Path.GetDirectoryName(_remoteLockPath)}");
+                    Log.Info($"LockManager: Remote-Pfad existiert nicht: {Path.GetDirectoryName(config.SyncRemoteLockFile)}");
                     // Kein Fehler, aber kein Remote-Lock möglich
                     _locksAcquired = true;
                     return true;
                 }
                 
-                if (File.Exists(_remoteLockPath))
+                if (File.Exists(config.SyncRemoteLockFile))
                 {
                     // Prüfe ob Lock stale ist
-                    FileInfo lockInfo = new FileInfo(_remoteLockPath);
+                    FileInfo lockInfo = new FileInfo(config.SyncRemoteLockFile);
                     if (lockInfo.LastWriteTimeUtc.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
                     {
-                        Log.Info($"LockManager: Stale remote Lock erkannt, überschreibe {_remoteLockPath}");
-                        File.Delete(_remoteLockPath);
+                        Log.Info($"LockManager: Stale remote Lock erkannt, überschreibe {config.SyncRemoteLockFile}");
+                        File.Delete(config.SyncRemoteLockFile);
                     }
                     else
                     {
@@ -97,19 +100,19 @@ namespace LRCatalogSync.Core
                         // Release lokalen Lock
                         _localLockStream?.Close();
                         _localLockStream = null;
-                        File.Delete(_localLockPath);
+                        File.Delete(config.SyncLocalLockFile);
                         return false;
                     }
                 }
                 
                 // Erstelle remote Lock-Datei
-                _remoteLockStream = new FileStream(_remoteLockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                _remoteLockStream = new FileStream(config.SyncRemoteLockFile, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 
                 // Schreibe Sync-GUID in Lock-Datei
                 // WICHTIG: StreamWriter disposed nicht den underlying Stream!
                 var remoteWriter = new StreamWriter(_remoteLockStream);
                 remoteWriter.WriteLine($"SyncGuid={SyncGuid}");
-                remoteWriter.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                remoteWriter.WriteLine($"Timestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}");
                 remoteWriter.Flush();
                 remoteWriter.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
@@ -124,7 +127,7 @@ namespace LRCatalogSync.Core
             catch (Exception ex)
             {
                 Log.Error($"LockManager: Fehler beim Akquirieren der Locks: {ex.Message}");
-                ReleaseLocks();
+                ReleaseLocks(config);
                 return false;
             }
         }
@@ -204,7 +207,7 @@ namespace LRCatalogSync.Core
         /// Gibt alle Locks wieder frei
         /// MUSS IMMER im finally-Block aufgerufen werden!
         /// </summary>
-        public void ReleaseLocks()
+        public void ReleaseLocks(AppConfig config)
         {
             try
             {
@@ -226,12 +229,12 @@ namespace LRCatalogSync.Core
                 }
                 
                 // Lösche lokale Lock-Datei
-                if (!string.IsNullOrEmpty(_localLockPath) && File.Exists(_localLockPath))
+                if (!string.IsNullOrEmpty(config.SyncLocalLockFile) && File.Exists(config.SyncLocalLockFile))
                 {
                     try
                     {
-                        File.Delete(_localLockPath);
-                        Log.Debug($"LockManager: Lokale Lock-Datei gelöscht: {_localLockPath}");
+                        File.Delete(config.SyncLocalLockFile);
+                        Log.Debug($"LockManager: Lokale Lock-Datei gelöscht: {config.SyncLocalLockFile}");
                     }
                     catch (Exception ex)
                     {
@@ -254,12 +257,12 @@ namespace LRCatalogSync.Core
                 }
                 
                 // Lösche remote Lock-Datei
-                if (!string.IsNullOrEmpty(_remoteLockPath) && File.Exists(_remoteLockPath))
+                if (!string.IsNullOrEmpty(config.SyncRemoteLockFile) && File.Exists(config.SyncRemoteLockFile))
                 {
                     try
                     {
-                        File.Delete(_remoteLockPath);
-                        Log.Debug($"LockManager: Remote Lock-Datei gelöscht: {_remoteLockPath}");
+                        File.Delete(config.SyncRemoteLockFile);
+                        Log.Debug($"LockManager: Remote Lock-Datei gelöscht: {config.SyncRemoteLockFile}");
                     }
                     catch (Exception ex)
                     {
@@ -306,13 +309,12 @@ namespace LRCatalogSync.Core
         // ==================== DISPOSE ====================
         public void Dispose()
         {
-            ReleaseLocks();
+            if (_config != null)
+            {
+                ReleaseLocks(_config);
+                _config = null;
+            }
             GC.SuppressFinalize(this);
-        }
-        
-        ~LockManager()
-        {
-            ReleaseLocks();
         }
     }
 }

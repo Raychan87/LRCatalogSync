@@ -58,10 +58,16 @@ namespace LRCatalogSync.Infrastructure
         public string CatalogName => Path.GetFileNameWithoutExtension(CatalogLocalFile);
 
         // Remote: Vollständiger Pfad (RemotePath + Dateiname)
-        public string CatalogRemoteFullPath => Path.Combine(CatalogRemotePath, CatalogFileName);
+        public string CatalogRemoteFile => Path.Combine(CatalogRemotePath, CatalogFileName);
 
         // Vollständiger Pfad zur Lightroom Lock-Datei (.lrcat.lock)
         public string CatalogLockFile => Path.Combine(CatalogLocalPath, $"{CatalogName}.lrcat.lock");
+
+        // Vollständiger Pfad zur lokalen LRCatSync Lock-Datei (LocalPath + Dateiname)
+        public string SyncLocalLockFile => Path.Combine(CatalogLocalPath, GlobalConst.LOCK_FILE);
+
+        // Vollständiger Pfad zur remote LRCatSync Lock-Datei (RemotePath + Dateiname)
+        public string SyncRemoteLockFile => Path.Combine(CatalogRemotePath, GlobalConst.LOCK_FILE);
 
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.

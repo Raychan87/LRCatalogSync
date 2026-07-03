@@ -63,7 +63,7 @@ namespace LRCatalogSync.Core
                 if (syncDirection == SyncDirection.Upload)
                 {
                     Log.Debug("CatalogManager: Akquiere Locks für Upload-Synchronisation");
-                    lockManager = new LockManager();
+                    lockManager = new LockManager(config);
                     
                     if (!lockManager.AcquireLocks(config))
                     {
@@ -108,7 +108,7 @@ namespace LRCatalogSync.Core
             finally
             {
                 // IMMER ausführen – selbst bei Exceptions!
-                lockManager?.ReleaseLocks();
+                lockManager?.Dispose();
                 
                 // Lightroom-Lock-Dateien löschen (nur die von uns erstellten)
                 CleanupLightroomLocks(config);
@@ -253,7 +253,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl \"{GlobalConst.REMOTE_NAME}:{config.CatalogRemoteFullPath}\"",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl \"{GlobalConst.REMOTE_NAME}:{config.CatalogRemoteFile}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -438,12 +438,12 @@ namespace LRCatalogSync.Core
                 if (direction == SyncDirection.Upload)
                 {
                     sourcePath = config.CatalogLocalPath;
-                    destPath = config.CatalogRemoteFullPath;
+                    destPath = config.CatalogRemoteFile;
                     Log.Info("CatalogManager: Starte rclone upload (lokal → NAS)");
                 }
                 else if (direction == SyncDirection.Download)
                 {
-                    sourcePath = config.CatalogRemoteFullPath;
+                    sourcePath = config.CatalogRemoteFile;
                     destPath = config.CatalogLocalPath;
                     Log.Info("CatalogManager: Starte rclone download (NAS → lokal)");
                 }
@@ -597,7 +597,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFullPath}\" --include \"{config.CatalogName} Previews.lrdata/**\" --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFile}\" --include \"{config.CatalogName} Previews.lrdata/**\" --log-level {config.LogLevel}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

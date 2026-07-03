@@ -30,6 +30,9 @@ namespace LRCatalogSync
         
         // Backup-Dateiname für Katalog-Sync (Ringspeicher mit 1 Slot)
         public const string BACKUP_FILENAME = "LRCatSync_last_katalog.zip";
+        
+        // Lock-Dateinamen für Synchronisation
+        public const string LOCK_FILE = "LRCatSync.lock";
     }
     
 }
