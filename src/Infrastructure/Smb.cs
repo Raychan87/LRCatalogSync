@@ -500,6 +500,10 @@ public sealed class SMBConnectionManager
     
     public static SMBConnectionManager Instance => _instance.Value;
     
+    // Retry-Parameter für Auto-Reconnect
+    private const int MAX_CONNECT_RETRIES = 3;
+    private const int CONNECT_RETRY_DELAY_MS = 1000;
+    
     private SmbClient _client = new SmbClient();
     private AppConfig? _lastConfig = null;
     private bool _ownsConnection = false;
@@ -508,6 +512,7 @@ public sealed class SMBConnectionManager
     
     /// <summary>
     /// Stellt sicher, dass eine aktive SMB-Verbindung besteht
+    /// Mit Auto-Reconnect bei Verbindungsproblemen
     /// </summary>
     /// <param name="config">AppConfig mit RemoteIP, SambaUser, SambaPassword, CatalogRemotePath</param>
     /// <returns>true wenn verbunden, sonst false</returns>
@@ -520,12 +525,67 @@ public sealed class SMBConnectionManager
                 _lastConfig.SambaUser == config.SambaUser &&
                 _lastConfig.CatalogRemotePath == config.CatalogRemotePath)
             {
-                return true; // Bereits verbunden
+                // Kurze Verbindungserkennung: Kleiner Test-Read
+                if (TestConnection())
+                    return true;
+                
+                // Verbindung scheint tot zu sein -> Reconnect
+                Log.Info("[SMB] Verbindungserkennung fehlgeschlagen, trenne und reconnecte...");
+                Disconnect();
             }
-            // Parameter unterschiedlich -> neu verbinden
-            Disconnect();
+            else
+            {
+                // Parameter unterschiedlich -> neu verbinden
+                Disconnect();
+            }
         }
         
+        // Verbindungsaufbau mit Retry
+        for (int attempt = 1; attempt <= MAX_CONNECT_RETRIES; attempt++)
+        {
+            Log.Debug($"[SMB] Verbindungsversuch {attempt}/{MAX_CONNECT_RETRIES}");
+            
+            if (TryConnect(config))
+            {
+                _lastConfig = config;
+                _ownsConnection = true;
+                return true;
+            }
+            
+            if (attempt < MAX_CONNECT_RETRIES)
+            {
+                int delay = CONNECT_RETRY_DELAY_MS * attempt; // Exponential backoff
+                Log.Info($"[SMB] Verbindung fehlgeschlagen, warte {delay}ms vor Retry...");
+                Thread.Sleep(delay);
+            }
+        }
+        
+        Log.Error($"[SMB] Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
+        return false;
+    }
+    
+    /// <summary>
+    /// Testet ob die aktuelle Verbindung noch funktioniert
+    /// </summary>
+    private bool TestConnection()
+    {
+        try
+        {
+            // Versuche eine kleine Operation (Root-Verzeichnis auflisten)
+            var files = _client.ListFiles("");
+            return true; // Wenn kein Fehler geworfen wurde, ist Verbindung ok
+        }
+        catch
+        {
+            return false; // Verbindung wahrscheinlich tot
+        }
+    }
+    
+    /// <summary>
+    /// Versucht einmalig eine Verbindung herzustellen
+    /// </summary>
+    private bool TryConnect(AppConfig config)
+    {
         // Extrahiere Share-Name aus CatalogRemotePath (z.B. "\\NAS\Freigabe\subdir" -> "Freigabe")
         string shareName = ExtractShareName(config.CatalogRemotePath);
         string serverIP = config.RemoteIP;
@@ -533,7 +593,7 @@ public sealed class SMBConnectionManager
         // Verbinde mit Server
         if (!_client.Connect(serverIP))
         {
-            Log.Error($"[SMB] Verbindung zum Server {serverIP} fehlgeschlagen");
+            Log.Error($"[SMB] TCP-Verbindung zu {serverIP} fehlgeschlagen");
             return false;
         }
         
@@ -554,8 +614,6 @@ public sealed class SMBConnectionManager
             return false;
         }
         
-        _lastConfig = config;
-        _ownsConnection = true;
         Log.Info($"[SMB] Verbunden mit {serverIP}/{shareName}");
         return true;
     }

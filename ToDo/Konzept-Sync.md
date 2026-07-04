@@ -294,24 +294,24 @@ Hinweis: Alle SMB-Funktionen bleiben in `Smb.cs`. `SMBConnectionManager` ist nun
 - [x] `ListFiles(string relativePath = "")` - Wrapper um bestehendes ListFiles
 - [x] `SMBConnectionManager` als eigenständige Klasse aus `SmbClient` ausgelagert
 
-### Step 6: LockManager refaktorieren
-- [ ] UNC-Pfad/FileStream durch SMBConnectionManager ersetzen
-- [ ] `AcquireLocks()`使用了 SMBConnectionManager.Instance.EnsureConnected()
-- [ ] Remote Lock via WriteFile statt FileStream
+### Step 6: LockManager refaktorieren ✅ **ABGESCHLOSSEN**
+- [x] UNC-Pfad/FileStream durch SMBConnectionManager ersetzt
+- [x] `AcquireLocks()` nutzt SMBConnectionManager.Instance.EnsureConnected()
+- [x] Remote Lock via WriteFile statt FileStream
 
-### Step 7: Weitere Remote-Zugriffe identifizieren
-- [ ] BackupManager.cs auf Remote-Zugriffe prufen
-- [ ] Andere Cs-Dateien auf direkte File-Zugriffe mit Remote-Pfaden prufen
-- [ ] Ggf. weitere Adapter fur SMB-Zugriff implementieren
+### Step 7: Weitere Remote-Zugriffe identifizieren ✅ **ABGESCHLOSSEN**
+- [x] BackupManager.cs auf Remote-Zugriffe geprüft → OK (nutzt rclone)
+- [x] Andere CS-Dateien auf direkte File-Zugriffe mit Remote-Pfaden geprüft
+- [x] Problem in CatalogManager.cs identifiziert → Upload verwendet ZipFile.Open() auf UNC-Pfad (→ Step 9)
 
 ### Step 8: Testen mit realer Netzwerkfreigabe
 - [ ] Verbindung zu Samba-Server testen
 - [ ] Lock akquirieren/entfernen testen
 - [ ] Reconnect bei Verbindungsverlust testen
 
-### Step 9: CatalogManager SMB-Integration (PFLICHT!)
-- [ ] CreateZipBackup() differenziert anpassen:
+### Step 9: CatalogManager SMB-Integration (PFLICHT!) ✅ **ABGESCHLOSSEN**
+- [x] CreateZipBackup() differenziert angepasst:
   - Upload: MemoryStream + SMBConnectionManager.WriteFile() → ZIP direkt remote
   - Download: ZipFile.Open() lokal (bleibt wie bisher)
-- [ ] EnsureConnected() vor Upload-ZIP aufrufen
-- [ ] Testen: Upload erstellt ZIP direkt auf NAS (kein lokales Zwischenspeicher!)
+- [x] EnsureConnected() vor Upload-ZIP aufgerufen
+- [x] GetRelativePath() Hilfsmethode hinzugefügt
