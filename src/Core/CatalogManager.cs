@@ -48,7 +48,7 @@ namespace LRCatalogSync.Core
                 
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_catalog_check.log");
                 
-                syncDirection = CheckSyncDirection(config, tempLog);
+                syncDirection = CheckSyncDirection(config);
                 
                 if (syncDirection == SyncDirection.None)
                 {
@@ -178,13 +178,14 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // Prüft die Sync-Richtung basierend auf Modifikationszeit (via rclone lsl)
+        // geprüft!! 2026.07.05
+        // Prüft die Sync-Richtung basierend auf Änderungsdatum (via rclone lsl)
         // Vergleicht die letzte Änderungszeit von lokalem und remote Katalog
-        private static SyncDirection CheckSyncDirection(AppConfig config, string logFile)
+        private static SyncDirection CheckSyncDirection(AppConfig config)
         {
             try
             {
-                // Hole Modifikationszeit der lokalen Datei
+                // Hole Änderungsdatum der lokalen Datei
                 DateTime? localModTime = GetFileModificationTime(config.CatalogLocalFile);
                 if (localModTime == null)
                 {
@@ -192,8 +193,8 @@ namespace LRCatalogSync.Core
                     return SyncDirection.None;
                 }
                 
-                // Hole Modifikationszeit der remote Datei via rclone lsl
-                DateTime? remoteModTime = GetRemoteFileModificationTime(config, config.CatalogFileName);
+                // Hole Änderungsdatum der remote Datei via rclone lsl
+                DateTime? remoteModTime = GetRemoteFileModificationTime(config);
                 if (remoteModTime == null)
                 {
                     // Remote-Datei existiert nicht -> Upload
@@ -201,7 +202,7 @@ namespace LRCatalogSync.Core
                     return SyncDirection.Upload;
                 }
                 
-                // Vergleiche Modifikationszeiten
+                // Vergleiche Änderungsdatumen
                 TimeSpan difference = localModTime.Value - remoteModTime.Value;
                 
                 if (Math.Abs(difference.TotalSeconds) < 2)
@@ -228,8 +229,8 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // geprüft!!
-        // Holt das Änderungsdatum einer lokalen Datei
+        // geprüft!! 2026.07.05
+        // Holt das Änderungsdatum einer lokalen Datei (OS-Zeit)
         private static DateTime? GetFileModificationTime(string filePath)
         {
             try
@@ -237,7 +238,7 @@ namespace LRCatalogSync.Core
                 if (!File.Exists(filePath))
                     return null;
                 
-                return File.GetLastWriteTimeUtc(filePath);
+                return File.GetLastWriteTime(filePath); // Alternativ für UTC: File.GetLastWriteTimeUtc
             }
             catch
             {
@@ -245,8 +246,9 @@ namespace LRCatalogSync.Core
             }
         }
         
+        // geprüft!! 2026.07.05
         // Holt das Änderungsdatum einer remote Datei via rclone lsl
-        private static DateTime? GetRemoteFileModificationTime(AppConfig config, string fileName)
+        private static DateTime? GetRemoteFileModificationTime(AppConfig config)
         {
             try
             {
@@ -281,7 +283,7 @@ namespace LRCatalogSync.Core
                         // Konstruiere Datum/Zeit String und parse ihn
                         string dateStr = parts[1] + " " + parts[2];
                         
-                        // Versuche多种 Datumsformat zu parsen
+                        // Versuche Datumsformat zu parsen
                         string[] formats = new[]
                         {
                             "yyyy-MM-dd HH:mm:ss.fffffff",
@@ -335,10 +337,8 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // geprüft!!
+        // geprüft!! 2026.07.05
         // Erstellt ein gefiltertes ZIP-Backup des Katalogs vor dem Sync
-        // Nur kritische Dateien gemäß Konzept-KatalogSync.md
-        //
         // WICHTIG: Das Backup sichert den AKTUELLEN Zustand des Ziels VOR dem Überschreiben!
         // - Upload (Lokal→NAS): Sichert was auf dem NAS ist -> ZIP auf NAS
         // - Download (NAS→Lokal): Sichert was lokal ist -> ZIP lokal
@@ -346,16 +346,18 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                string backupPath;
+                string ZipFilePath;
                 
-                // Bestimme Quelle und Ziel basierend auf Sync-Richtung
+                // Upload: Backup auf NAS, Download: Backup lokal
                 if (direction == SyncDirection.Upload)
                 {
                     // Upload: Was auf dem NAS IST wird gesichert -> ZIP auf NAS
                     // Quelle = Remote (was existiert und überschrieben wird)
                     // Ziel = Remote (ZIP-Backup am selben Ort)
-                    backupPath = Path.Combine(config.CatalogRemotePath, GlobalConst.BACKUP_FILENAME);
-                    Log.Info($"CatalogManager: Erstelle Upload-Backup auf NAS: {backupPath}");
+
+                    // ZipFilePath = "/SambaOrdner/LRCatSync_last_katalog.zip"
+                    ZipFilePath = Path.Combine(config.CatalogRemotePath, GlobalConst.BACKUP_FILENAME);
+                    Log.Info($"CatalogManager: Erstelle Upload-Backup auf NAS: {ZipFilePath}");
                     
                     // SMB-Verbindung herstellen
                     if (!SMBConnectionManager.Instance.EnsureConnected(config))
@@ -364,92 +366,87 @@ namespace LRCatalogSync.Core
                         return;
                     }
                     
-                    // Alte ZIP-Datei auf NAS löschen falls vorhanden (Ringspeicher mit 1 Slot)
-                    string relativeBackupPath = GetRelativePath(config.CatalogRemotePath, backupPath);
-                    SMBConnectionManager.Instance.DeleteFile(relativeBackupPath);
+                    // Alte ZIP-Datei auf NAS löschen falls vorhanden
+                    // Relativer Pfad: BackupFilename direkt im CatalogRemotePath (ohne führendes /)
+                    SMBConnectionManager.Instance.DeleteFile(GlobalConst.BACKUP_FILENAME);
                     
                     using (var memStream = new MemoryStream())
                     {
                         using (var zip = new ZipArchive(memStream, ZipArchiveMode.Create, leaveOpen: true))
                         {
                             // Remote-Katalog-Hauptdatei (.lrcat) per SMB lesen
-                            string remoteCatalogFile = Path.Combine(config.CatalogRemotePath, $"{config.CatalogName}.lrcat").Replace("\\", "/");
-                            AddRemoteFileToZip(zip, config.CatalogRemotePath, remoteCatalogFile, $"{config.CatalogName}.lrcat");
+                            AddRemoteFileToZip(zip, $"{config.CatalogName}.lrcat", $"{config.CatalogName}.lrcat");
                             
                             // Remote-Katalog-Datenordner (.lrcat-data) per SMB rekursiv lesen
-                            string remoteCatalogDataDir = Path.Combine(config.CatalogRemotePath, $"{config.CatalogName}.lrcat-data").Replace("\\", "/");
-                            AddRemoteDirectoryToZip(zip, config.CatalogRemotePath, remoteCatalogDataDir, $"{config.CatalogName}.lrcat-data");
+                            AddRemoteDirectoryToZip(zip, $"{config.CatalogName}.lrcat-data", $"{config.CatalogName}.lrcat-data");
                             
                             // Remote-Helper.lrdata per SMB rekursiv lesen
-                            string remoteHelperDir = Path.Combine(config.CatalogRemotePath, $"{config.CatalogName} Helper.lrdata").Replace("\\", "/");
-                            AddRemoteDirectoryToZip(zip, config.CatalogRemotePath, remoteHelperDir, $"{config.CatalogName} Helper.lrdata");
+                            AddRemoteDirectoryToZip(zip, $"{config.CatalogName} Helper.lrdata", $"{config.CatalogName} Helper.lrdata");
                             
                             // Remote-Sync.lrdata per SMB rekursiv lesen
-                            string remoteSyncDir = Path.Combine(config.CatalogRemotePath, $"{config.CatalogName} Sync.lrdata").Replace("\\", "/");
-                            AddRemoteDirectoryToZip(zip, config.CatalogRemotePath, remoteSyncDir, $"{config.CatalogName} Sync.lrdata");
+                            AddRemoteDirectoryToZip(zip, $"{config.CatalogName} Sync.lrdata", $"{config.CatalogName} Sync.lrdata");
                             
                             // Remote-Smart Previews.lrdata per SMB rekursiv lesen
-                            string remoteSmartPreviewsDir = Path.Combine(config.CatalogRemotePath, $"{config.CatalogName} Smart Previews.lrdata").Replace("\\", "/");
-                            AddRemoteDirectoryToZip(zip, config.CatalogRemotePath, remoteSmartPreviewsDir, $"{config.CatalogName} Smart Previews.lrdata");
+                            AddRemoteDirectoryToZip(zip, $"{config.CatalogName} Smart Previews.lrdata", $"{config.CatalogName} Smart Previews.lrdata");
                         }
                         
                         // Gesamtes ZIP als ByteArray remote schreiben
-                        string relativePath = GetRelativePath(config.CatalogRemotePath, backupPath);
-                        if (!SMBConnectionManager.Instance.WriteFile(relativePath, memStream.ToArray()))
+                        // Relativer Pfad: BackupFilename direkt im CatalogRemotePath (ohne führendes /)
+                        if (!SMBConnectionManager.Instance.WriteFile(GlobalConst.BACKUP_FILENAME, memStream.ToArray()))
                         {
                             Log.Error($"CatalogManager: Schreiben des ZIP-Backups auf NAS fehlgeschlagen");
                             return;
                         }
                     }
                     
-                    Log.Info($"CatalogManager: Upload-Backup erfolgreich auf NAS erstellt: {backupPath}");
+                    Log.Info($"CatalogManager: Upload-Backup erfolgreich auf NAS erstellt: {ZipFilePath}");
                 }
                 else if (direction == SyncDirection.Download)
                 {
                     // Download: Was lokal IST wird gesichert -> ZIP lokal
                     // Quelle = Lokal (was existiert und überschrieben wird)
                     // Ziel = Lokal (ZIP-Backup am selben Ort)
-                    string sourcePath = config.CatalogLocalPath;
-                    backupPath = Path.Combine(sourcePath, GlobalConst.BACKUP_FILENAME);
-                    Log.Info($"CatalogManager: Erstelle Download-Backup Lokal: {backupPath}");
+                    // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/LRCatSync_last_katalog.zip"
+                    ZipFilePath = Path.Combine(config.CatalogLocalPath, GlobalConst.BACKUP_FILENAME);
+                    Log.Info($"CatalogManager: Erstelle Download-Backup Lokal: {ZipFilePath}");
                     
                     // Lösche alte ZIP-Datei falls vorhanden (Ringspeicher mit 1 Slot)
-                    if (File.Exists(backupPath))
+                    if (File.Exists(ZipFilePath))
                     {
-                        File.Delete(backupPath);
-                        Log.Debug($"CatalogManager: Altes Backup gelöscht: {backupPath}");
+                        File.Delete(ZipFilePath);
+                        Log.Debug($"CatalogManager: Altes Backup gelöscht: {ZipFilePath}");
                     }
                     
                     // Erstelle ZIP-Datei lokal
-                    using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Create))
+                    using (var zip = ZipFile.Open(ZipFilePath, ZipArchiveMode.Create))
                     {
                         // Katalog-Hauptdatei (.lrcat)
-                        string catalogFile = Path.Combine(sourcePath, $"{config.CatalogName}.lrcat");
+                        string catalogFile = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat");
                         if (File.Exists(catalogFile))
                             zip.CreateEntryFromFile(catalogFile, $"{config.CatalogName}.lrcat");
                         
                         // Katalog-Datenordner (.lrcat-data)
-                        string catalogDataDir = Path.Combine(sourcePath, $"{config.CatalogName}.lrcat-data");
+                        string catalogDataDir = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName}.lrcat-data");
                         if (Directory.Exists(catalogDataDir))
                             AddDirectoryToZip(zip, catalogDataDir, $"{config.CatalogName}.lrcat-data");
                         
                         // Helper.lrdata
-                        string helperDir = Path.Combine(sourcePath, $"{config.CatalogName} Helper.lrdata");
+                        string helperDir = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName} Helper.lrdata");
                         if (Directory.Exists(helperDir))
                             AddDirectoryToZip(zip, helperDir, $"{config.CatalogName} Helper.lrdata");
                         
                         // Sync.lrdata
-                        string syncDir = Path.Combine(sourcePath, $"{config.CatalogName} Sync.lrdata");
+                        string syncDir = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName} Sync.lrdata");
                         if (Directory.Exists(syncDir))
                             AddDirectoryToZip(zip, syncDir, $"{config.CatalogName} Sync.lrdata");
                         
                         // Smart Previews.lrdata
-                        string smartPreviewsDir = Path.Combine(sourcePath, $"{config.CatalogName} Smart Previews.lrdata");
+                        string smartPreviewsDir = Path.Combine(config.CatalogLocalPath, $"{config.CatalogName} Smart Previews.lrdata");
                         if (Directory.Exists(smartPreviewsDir))
                             AddDirectoryToZip(zip, smartPreviewsDir, $"{config.CatalogName} Smart Previews.lrdata");                    
                     }
                     
-                    Log.Info($"CatalogManager: Download-Backup erfolgreich lokal erstellt: {backupPath}");
+                    Log.Info($"CatalogManager: Download-Backup erfolgreich lokal erstellt: {ZipFilePath}");
                 }
             }
             catch (Exception ex)
@@ -472,19 +469,17 @@ namespace LRCatalogSync.Core
         }
         
         // NEU: Fügt Dateien aus einem Remote-Verzeichnis rekursiv in das ZIP-Archiv ein (per SMB)
-        private static void AddRemoteDirectoryToZip(ZipArchive zip, string remoteBasePath, string remoteDirPath, string entryPath)
+        // relativeDir: Relativer Pfad innerhalb der SMB-Freigabe (z.B. "Katalog.lrcat-data")
+        private static void AddRemoteDirectoryToZip(ZipArchive zip, string relativeDir, string entryPath)
         {
             try
             {
-                // Relativen Pfad innerhalb der Freigabe berechnen
-                string relativeDir = GetRelativePath(remoteBasePath, remoteDirPath);
-                
                 // Dateien im Verzeichnis auflisten
                 var files = SMBConnectionManager.Instance.ListFiles(relativeDir);
                 
                 foreach (string fileName in files)
                 {
-                    string fileRelPath = string.IsNullOrEmpty(relativeDir) ? fileName : relativeDir + "/" + fileName;
+                    string fileRelPath = relativeDir + "/" + fileName;
                     
                     // Prüfen ob es ein Verzeichnis ist (endet mit / oder \)
                     // Wir müssen die Dateiinformationen abrufen um das zu wissen
@@ -504,24 +499,23 @@ namespace LRCatalogSync.Core
                     else
                     {
                         // Wahrscheinlich ein Verzeichnis -> rekursiv weiter
-                        string subDirPath = remoteDirPath.TrimEnd('/','\\') + "/" + fileName;
-                        AddRemoteDirectoryToZip(zip, remoteBasePath, subDirPath, Path.Combine(entryPath, fileName).Replace('\\', '/'));
+                        AddRemoteDirectoryToZip(zip, fileRelPath, Path.Combine(entryPath, fileName).Replace('\\', '/'));
                     }
                 }
             }
             catch (Exception ex)
             {
-                Log.Debug($"CatalogManager: Fehler beim Hinzufügen von Remote-Verzeichnis {remoteDirPath}: {ex.Message}");
+                Log.Debug($"CatalogManager: Fehler beim Hinzufügen von Remote-Verzeichnis {relativeDir}: {ex.Message}");
             }
         }
         
         // NEU: Fügt eine einzelne Remote-Datei zum ZIP hinzu
-        private static void AddRemoteFileToZip(ZipArchive zip, string remoteBasePath, string remoteFilePath, string entryName)
+        // relativeFilePath: Relativer Pfad innerhalb der SMB-Freigabe (z.B. "Katalog.lrcat")
+        private static void AddRemoteFileToZip(ZipArchive zip, string relativeFilePath, string entryName)
         {
             try
             {
-                string relativePath = GetRelativePath(remoteBasePath, remoteFilePath);
-                byte[]? fileData = SMBConnectionManager.Instance.ReadFile(relativePath);
+                byte[]? fileData = SMBConnectionManager.Instance.ReadFile(relativeFilePath);
                 
                 if (fileData != null)
                 {
@@ -534,7 +528,7 @@ namespace LRCatalogSync.Core
             }
             catch (Exception ex)
             {
-                Log.Debug($"CatalogManager: Fehler beim Hinzufügen von Remote-Datei {remoteFilePath}: {ex.Message}");
+                Log.Debug($"CatalogManager: Fehler beim Hinzufügen von Remote-Datei {relativeFilePath}: {ex.Message}");
             }
         }
         
@@ -739,33 +733,6 @@ namespace LRCatalogSync.Core
             catch (Exception ex)
             {
                 Log.Error($"CatalogManager: Previews.lrdata Sync Fehler: {ex.Message}");
-            }
-        }
-        
-        // Hilfsmethode: Berechnet den relativen Pfad innerhalb der SMB-Freigabe
-        // z.B.: basePath=\\Server\Share\Ordner, fullPath=\\Server\Share\Ordner\Datei.txt -> Ergebnis=\Ordner\Datei.txt
-        private static string GetRelativePath(string basePath, string fullPath)
-        {
-            try
-            {
-                // Normalisiere beide Pfade
-                string baseNorm = basePath.TrimEnd('\\', '/').Replace('/', '\\');
-                string fullNorm = fullPath.Replace('/', '\\');
-                
-                // Prüfe ob fullPath mit basePath beginnt
-                if (fullNorm.StartsWith(baseNorm, StringComparison.OrdinalIgnoreCase))
-                {
-                    string relative = fullNorm.Substring(baseNorm.Length);
-                    return relative.TrimStart('\\');
-                }
-                
-                // Fallback: Wenn es schon ein relativer Pfad ist (ohne UNC)
-                return fullPath;
-            }
-            catch
-            {
-                // Bei Fehler: Relative Pfad annehmen
-                return fullPath;
             }
         }
     }

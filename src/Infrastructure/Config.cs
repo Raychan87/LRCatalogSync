@@ -11,13 +11,13 @@ namespace LRCatalogSync.Infrastructure
         // ==================== EIGENSCHAFTEN ====================
 
         // Lokaler Pfad zur Lightroom Katalog-Datei (.lrcat)
-        public string CatalogLocalFile = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname]/[Katalogname].lrcat";
+        public string CatalogLocalFile = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname].lrcat";
 
         // Lokaler Pfad zum Backups Ordner (für die Sicherung der Lightroom Kataloge) 
-        public string BackupsLocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname]/Backups/";
+        public string BackupsLocalPath = "C:/Benutzer/[Benutzername]/Bilder/Lightroom/Backups/";
 
         // Remote Pfad zum Backups Ordner (auf dem Samba Server)
-        public string BackupsRemotePath = "/Ordnername/Backup/";
+        public string BackupsRemotePath = "/SambaOrdner/Backups/";
 
         // Aktiviert/Deaktiviert die Backup-Synchronisierung
         public bool EnableBackups = true;
@@ -29,7 +29,7 @@ namespace LRCatalogSync.Infrastructure
         public string RemoteIP = "xxx.xxx.xxx.xxx";
 
         // Remote Pfad zum Lightroom Katalog-Ordner (auf dem Samba Server)
-        public string CatalogRemotePath = "/Ordnername/";
+        public string CatalogRemotePath = "/SambaOrdner/";
 
         // Ordner in dem rclone.exe liegt (z.B. "./rclone" oder "C:\Program Files\rclone")
         public string RcloneFolder = "./rclone";
@@ -47,26 +47,33 @@ namespace LRCatalogSync.Infrastructure
         public string LogLevel { get; set; } = "INFO";
 
         // ==================== BERECHNETE EIGENSCHAFTEN (Read-Only) ====================
-        
-        // Extrahiert den Ordnerpfad aus CatalogLocalFile (z.B. "C:\Kataloge\MeineFotos" aus "C:\Kataloge\MeineFotos\MeineFotos.lrcat")
+
+        // Extrahiert den lokalen Pfad ohne Dateiname (z.B. "C:/Benutzer/[Benutzername]/Bilder/Lightroom/")
+        // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/"
         public string CatalogLocalPath => Path.GetDirectoryName(CatalogLocalFile) ?? string.Empty;
         
         // Extrahiert den Dateinamen (z.B. "MeineFotos.lrcat")
+        // Beispiel: "[Katalogname].lrcat"
         public string CatalogFileName => Path.GetFileName(CatalogLocalFile);
         
         // Extrahiert den Katalognamen ohne Endung (z.B. "MeineFotos")
+        // Beispiel: "[Katalogname]"
         public string CatalogName => Path.GetFileNameWithoutExtension(CatalogLocalFile);
 
-        // Remote: Vollständiger Pfad (RemotePath + Dateiname)
+        // Remote: Vollständiger Pfad zur Lightroom Katalog-Datei auf dem Samba Server
+        // Beispiel: "/SambaOrdner/[Katalogname].lrcat"
         public string CatalogRemoteFile => Path.Combine(CatalogRemotePath, CatalogFileName);
 
         // Vollständiger Pfad zur Lightroom Lock-Datei (.lrcat.lock)
+        // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname].lrcat.lock"
         public string CatalogLockFile => Path.Combine(CatalogLocalPath, $"{CatalogName}.lrcat.lock");
 
         // Vollständiger Pfad zur lokalen LRCatSync Lock-Datei (LocalPath + Dateiname)
+        // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/LRCatSync.lock"
         public string SyncLocalLockFile => Path.Combine(CatalogLocalPath, GlobalConst.LOCK_FILE);
 
         // Vollständiger Pfad zur remote LRCatSync Lock-Datei (RemotePath + Dateiname)
+        // Beispiel: "/SambaOrdner/LRCatSync.lock"
         public string SyncRemoteLockFile => Path.Combine(CatalogRemotePath, GlobalConst.LOCK_FILE);
 
         // ==================== METHODEN ====================
