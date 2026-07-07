@@ -30,14 +30,6 @@ namespace LRCatalogSync.Core
         // Phase 5: Cleanup (IMMER im finally!)
         public static void RunCatalogSync(AppConfig config, TrayManager trayManager)
         {
-            // ========== PHASE 0: LIGHTROOM-LOCK-ERKENNUNG (vor try!) ==========
-            if (IsLightroomRunning(config))
-            {
-                Log.Debug("CatalogManager: Lightroom läuft (.lrcat.lock erkannt), warte auf Sync-Ende");
-                trayManager.UpdateStatus("Lockfile");  // 🔵 Blau
-                return; // Kein try/finally nötig – wir haben nichts erstellt
-            }
-
             LockManager? lockManager = null;
             SyncDirection syncDirection = SyncDirection.None;
 
@@ -86,7 +78,7 @@ namespace LRCatalogSync.Core
                 
                 // ========== PHASE 4: RCLONE SYNC AUSFÜHREN ==========
                 Log.Info($"CatalogManager: Starte rclone {syncDirection.ToString().ToLower()}");
-                trayManager.UpdateStatus("Syncing");  // 🟡 Gelb
+                trayManager.UpdateStatus("LSyncing");  // 🟡 Gelb
                 
                 if (syncDirection == SyncDirection.Upload)
                 {
@@ -143,38 +135,6 @@ namespace LRCatalogSync.Core
             catch (Exception ex)
             {
                 Log.Error($"CatalogManager: Fehler beim Löschen der Lightroom-Locks: {ex.Message}");
-            }
-        }
-        
-        // Geprüft!!
-        // Prüft ob Lightroom läuft (sucht nach [Katalogname].lrcat.lock, [Katalogname].lrcat-shm, [Katalogname].lrcat-wal)
-        private static bool IsLightroomRunning(AppConfig config)
-        {
-            try
-            {
-                // Erstelle Array mit möglichen Lock-Dateinamen 
-                string[] lockFiles = {
-                    $"{config.CatalogName}.lrcat.lock",
-                    $"{config.CatalogName}.lrcat-shm",
-                    $"{config.CatalogName}.lrcat-wal"
-                };
-                
-                // Suche nach Lightroom-Lock-Dateien mit vollständigem Dateinamen
-                foreach (string lockFile in lockFiles)
-                {
-                    string fullPath = Path.Combine(config.CatalogLocalPath, lockFile);
-                    if (File.Exists(fullPath))
-                    {
-                        Log.Debug($"CatalogManager: Lightroom-Lock erkannt: {fullPath}");
-                        return true;
-                    }
-                }                
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"CatalogManager: Fehler bei Lightroom-Lock-Prüfung: {ex.Message}");
-                return false;
             }
         }
         
@@ -468,7 +428,8 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // NEU: Fügt Dateien aus einem Remote-Verzeichnis rekursiv in das ZIP-Archiv ein (per SMB)
+        // geprüft!! 2026.07.05
+        // Fügt Dateien aus einem Remote-Verzeichnis rekursiv in das ZIP-Archiv ein (per SMB)
         // relativeDir: Relativer Pfad innerhalb der SMB-Freigabe (z.B. "Katalog.lrcat-data")
         private static void AddRemoteDirectoryToZip(ZipArchive zip, string relativeDir, string entryPath)
         {
@@ -509,7 +470,8 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // NEU: Fügt eine einzelne Remote-Datei zum ZIP hinzu
+        // geprüft!! 2026.07.05
+        // Fügt eine einzelne Remote-Datei zum ZIP hinzu
         // relativeFilePath: Relativer Pfad innerhalb der SMB-Freigabe (z.B. "Katalog.lrcat")
         private static void AddRemoteFileToZip(ZipArchive zip, string relativeFilePath, string entryName)
         {

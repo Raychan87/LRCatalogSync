@@ -83,10 +83,14 @@ namespace LRCatalogSync.UI
                     trayIcon.Icon = iconGreen;
                     trayIcon.Text = "LR Catalog Sync - Standby";
                     break;
-                case "Syncing":
+                case "BSyncing":
                     trayIcon.Icon = iconYellow;
-                    trayIcon.Text = "LR Catalog Sync - Synchronisiere...";
+                    trayIcon.Text = "LR Catalog Sync - Synchronisiere Backups";
                     break;
+                case "LSyncing":
+                    trayIcon.Icon = iconYellow;
+                    trayIcon.Text = "LR Catalog Sync - Synchronisiere Katalog";
+                    break;   
                 case "rclone":
                     trayIcon.Icon = iconRed;
                     trayIcon.Text = "LR Catalog Sync - rclone Fehler";

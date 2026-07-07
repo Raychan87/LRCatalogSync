@@ -20,7 +20,7 @@ namespace LRCatalogSync.Core
             try
             {
                 // ========== LOG-EINTRAG: START ==========
-                Log.Debug($"Backup: gestartet {config.BackupsLocalPath} -> {remoteFullPath}");
+                Log.Debug($"BackupManager: gestartet {config.BackupsLocalPath} -> {remoteFullPath}");
 
                 // ========== LOG-DATEI VORBEREITEN ==========
                 string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_sync.log");
@@ -57,11 +57,11 @@ namespace LRCatalogSync.Core
                 WriteRcloneStats(tempLog);
 
                 // ========== LOG-EINTRAG: ENDE ==========
-                Log.Debug("Backup: abgeschlossen");
+                Log.Debug("BackupManager: abgeschlossen");
             }
             catch (Exception ex)
             {
-                Log.Error($"Backup/Fehler: {ex.Message}");
+                Log.Error($"BackupManager: {ex.Message}");
             }
         }
 
@@ -74,42 +74,20 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                // ========== VALIDIERUNGEN ==========
-                if (!File.Exists(GlobalData.RcloneConfigPath))
-                {
-                    Log.Error("rclone.conf fehlt. Bitte Einstellungen prüfen.");
-                    trayManager.UpdateStatus("Error");
-                    return;
-                }
-
-                if (!File.Exists(config.RclonePath))
-                {
-                    Log.Error("rclone.exe nicht gefunden. Bitte Einstellungen prüfen.");
-                    trayManager.UpdateStatus("rclone");
-                    return;
-                }
-
-                // ========== BACKUP AUSFÜHREN ==========
-                if (!config.EnableBackups)
-                {
-                    Log.Debug("Backup: deaktiviert");
-                    return;
-                }
-
                 // Zusammenstellung des Remote-Pfads (z.B. "synology:/Lightroom/Backups")
                 string remoteFullPath = GlobalConst.REMOTE_NAME;
                 if (!string.IsNullOrEmpty(config.BackupsRemotePath))
                     remoteFullPath += ":" + config.BackupsRemotePath;
 
                 // Setze Tray auf "Syncing" und starte Sync
-                trayManager.UpdateStatus("Syncing");
+                trayManager.UpdateStatus("BSyncing");
 
                 // Führe Sync durch
                 SyncBackups(config, remoteFullPath);
             }
             catch (Exception ex)
             {
-                Log.Error($"Backup/Fehler: {ex.Message}");
+                Log.Error($"BackupManager: {ex.Message}");
                 trayManager.UpdateStatus("Error");
             }
             finally
@@ -148,13 +126,13 @@ namespace LRCatalogSync.Core
                         trimmed.Contains("Elapsed time:"))
                     {
                         // Ausgabe ins Logfile mit rclone-Präfix
-                        Log.Debug("Backup/rclone: " + trimmed);
+                        Log.Debug("BackupManager: - rclone: " + trimmed);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Log.Debug($"Backup/rclone/Fehler: {ex.Message}");
+                Log.Debug($"BackupManager: - rclone: {ex.Message}");
             }
         }
 

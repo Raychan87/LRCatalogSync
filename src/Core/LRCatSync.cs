@@ -44,7 +44,7 @@ namespace LRCatalogSync.Core
 
             // ========== STARTE AUTOMATISCHEN SYNC-ZYKLUS ==========
             // Timer führt alle CATALOG_SYNC_CHECK_INTERVAL Sekunden kompletten Zyklus aus (Backup → Katalog)
-            Log.Info($"Coordinator: Starte Sync-Zyklus ({GlobalConst.CATALOG_SYNC_CHECK_INTERVAL}sec Intervall)");
+            Log.Debug($"LRCatSync: Starte Sync-Zyklus ({GlobalConst.CATALOG_SYNC_CHECK_INTERVAL}sec Intervall)");
             syncCycleTimer = new System.Threading.Timer(SyncCycleCallback, null, 0, GlobalConst.CATALOG_SYNC_CHECK_INTERVAL * 1000);
         }
 

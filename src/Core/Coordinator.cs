@@ -34,22 +34,52 @@ namespace LRCatalogSync.Core
 
             try
             {
-                // ========== SCHRITT 1: BackupManager ausführen ==========
-                // BackupManager synchronisiert BackupsLocalPath → NAS
-                Log.Debug("Coordinator: Starte BackupManager");                
-                try
+                // ========== VALIDIERUNGEN ==========
+                if (!File.Exists(GlobalData.RcloneConfigPath))
                 {
-                    BackupManager.RunBackupProcess(config, trayManager);
-                    Log.Debug("Coordinator: BackupManager abgeschlossen");
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"Coordinator: BackupManager fehlgeschlagen: {ex.Message}");
+                    Log.Error("Coordinator: rclone.conf fehlt. Bitte Einstellungen prüfen.");
                     trayManager.UpdateStatus("Error");
-                    // Mache weiter mit Katalog-Sync auch wenn Backup fehlerhaft war
+                    return;
                 }
 
-                // ========== SCHRITT 2: Katalog-Sync ausführen ==========
+                if (!File.Exists(config.RclonePath))
+                {
+                    Log.Error("Coordinator: rclone.exe nicht gefunden. Bitte Einstellungen prüfen.");
+                    trayManager.UpdateStatus("rclone");
+                    return;
+                }
+
+                if (!config.EnableBackups)
+                {
+                    Log.Debug("Coordinator: Backup deaktiviert - überspringe");
+                }
+                else
+                {
+                    // ========== SCHRITT 1: BackupManager ausführen ==========
+                    // BackupManager synchronisiert BackupsLocalPath → NAS
+                    Log.Debug("Coordinator: Starte BackupManager");                
+                    try
+                    {
+                        BackupManager.RunBackupProcess(config, trayManager);
+                        Log.Debug("Coordinator: BackupManager abgeschlossen");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"Coordinator: BackupManager fehlgeschlagen: {ex.Message}");
+                        trayManager.UpdateStatus("Error");
+                        // Mache weiter mit Katalog-Sync auch wenn Backup fehlerhaft war
+                    }
+                }
+
+                // ========== SCHRITT 2: KATALOG-SYNC (nur wenn Lightroom geschlossen) ==========
+                // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
+                if (IsLightroomRunning(config))
+                {
+                    Log.Info("Coordinator: Lightroom läuft - Katalog-Sync übersprungen");
+                    trayManager.UpdateStatus("Lockfile");
+                    return;
+                }
+
                 // CatalogManager synchronisiert CatalogLocalPath → NAS (oder umgekehrt)
                 Log.Debug("Coordinator: Starte CatalogManager");
                 
@@ -80,6 +110,35 @@ namespace LRCatalogSync.Core
                 {
                     isCycleRunning = false;
                 }
+            }
+        }
+
+        // Prüft ob Lightroom läuft (sucht nach Lock-Dateien)
+        private static bool IsLightroomRunning(AppConfig config)
+        {
+            try
+            {
+                string[] lockFiles = {
+                    $"{config.CatalogName}.lrcat.lock",
+                    $"{config.CatalogName}.lrcat-shm",
+                    $"{config.CatalogName}.lrcat-wal"
+                };
+                
+                foreach (string lockFile in lockFiles)
+                {
+                    string fullPath = Path.Combine(config.CatalogLocalPath, lockFile);
+                    if (File.Exists(fullPath))
+                    {
+                        Log.Error($"Coordinator: Lightroom-Lock erkannt: {fullPath}");
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Coordinator: Fehler bei Lightroom-Lock-Prüfung: {ex.Message}");
+                return false;
             }
         }
     }
