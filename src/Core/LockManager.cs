@@ -35,16 +35,68 @@ namespace LRCatalogSync.Core
             _config = config;
         }
 
-        // ==================== ÖFFENTLICHE METHODEN ====================
-        
-        /// <summary>
-        /// Akquiriert atomar lokale und remote Locks
-        /// Gibt false zurück wenn Locks nicht akquiriert werden können
-        /// </summary>
+        // ==================== ÖFFENTLICHE METHODEN ====================        
+        // geprpüft!! 2026.07.07
+        // Akquiriert atomar lokale und remote Locks
+        // Gibt false zurück wenn Locks nicht akquiriert werden können
         public bool AcquireLocks(AppConfig config)
         {
             try
             {
+                // ========== REMOTE LOCK AKQUIRIEREN ==========
+                // Stelle SMB-Verbindung her
+                if (!SMBConnectionManager.Instance.EnsureConnected(config))
+                {
+                    Log.Error($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
+                    _locksAcquired = false;
+                    return false;
+                }
+                
+                // Lädt alle Filenamen von den Remote Pfad in die existingFiles.
+                var existingFiles = SMBConnectionManager.Instance.ListFiles(Path.GetDirectoryName(config.CatalogRemotePath) ?? "");
+
+                // Prüfe ob das Lockfile vorhanden ist
+                if (existingFiles.Contains(GlobalConst.LOCK_FILE))
+                {
+                    // Lies Lock-Inhalt um Alter zu prüfen
+                    byte[]? lockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
+                    if (lockData != null)
+                    {
+                        string lockContent = Encoding.UTF8.GetString(lockData);
+                        
+                        // Parse Timestamp aus Lock-Datei
+                        DateTime lockTimestamp;
+                        if (TryParseLockTimestamp(lockContent, out lockTimestamp))
+                        {
+                            if (lockTimestamp.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
+                            {
+                                Log.Debug($"LockManager: Alte remote Lock erkannt, überschreibe {config.SyncRemoteLockFile}");
+                                SMBConnectionManager.Instance.DeleteFile(GlobalConst.LOCK_FILE);
+                            }
+                            else
+                            {
+                                Log.Debug($"LockManager: Remote Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
+                                // Release lokalen Lock
+                                _localLockStream?.Close();
+                                _localLockStream = null;
+                                return false;
+                            }
+                        }
+                    }
+                }
+                
+                // Erstelle remote Lock-Datei via SMB
+                string lockContentNew = $"SyncGuid={SyncGuid}\nTimestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                byte[] lockBytes = Encoding.UTF8.GetBytes(lockContentNew);
+                
+                if (!SMBConnectionManager.Instance.WriteFile(GlobalConst.LOCK_FILE, lockBytes))
+                {
+                    Log.Error($"LockManager: Schreiben der remote Lock-Datei fehlgeschlagen");
+                    _localLockStream?.Close();
+                    _localLockStream = null;
+                    return false;
+                }
+
                 // ========== LOKALER LOCK AKQUIRIEREN ==========
                 // Erstelle lokale Lock-Datei mit FileShare.None (exklusiver Zugriff)
                 if (File.Exists(config.SyncLocalLockFile))
@@ -53,12 +105,12 @@ namespace LRCatalogSync.Core
                     FileInfo lockInfo = new FileInfo(config.SyncLocalLockFile);
                     if (lockInfo.LastWriteTime.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.Now)
                     {
-                        Log.Info($"LockManager: veraltete lokale Lock File erkannt, überschreibe {config.SyncLocalLockFile}");
+                        Log.Debug($"LockManager: veraltete lokale Lock File erkannt, überschreibe {config.SyncLocalLockFile}");
                         File.Delete(config.SyncLocalLockFile);
                     }
                     else
                     {
-                        Log.Info($"LockManager: Lokaler Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
+                        Log.Debug($"LockManager: Lokaler Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
                         return false;
                     }
                 }
@@ -74,67 +126,8 @@ namespace LRCatalogSync.Core
                 writer.Flush();
                 writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
-                // ========== REMOTE LOCK AKQUIRIEREN ==========
-                // Stelle SMB-Verbindung her
-                if (!SMBConnectionManager.Instance.EnsureConnected(config))
-                {
-                    Log.Info($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
-                    _locksAcquired = true;
-                    return true;
-                }
-                
-                // Berechne relativen Pfad zur Lock-Datei innerhalb der Freigabe
-                string lockRelativePath = GetRelativePath(config.CatalogRemotePath, config.SyncRemoteLockFile);
-                
-                // Prüfe ob Lock-Datei existiert via SMB
-                var existingFiles = SMBConnectionManager.Instance.ListFiles(Path.GetDirectoryName(lockRelativePath) ?? "");
-                string lockFileName = Path.GetFileName(lockRelativePath);
-                
-                if (existingFiles.Contains(lockFileName))
-                {
-                    // Lies Lock-Inhalt um Alter zu prüfen
-                    byte[]? lockData = SMBConnectionManager.Instance.ReadFile(lockRelativePath);
-                    if (lockData != null)
-                    {
-                        string lockContent = Encoding.UTF8.GetString(lockData);
-                        
-                        // Parse Timestamp aus Lock-Datei
-                        DateTime lockTimestamp;
-                        if (TryParseLockTimestamp(lockContent, out lockTimestamp))
-                        {
-                            if (lockTimestamp.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
-                            {
-                                Log.Info($"LockManager: Stale remote Lock erkannt, überschreibe {config.SyncRemoteLockFile}");
-                                SMBConnectionManager.Instance.DeleteFile(lockRelativePath);
-                            }
-                            else
-                            {
-                                Log.Info($"LockManager: Remote Lock ist noch aktiv (jünger als {GlobalConst.SYNC_LOCK_TIMEOUT_MIN} min)");
-                                // Release lokalen Lock
-                                _localLockStream?.Close();
-                                _localLockStream = null;
-                                File.Delete(config.SyncLocalLockFile);
-                                return false;
-                            }
-                        }
-                    }
-                }
-                
-                // Erstelle remote Lock-Datei via SMB
-                string lockContentNew = $"SyncGuid={SyncGuid}\nTimestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-                byte[] lockBytes = Encoding.UTF8.GetBytes(lockContentNew);
-                
-                if (!SMBConnectionManager.Instance.WriteFile(lockRelativePath, lockBytes))
-                {
-                    Log.Error($"LockManager: Schreiben der remote Lock-Datei fehlgeschlagen");
-                    _localLockStream?.Close();
-                    _localLockStream = null;
-                    File.Delete(config.SyncLocalLockFile);
-                    return false;
-                }
-                
                 _locksAcquired = true;
-                Log.Info($"LockManager: Beide Locks akquiriert (SyncGuid: {SyncGuid})");
+                Log.Debug($"LockManager: Beide Locks akquiriert (SyncGuid: {SyncGuid})");
                 
                 // Starte Heartbeat-Thread
                 StartHeartbeat();
