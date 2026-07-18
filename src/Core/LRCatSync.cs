@@ -37,7 +37,7 @@ namespace LRCatalogSync.Core
 
             // ========== CRASH-RECOVERY: Verwaiste Locks bereinigen ==========
             // Prüfe beim Programmstart ob verwaiste Locks existieren (>30 min alt)
-            CleanupStaleLocks(config);
+            LockManager.CleanupStaleLocks(config);
 
             // ========== KONTEXTMENÜ AUFBAUEN ==========
             SetupContextMenu();
@@ -105,56 +105,6 @@ namespace LRCatalogSync.Core
         {
             // Coordinator übernimmt die sequenzielle Ausführung
             Coordinator.RunSyncCycle(config, trayManager);
-        }
-
-        /// <summary>
-        /// Bereinigt verwaiste Locks beim Programmstart (Crash-Recovery)
-        /// </summary>
-        private void CleanupStaleLocks(AppConfig config)
-        {
-            try
-            {
-                string localLockPath = Path.Combine(config.CatalogLocalPath, "LRCatSync.lock");
-                
-                if (File.Exists(localLockPath))
-                {
-                    FileInfo lockFile = new FileInfo(localLockPath);
-                    TimeSpan age = DateTime.Now - lockFile.LastWriteTime;
-                    
-                    if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
-                    {
-                        // Lock ist älter als Timeout → Crash-Recovery
-                        File.Delete(localLockPath);
-                        Log.Info($"Crash-Recovery: Verwaiste Lock gelöscht ({age.TotalMinutes:F0} min alt)");
-                    }
-                    else
-                    {
-                        // Lock ist noch aktiv → Info
-                        Log.Info($"Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
-                    }
-                }
-                
-                // Prüfe auch Remote-Lock (auf NAS)
-                string remoteLockPath = Path.Combine(config.CatalogRemotePath, "LRCatSync.lock");
-                if (Directory.Exists(Path.GetDirectoryName(remoteLockPath)))
-                {
-                    if (File.Exists(remoteLockPath))
-                    {
-                        FileInfo lockFile = new FileInfo(remoteLockPath);
-                        TimeSpan age = DateTime.Now - lockFile.LastWriteTime;
-                        
-                        if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
-                        {
-                            File.Delete(remoteLockPath);
-                            Log.Info($"Crash-Recovery: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Crash-Recovery: Fehler beim Bereinigen: {ex.Message}");
-            }
         }
 
         // ==================== BEREINIGUNG ====================

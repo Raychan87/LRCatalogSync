@@ -129,7 +129,7 @@ namespace LRCatalogSync.Core
                     string fullPath = Path.Combine(config.CatalogLocalPath, lockFile);
                     if (File.Exists(fullPath))
                     {
-                        Log.Error($"Coordinator: Lightroom-Lock erkannt: {fullPath}");
+                        Log.Notice($"Coordinator: Lightroom-Lock erkannt: {fullPath}");
                         return true;
                     }
                 }
