@@ -37,8 +37,11 @@ namespace LRCatalogSync.Infrastructure
         // Samba Benutzername
         public string SambaUser = "";
 
-        // Samba Passwort (verschlüsselt mit rclone obscure)
-        public string SambaPassword = "";
+        // Passwort für Rclone (verschlüsselt mit rclone obscure)
+        public string SambaPasswordRclone = "";
+
+        // Passwort für Samba (verschlüsselt mit AES-256)
+        public string SambaPasswordAes = "";
 
         // Absolute Pfade (werden beim Laden berechnet)
         public string RclonePath { get; private set; } = null!;
@@ -122,7 +125,9 @@ namespace LRCatalogSync.Infrastructure
                         if (key == "RcloneFolder") RcloneFolder = value;
                         if (key == "RemoteIP") RemoteIP = value;
                         if (key == "SambaUser") SambaUser = value;
-                        if (key == "SambaPassword") SambaPassword = value;
+                        if (key == "SambaPassword") SambaPasswordRclone = value; // Migration: Altes SambaPassword → SambaPasswordRclone
+                        if (key == "SambaPasswordRclone") SambaPasswordRclone = value;
+                        if (key == "SambaPasswordAes") SambaPasswordAes = value;
                         if (key == "LogLevel") LogLevel = value;
                     }
                 }
@@ -167,7 +172,8 @@ namespace LRCatalogSync.Infrastructure
                 "RcloneFolder=" + RcloneFolder,
                 "RemoteIP=" + RemoteIP,
                 "SambaUser=" + SambaUser,
-                "SambaPassword=" + SambaPassword,
+                "SambaPasswordRclone=" + SambaPasswordRclone,
+                "SambaPasswordAes=" + SambaPasswordAes,
                 "LogLevel=" + LogLevel
             };
 

@@ -66,12 +66,24 @@ public class SmbClient
     /// </summary>
     /// <param name="domain">Dom�ne (leer f�r lokale Benutzer oder Workgroup)</param>
     /// <param name="username">Benutzername</param>
-    /// <param name="password">Passwort</param>
+    /// <param name="encryptedPassword">Verschlüsseltes Passwort (AES-256)</param>
     /// <returns>true bei erfolgreicher Authentifizierung, sonst false</returns>
-    public bool Login(string domain, string username, string password)
+    public bool Login(string domain, string username, string encryptedPassword)
     {
         if (!_isConnected)
         {
+            return false;
+        }
+
+        // Passwort entschlüsseln
+        string password;
+        try
+        {
+            password = AesEncryptor.Decrypt(encryptedPassword);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Smb: Passwort-Entschlüsselung fehlgeschlagen: {ex.Message}");
             return false;
         }
 
@@ -598,7 +610,7 @@ public sealed class SMBConnectionManager
         }
         
         // Anmelden
-        if (!_client.Login(string.Empty, config.SambaUser, config.SambaPassword))
+        if (!_client.Login(string.Empty, config.SambaUser, config.SambaPasswordAes))
         {
             Log.Error($"[SMB] Anmeldung als {config.SambaUser} fehlgeschlagen");
             _client.Disconnect();

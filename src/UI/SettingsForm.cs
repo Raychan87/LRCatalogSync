@@ -10,13 +10,15 @@ namespace LRCatalogSync.UI
     public partial class SettingsForm : Form
     {
         private AppConfig config;
-        private string originalPassword; // Speichert das ursprüngliche verschlüsseltes Passwort
+        private string originalPasswordRclone; // Speichert das ursprüngliche rclone-verschlüsselte Passwort
+        private string originalPasswordAes; // Speichert das ursprüngliche AES-verschlüsselte Passwort
 
         public SettingsForm(AppConfig cfg)
         {
             InitializeComponent();
             config = cfg;
-            originalPassword = cfg.SambaPassword; // Speichern des ursprünglichen Passworts
+            originalPasswordRclone = cfg.SambaPasswordRclone; // Speichern des ursprünglichen Rclone-Passworts
+            originalPasswordAes = cfg.SambaPasswordAes; // Speichern des ursprünglichen AES-Passworts
 
             SetupControls();
             LoadSettings();
@@ -169,7 +171,7 @@ namespace LRCatalogSync.UI
         private void LoadSettings()
         {
             var passwordControl = this.Controls.Find("txtSambaPassword", true);
-            if (passwordControl.Length > 0 && !string.IsNullOrEmpty(originalPassword))
+            if (passwordControl.Length > 0 && (!string.IsNullOrEmpty(originalPasswordRclone) || !string.IsNullOrEmpty(originalPasswordAes)))
             {
                 ((TextBox)passwordControl[0]).Text = "****";
             }
@@ -477,18 +479,15 @@ namespace LRCatalogSync.UI
                 // Überprüfe, ob das ursprüngliche Passwort bereits verschlüsselt ist
                 if (string.IsNullOrEmpty(passwordInput) || passwordInput == "****")
                 {
-                    // Wenn kein neues Passwort eingegeben wurde, behalte das alte
-                    // Aber stelle sicher, dass es korrekt verarbeitet wird
-                    if (!string.IsNullOrEmpty(originalPassword))
-                    {
-                        // Verwende das ursprüngliche Passwort
-                        config.SambaPassword = originalPassword;
-                    }
+                    // Wenn kein neues Passwort eingegeben wurde, behalte die alten Passwörter
+                    config.SambaPasswordRclone = originalPasswordRclone;
+                    config.SambaPasswordAes = originalPasswordAes;
                 }
                 else
                 {
-                    // Neues Passwort eingegeben - verschlüssele es mit dem validierten rclone Pfad
-                    config.SambaPassword = ObscurePassword(passwordInput, absoluteRclonePath);
+                    // Neues Passwort eingegeben - verschlüssele es für beide Systeme
+                    config.SambaPasswordRclone = ObscurePassword(passwordInput, absoluteRclonePath);
+                    config.SambaPasswordAes = AesEncryptor.Encrypt(passwordInput);
                 }
 
                 // Stelle sicher, dass data/config Ordner existiert
@@ -568,7 +567,7 @@ namespace LRCatalogSync.UI
                 "type = smb",
                 $"host = {config.RemoteIP}",
                 $"user = {config.SambaUser}",
-                $"pass = {config.SambaPassword}"
+                $"pass = {config.SambaPasswordRclone}"
             };
 
             File.WriteAllLines(GlobalData.RcloneConfigPath, lines);
