@@ -53,12 +53,12 @@ namespace LRCatalogSync.Core
                     {
                         // Lock ist älter als Timeout → Crash-Recovery
                         File.Delete(config.SyncLocalLockFile);
-                        Log.Info($"Crash-Recovery: Verwaiste lokale Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                        Log.Info($"LockManager: Verwaiste lokale Lock gelöscht ({age.TotalMinutes:F0} min alt)");
                     }
                     else
                     {
                         // Lock ist noch aktiv → Info
-                        Log.Info($"Lokale Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                        Log.Info($"LockManager: Lokale Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
                     }
                 }
                 
@@ -82,24 +82,24 @@ namespace LRCatalogSync.Core
                                 // Lock ist veraltet → löschen via SMB
                                 if (SMBConnectionManager.Instance.DeleteFile(GlobalConst.LOCK_FILE))
                                 {
-                                    Log.Info($"Crash-Recovery: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                                    Log.Info($"LockManager: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
                                 }
                             }
                             else
                             {
-                                Log.Info($"Remote Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                                Log.Info($"LockManager: Remote Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
                             }
                         }
                     }
                 }
                 else
                 {
-                    Log.Debug("Crash-Recovery: Keine SMB-Verbindung möglich, Remote-Lock wurde nicht geprüft");
+                    Log.Debug("LockManager: Keine SMB-Verbindung möglich, Remote-Lock wurde nicht geprüft");
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"Crash-Recovery: Fehler beim Bereinigen: {ex.Message}");
+                Log.Error($"LockManager: Fehler beim Bereinigen: {ex.Message}");
             }
         }
   

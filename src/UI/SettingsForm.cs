@@ -554,7 +554,7 @@ namespace LRCatalogSync.UI
             }
             catch (Exception ex)
             {
-                Log.Error($"Config/Fehler: Verschlüsseln des Passworts: {ex.Message}");
+                Log.Error($"SettingsForm: Verschlüsseln des Passworts: {ex.Message}");
                 throw;
             }
         }
