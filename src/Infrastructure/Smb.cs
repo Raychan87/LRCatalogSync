@@ -632,19 +632,22 @@ public sealed class SMBConnectionManager
     
     /// <summary>
     /// Extrahiert den Share-Namen aus einem UNC-Pfad
+    /// Entfernt alle / und \ und gibt den ersten Teil zurück
     /// </summary>
     private string ExtractShareName(string uncPath)
     {
-        // Erwartet: \\Server\Share\subdir oder \\Server\Share
-        if (uncPath.StartsWith(@"\\"))
+        // Entferne alle / und \ am Anfang des Pfads
+        string trimmed = uncPath.TrimStart('/', '\\');
+        
+        // Teile beim ersten / oder \ und nimm nur den ersten Teil
+        int firstSeparator = trimmed.IndexOfAny(new char[] { '/', '\\' });
+        if (firstSeparator > 0)
         {
-            var parts = uncPath.Substring(2).Split('\\');
-            if (parts.Length >= 1)
-            {
-                return parts[0]; // Share-Name ist erster Teil nach \\
-            }
+            return trimmed.Substring(0, firstSeparator);
         }
-        return uncPath; // Fallback
+        
+        // Wenn kein Separator gefunden wurde, ist der gesamte String der Share-Name
+        return trimmed;
     }
     
     /// <summary>

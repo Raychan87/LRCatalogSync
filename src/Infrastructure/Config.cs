@@ -97,9 +97,11 @@ namespace LRCatalogSync.Infrastructure
                     // Nur Zeilen mit "=" verarbeiten
                     if (line.Contains("=") && !line.StartsWith("#"))
                     {
-                        // Teile die Zeile am "=" Zeichen
-                        string key = line.Split('=')[0].Trim();      // Linke Seite (z.B. "CheckInterval")
-                        string value = line.Split('=')[1].Trim();    // Rechte Seite (z.B. "15")
+                        // Teile die Zeile am ERSTEN "=" Zeichen
+                        // Wichtig: Split mit Limit 2, damit Werte mit "=" (z.B. Base64-Padding) erhalten bleiben
+                        string[] parts = line.Split('=', 2);
+                        string key = parts[0].Trim();      // Linke Seite (z.B. "CheckInterval")
+                        string value = parts[1].Trim();    // Rechte Seite (z.B. "15")
 
                         // Weise die Werte den Eigenschaften zu
                         if (key == "CatalogLocalFile") CatalogLocalFile = value;
