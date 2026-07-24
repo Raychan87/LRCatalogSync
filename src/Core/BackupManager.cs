@@ -50,6 +50,56 @@ namespace LRCatalogSync.Core
                         return;
 
                     p.WaitForExit(); // Warte bis Prozess beendet ist
+                    
+                    // ========== FEHLERBEHANDLUNG FÜR BISYNC ==========
+                    // Prüfe ob Fehler "cannot find prior Path1 or Path2 listings" auftrat
+                    if (p.ExitCode != 0)
+                    {
+                        // Lese Logdatei für Fehleranalyse
+                        var lines = ReadLogFileWithRetry(tempLog, 5, 200);
+                        if (lines != null)
+                        {
+                            string logContent = string.Join("\n", lines);
+                            
+                            // Prüfe auf spezifischen Fehler
+                            if (logContent.Contains("cannot find prior Path1 or Path2 listings"))
+                            {
+                                Log.Info("BackupManager: Bisync-Fehler erkannt, starte mit --resync neu");
+                                
+                                // Erstelle neuen ProcessStartInfo mit --resync
+                                var resyncPsi = new ProcessStartInfo
+                                {
+                                    FileName = config.RclonePath,
+                                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --resync",
+                                    UseShellExecute = false,
+                                    RedirectStandardOutput = true,
+                                    RedirectStandardError = true,
+                                    CreateNoWindow = true
+                                };
+                                
+                                // Führe resync aus
+                                using (var resyncProc = Process.Start(resyncPsi))
+                                {
+                                    if (resyncProc != null)
+                                    {
+                                        resyncProc.WaitForExit();
+                                        
+                                        // Logge Ergebnis
+                                        if (resyncProc.ExitCode == 0)
+                                        {
+                                            Log.Info("BackupManager: Bisync mit --resync erfolgreich");
+                                        }
+                                        else
+                                        {
+                                            Log.Error($"BackupManager: Bisync mit --resync fehlgeschlagen (ExitCode: {resyncProc.ExitCode})");
+                                        }
+                                    }
+                                }
+                                
+                                return; // Nach resync beenden
+                            }
+                        }
+                    }
                 }
 
                 // ========== LOG-STATISTIKEN AUSGEBEN ==========
