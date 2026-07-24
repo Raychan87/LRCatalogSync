@@ -22,6 +22,12 @@ namespace LRCatalogSync.Infrastructure
         // Aktiviert/Deaktiviert die Backup-Synchronisierung
         public bool EnableBackups = true;
 
+        // Aktiviert/Deaktiviert rclone copy (Backup vor Sync)
+        public bool EnableRcloneCopy = true;
+
+        // Ordnername für rclone copy Backup
+        public string RcloneCopyFolderName = "Last_catalog_backup";
+
         // Syncen von Preview-Daten (aktiviert *Smart Previews.lrdata, deaktiviert auch *Previews.lrdata)
         public bool SyncPreviewData = false;
 
@@ -122,6 +128,8 @@ namespace LRCatalogSync.Infrastructure
                         if (key == "BackupsLocalPath") BackupsLocalPath = value;
                         if (key == "BackupsRemotePath") BackupsRemotePath = value;
                         if (key == "EnableBackups") EnableBackups = bool.TryParse(value, out bool result) && result;
+                        if (key == "EnableRcloneCopy") EnableRcloneCopy = bool.TryParse(value, out bool result3) && result3;
+                        if (key == "RcloneCopyFolderName") RcloneCopyFolderName = value;
                         if (key == "SyncPreviewData") SyncPreviewData = bool.TryParse(value, out bool result2) && result2;
                         if (key == "CatalogRemotePath") CatalogRemotePath = value;
                         if (key == "RcloneFolder") RcloneFolder = value;
@@ -169,6 +177,8 @@ namespace LRCatalogSync.Infrastructure
                 "BackupsLocalPath=" + BackupsLocalPath,
                 "BackupsRemotePath=" + BackupsRemotePath,
                 "EnableBackups=" + EnableBackups,
+                "EnableRcloneCopy=" + EnableRcloneCopy,
+                "RcloneCopyFolderName=" + RcloneCopyFolderName,
                 "SyncPreviewData=" + SyncPreviewData,
                 "CatalogRemotePath=" + CatalogRemotePath,
                 "RcloneFolder=" + RcloneFolder,

@@ -315,3 +315,51 @@ Hinweis: Alle SMB-Funktionen bleiben in `Smb.cs`. `SMBConnectionManager` ist nun
   - Download: ZipFile.Open() lokal (bleibt wie bisher)
 - [x] EnsureConnected() vor Upload-ZIP aufgerufen
 - [x] GetRelativePath() Hilfsmethode hinzugefügt
+
+
+
+
+
+rclone delete "synology:/Lightroom/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --rmdirs --log-level DEBUG 
+
+
+c:/rclone/rclone.exe sync "E:\Lightroom_SyDrive\" "synology:/Lightroom/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --delete-before --log-level DEBUG
+
+
+
+
+c:/rclone/rclone.exe copy "synology:/Lightroom/" "synology:/Lightroom/last_version/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --log-level DEBUG
+
+
+
+
+Okay wir müsses etwas Schritt für Schritt umbauen. WICHTIG!!! In kleinen Schritten und dann auf mein OK warten für den nächsten Schritt.
+
+Hauptsächliche Änderungen finden in RunRcloneSync() statt:
+
+1. Als erstes sollte gewechselt werden von --exclude zu --include bei RunRcloneSync() 
+
+Beispiel wie es funktioniert:
+''
+c:/rclone/rclone.exe sync "E:\Lightroom_SyDrive\" "synology:/Lightroom/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --delete-before --log-level DEBUG
+''
+Passe den Befehl so an das es in das Projekt passt mit config.CatalogName usw.
+
+2. Hinzufügen von rclone delete in RunRcloneSync() direkt zwischen Quelle und Ziel bestimmung und rclone sync und nutze die gleichen Includes wie bei rclone sync.
+
+Beispiel wie es funktioniert:
+''
+rclone delete "synology:/Lightroom/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --rmdirs --log-level DEBUG 
+''
+Passe den Befehl so an das es in das Projekt passt mit config.CatalogName usw.
+
+3. Hinzufügen von rclone copy in RunRcloneSync() direkt zwischen Quelle und Ziel Bestimmung und rclone delete und nutze die gleichen Includes wie bei rclone sync und delete. Nutze auch die Globale Variable BACKUP_FOLDER_NAME.
+
+Beispiel wie es funktioniert:
+''
+c:/rclone/rclone.exe copy "synology:/Lightroom/" "synology:/Lightroom/last_version/" --config "z:\_Projekte_Github\.Net-Projekte\LightroomSync\bin\Debug\net10.0-windows\data\config\rclone.conf" --include "Lightroom-Katalog-v15.lrcat" --include "Lightroom-Katalog-v15.lrcat-data/**" --include "Lightroom-Katalog-v15 Sync.lrdata/**" --include "Lightroom-Katalog-v15 Smart Previews.lrdata/**" --include "Lightroom-Katalog-v15 Helper.lrdata/**" --log-level DEBUG
+''
+Passe den Befehl so an das es in das Projekt passt mit config.CatalogName usw.
+
+4. Baue in das Einstellungsmenü bei Settingsform.cs ein Checkbox ein damit man den rclone copy Option zum zu und abschalten hat. Default soll dieser zugeschaltet sein und mache ein Pfeld für bestimmen des Ordnernamens. default "Last_catalog_backup".
+

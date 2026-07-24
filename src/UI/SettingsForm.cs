@@ -27,7 +27,7 @@ namespace LRCatalogSync.UI
         private void SetupControls()
         {
             this.Text = "LRCatalogSync - Fototour-und-Technik.de";
-            this.Size = new System.Drawing.Size(510, 550);
+            this.Size = new System.Drawing.Size(510, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -70,6 +70,15 @@ namespace LRCatalogSync.UI
             AddLabelAndTextBox(scrollPanel, "Katalog-Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
+            yPos += lineHeight;
+            
+            AddInfoText(scrollPanel, "rclone copy (Backup vor Sync)", ref yPos, 10);
+            yPos += lineHeightToHeading;
+            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight - 5;
+            AddCheckBox(scrollPanel, "rclone copy aktivieren", ref yPos, "chkEnableRcloneCopy", config.EnableRcloneCopy, labelWidth);
+            yPos += lineHeight;
+            AddLabelAndTextBox(scrollPanel, "Backup-Ordnername:", ref yPos, "txtRcloneCopyFolderName", config.RcloneCopyFolderName, labelWidth, controlWidth, false);
             yPos += lineHeight;
             
             AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
@@ -174,6 +183,19 @@ namespace LRCatalogSync.UI
             if (passwordControl.Length > 0 && (!string.IsNullOrEmpty(originalPasswordRclone) || !string.IsNullOrEmpty(originalPasswordAes)))
             {
                 ((TextBox)passwordControl[0]).Text = "****";
+            }
+            
+            // Setze Standardwerte für rclone copy, falls noch nicht gesetzt
+            var chkEnableRcloneCopy = this.Controls.Find("chkEnableRcloneCopy", true);
+            if (chkEnableRcloneCopy.Length > 0)
+            {
+                ((CheckBox)chkEnableRcloneCopy[0]).Checked = config.EnableRcloneCopy;
+            }
+            
+            var txtRcloneCopyFolderName = this.Controls.Find("txtRcloneCopyFolderName", true);
+            if (txtRcloneCopyFolderName.Length > 0)
+            {
+                ((TextBox)txtRcloneCopyFolderName[0]).Text = config.RcloneCopyFolderName;
             }
         }
 
@@ -378,6 +400,8 @@ namespace LRCatalogSync.UI
                 config.BackupsLocalPath = GetControlValue("txtBackupsLocalPath");
                 config.BackupsRemotePath = GetControlValue("txtBackupsRemotePath");
                 config.EnableBackups = GetCheckBoxValue("chkEnableBackups");
+                config.EnableRcloneCopy = GetCheckBoxValue("chkEnableRcloneCopy");
+                config.RcloneCopyFolderName = GetControlValue("txtRcloneCopyFolderName");
                 config.SyncPreviewData = GetCheckBoxValue("chkSyncPreviewData");
                 config.RemoteIP = GetControlValue("txtRemoteIP");
                 config.CatalogRemotePath = GetControlValue("txtCatalogRemotePath");
@@ -471,6 +495,17 @@ namespace LRCatalogSync.UI
                             MessageBoxIcon.Error);
                         return;
                     }
+                }
+
+                // ================= VALIDIERUNG 3b: rclone copy Ordnername prüfen =================
+                if (config.EnableRcloneCopy && string.IsNullOrEmpty(config.RcloneCopyFolderName))
+                {
+                    MessageBox.Show(
+                        "Fehler: Der rclone copy Ordnername darf nicht leer sein!",
+                        "Ordnername fehlt",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
                 }
 
                 // ================= VALIDIERUNG 4: Passwort verschlüsseln =================

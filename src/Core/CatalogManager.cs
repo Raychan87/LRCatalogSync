@@ -292,68 +292,183 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // geprüft!!
+        // geprüft!! 2026.07.24
         // Führt rclone sync aus (Upload oder Download) mit dynamischen Excludes
         private static void RunRcloneSync(AppConfig config, SyncDirection direction)
         {
             try
             {
-                string sourcePath, destPath;
-                DateTime syncStartTime = DateTime.Now;
+                DateTime syncStartTime = DateTime.Now;                             
                 int transferredFiles = 0;
-                long transferredBytes = 0;
+                long transferredBytes = 0;    
+                string sourcePath, destPath, copyBackupPath, copySourcePath;               
+                string tempLog = Path.Combine(GlobalData.BaseDir, "data", "logs", "rclone_backup_sync.log");
+                string logsDir = Path.Combine(GlobalData.BaseDir, "data", "logs");
                 
+                // ========== Richtung festlegen  ==========
                 // Bestimme Quelle und Ziel basierend auf Sync-Richtung
                 if (direction == SyncDirection.Upload)
                 {
                     sourcePath = config.CatalogLocalPath;
-                    destPath = config.CatalogRemoteFile;
-                    Log.Info("CatalogManager: Starte rclone upload (lokal → NAS)");
+                    destPath =  $"synology:{config.CatalogRemotePath}";
+                    Log.Debug("CatalogManager: Starte rclone upload (lokal → NAS)");
                 }
                 else if (direction == SyncDirection.Download)
                 {
-                    sourcePath = config.CatalogRemoteFile;
+                    sourcePath =  $"synology:{config.CatalogRemotePath}";
                     destPath = config.CatalogLocalPath;
-                    Log.Info("CatalogManager: Starte rclone download (NAS → lokal)");
+                    Log.Debug("CatalogManager: Starte rclone download (NAS → lokal)");
                 }
                 else
                 {
+                    Log.Debug("CatalogManager: Keine Sync-Richtung erkannt, breche ab");
                     return;
                 }
                 
-                // Baue Exclude-Filter mit vollen Ornder-/Dateinamen
-                var excludes = new System.Collections.Generic.List<string>
+                // ========== Include-Filter  ==========
+                // Baue Include-Filter mit vollen Ornder-/Dateinamen
+                // WICHTIG: Der Exclude-Filter für den Backup-Ordner MUSS am Ende stehen,
+                // damit er nach den Include-Filtern angewendet wird und Vorrang hat
+                var includes = new System.Collections.Generic.List<string>
                 {
-                    $"--exclude \"{config.CatalogName}.lrcat.lock\"",
-                    $"--exclude \"{config.CatalogName}.lrcat-shm\"",
-                    $"--exclude \"{config.CatalogName}.lrcat-wal\"",
-                    $"--exclude \"{config.CatalogName} Previews.lrdata/\"",
+                    $"--include \"/{config.CatalogName}.lrcat\"",
+                    $"--include \"/{config.CatalogName}.lrcat-data/**\"",
+                    $"--include \"/{config.CatalogName} Sync.lrdata/**\"",
+                    $"--include \"/{config.CatalogName} Smart Previews.lrdata/**\"",
+                    $"--include \"/{config.CatalogName} Helper.lrdata/**\"",
                 };
 
-                // BackupsLocalPath ausschließen wenn im Katalog-Pfad
-                if (config.IsBackupInsideCatalogPath())
+                // Kombiniere Includes in einen String für rclone
+                string includeArgs = string.Join(" ", includes);
+                
+                // ========== RCLONE COPY AUSFÜHREN (Backup) ==========                
+                // Prüfe ob rclone copy aktiviert ist
+                if (!config.EnableRcloneCopy)
                 {
-                    string relativeBackupPath = config.GetRelativeBackupExcludePattern();
-                    if (!string.IsNullOrEmpty(relativeBackupPath))
+                    Log.Debug("CatalogManager: rclone copy ist deaktiviert, überspringe Backup");
+                }
+                else
+                {
+                    // Bestimme Backup-Pfad basierend auf Sync-Richtung   
+                    if (direction == SyncDirection.Upload)
                     {
-                        excludes.Add($"--exclude \"{relativeBackupPath}/**\"");
-                        Log.Debug($"CatalogManager: Schließe Backup-Ordner aus: {relativeBackupPath}");
+                        copyBackupPath = $"synology:{config.CatalogRemotePath}{config.RcloneCopyFolderName}"; 
+                        copySourcePath = $"synology:{config.CatalogRemotePath}";
+                    }
+                    else
+                    { 
+                        copyBackupPath = Path.Combine(config.CatalogLocalPath, config.RcloneCopyFolderName);
+                        copySourcePath = config.CatalogLocalPath;
+                    }
+
+                    // Erstelle Logs-Ordner falls nicht vorhanden
+                    if (!Directory.Exists(logsDir))
+                        Directory.CreateDirectory(logsDir);
+
+                    // Lösche temporäre Log-Datei falls vorhanden
+                    if (File.Exists(tempLog))
+                        File.Delete(tempLog);
+
+                    Log.Debug("CatalogManager: rclone copy starten");
+                    
+                    // Baue ProcessStartInfo für rclone copy
+                    var copyPsi = new ProcessStartInfo
+                    {
+                        FileName = config.RclonePath,
+                        Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" copy \"{copySourcePath}\" \"{copyBackupPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    };
+                    
+                    // Führe rclone copy aus und warte auf Beendigung
+                    using (var copyProc = Process.Start(copyPsi))
+                    {
+                        if (copyProc != null)
+                        {
+                            string copyOutput = copyProc.StandardOutput.ReadToEnd();
+                            string copyError = copyProc.StandardError.ReadToEnd();
+                            copyProc.WaitForExit();
+                            
+                            if (copyProc.ExitCode == 0)
+                            {
+                                Log.Debug($"CatalogManager: rclone copy erfolgreich → {config.RcloneCopyFolderName}");
+                            }
+                            else
+                            {
+                                Log.Error($"CatalogManager: rclone copy fehlgeschlagen (ExitCode: {copyProc.ExitCode})");
+                            }
+                        }
                     }
                 }
-
-                // Kombiniere Excludes in einen String für rclone
-                string excludeArgs = string.Join(" ", excludes);
                 
+                // ========== RCLONE DELETE AUSFÜHREN  ==========
+                // Erstelle Logs-Ordner falls nicht vorhanden
+                if (!Directory.Exists(logsDir))
+                    Directory.CreateDirectory(logsDir);
+
+                // Lösche temporäre Log-Datei falls vorhanden
+                if (File.Exists(tempLog))
+                    File.Delete(tempLog);
+
+                Log.Debug($"CatalogManager: rclone delete starten");
+
+                // Baue ProcessStartInfo für rclone delete
+                // WICHTIG: Exclude für Backup-Ordner MUSS vor den Include-Filtern stehen!
+                var deletePsi = new ProcessStartInfo
+                {
+                    FileName = config.RclonePath,
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" delete \"{destPath}\" {includeArgs} --rmdirs --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                // Führe rclone delete aus und warte auf Beendigung
+                using (var deleteProc = Process.Start(deletePsi))
+                {
+                    if (deleteProc != null)
+                    {
+                        string deleteOutput = deleteProc.StandardOutput.ReadToEnd();
+                        string deleteError = deleteProc.StandardError.ReadToEnd();
+                        deleteProc.WaitForExit();
+                        
+                        if (deleteProc.ExitCode == 0)
+                        {
+                            Log.Debug($"CatalogManager: rclone delete erfolgreich");
+                        }
+                        else
+                        {
+                            Log.Error($"CatalogManager: rclone delete fehlgeschlagen (ExitCode: {deleteProc.ExitCode})");
+                        }
+                    }
+                }
+                
+                // ========== RCLONE SYNC AUSFÜHREN ==========
+                // Erstelle Logs-Ordner falls nicht vorhanden
+                if (!Directory.Exists(logsDir))
+                    Directory.CreateDirectory(logsDir);
+
+                // Lösche temporäre Log-Datei falls vorhanden
+                if (File.Exists(tempLog))
+                    File.Delete(tempLog);
+
+                Log.Debug($"CatalogManager: rclone sync starten");
+
+                // Baue ProcessStartInfo für rclone sync
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" sync \"{sourcePath}\" \"{destPath}\" --delete-befores {excludeArgs} --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" sync \"{sourcePath}\" \"{destPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
                 };
                 
+                // Führe rclone sync aus und warte auf Beendigung
                 using (var p = Process.Start(psi))
                 {
                     if (p == null)
@@ -375,12 +490,12 @@ namespace LRCatalogSync.Core
                         
                         TimeSpan duration = DateTime.Now - syncStartTime;
                         
-                        Log.Info($"CatalogManager: rclone {direction.ToString().ToLower()} erfolgreich");
-                        Log.Info($"CatalogManager: Transfer-Statistiken:");
-                        Log.Info($"  - Richtung: {direction}");
-                        Log.Info($"  - Dateien: {transferredFiles}");
-                        Log.Info($"  - Bytes: {transferredBytes:N0}");
-                        Log.Info($"  - Dauer: {duration:hh\\:mm\\:ss}");
+                        Log.Debug($"CatalogManager: rclone {direction.ToString().ToLower()} erfolgreich");
+                        Log.Debug($"CatalogManager: Transfer-Statistiken:");
+                        Log.Debug($"  - Richtung: {direction}");
+                        Log.Debug($"  - Dateien: {transferredFiles}");
+                        Log.Debug($"  - Bytes: {transferredBytes:N0}");
+                        Log.Debug($"  - Dauer: {duration:hh\\:mm\\:ss}");
                     }
                     else
                     {

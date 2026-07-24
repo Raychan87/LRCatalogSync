@@ -30,7 +30,9 @@ namespace LRCatalogSync
         
         // Lock-Dateinamen für Synchronisation
         public const string LOCK_FILE = "LRCatSync.lock";
-    }
-    
+
+        // Backup Ordnername für die Sicherung der Kataloge
+        public const string BACKUP_FOLDER_NAME = "Last_catalog_backup";
+    }    
 }
 
