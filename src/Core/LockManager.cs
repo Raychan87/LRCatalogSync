@@ -15,17 +15,15 @@ namespace LRCatalogSync.Core
         // ==================== EIGENSCHAFTEN ====================
         // Eindeutige Sync-GUID für Tracking
         public string SyncGuid { get; private set; } = Guid.NewGuid().ToString();
-                
+
         // Lokale Lock-Datei
         private FileStream? _localLockStream;
-        
+
         // Heartbeat Thread
         private Thread? _heartbeatThread;
+
         private CancellationTokenSource? _cts;
-        
-        // Lock-Status
-        private bool _locksAcquired = false;
-        
+
         // AppConfig für Lock-Pfade
         private AppConfig? _config;
 
@@ -138,7 +136,6 @@ namespace LRCatalogSync.Core
                 if (!SMBConnectionManager.Instance.EnsureConnected(config))
                 {
                     Log.Error($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
-                    _locksAcquired = false;
                     return false;
                 }
                 
@@ -216,7 +213,6 @@ namespace LRCatalogSync.Core
                 writer.Flush();
                 writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
-                _locksAcquired = true;
                 Log.Debug($"LockManager: Beide Locks akquiriert (SyncGuid: {SyncGuid})");
                 
                 // Starte Heartbeat-Thread
@@ -373,7 +369,6 @@ namespace LRCatalogSync.Core
                     }
                 }
                 
-                _locksAcquired = false;
                 Log.Notice($"LockManager: Alle Locks freigegeben (SyncGuid: {SyncGuid})");
             }
             catch (Exception ex)
