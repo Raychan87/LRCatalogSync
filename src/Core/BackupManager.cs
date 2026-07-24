@@ -64,7 +64,7 @@ namespace LRCatalogSync.Core
                             // Prüfe auf spezifischen Fehler
                             if (logContent.Contains("cannot find prior Path1 or Path2 listings"))
                             {
-                                Log.Info("BackupManager: Bisync-Fehler erkannt, starte mit --resync neu");
+                                Log.Debug("BackupManager: Bisync-Fehler erkannt, starte mit --resync neu");
                                 
                                 // Erstelle neuen ProcessStartInfo mit --resync
                                 var resyncPsi = new ProcessStartInfo
@@ -87,7 +87,7 @@ namespace LRCatalogSync.Core
                                         // Logge Ergebnis
                                         if (resyncProc.ExitCode == 0)
                                         {
-                                            Log.Info("BackupManager: Bisync mit --resync erfolgreich");
+                                            Log.Debug("BackupManager: Bisync mit --resync erfolgreich");
                                         }
                                         else
                                         {
