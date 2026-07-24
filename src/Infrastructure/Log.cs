@@ -126,7 +126,8 @@ namespace LRCatalogSync.Infrastructure
                 // Falls Rotation fehlschlägt - ignorieren und weitermachen
             }
         }
-
+        
+        // Schreibt eine Nachricht in die Log-Datei
         public static void Write(string message, string level = "INFO")
         {
             if (!ShouldLog(level))
@@ -160,13 +161,6 @@ namespace LRCatalogSync.Infrastructure
         public static void Info(string message) => Write(message, "INFO");
         public static void Notice(string message) => Write(message, "NOTICE");
         public static void Error(string message) => Write(message, "ERROR");
-
-        /// Formatiert eine Zeit als String
-        public static string FormatDateTime(DateTime? dt)
-        {
-            if (dt == null) return "";
-            return ((DateTime)dt).ToString("MM/dd/yyyy HH:mm:ss");
-        }
     }
 }
 

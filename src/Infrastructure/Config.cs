@@ -61,17 +61,13 @@ namespace LRCatalogSync.Infrastructure
         // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/"
         public string CatalogLocalPath => Path.GetDirectoryName(CatalogLocalFile) ?? string.Empty;
         
-        // Extrahiert den Dateinamen (z.B. "MeineFotos.lrcat")
-        // Beispiel: "[Katalogname].lrcat"
-        public string CatalogFileName => Path.GetFileName(CatalogLocalFile);
-        
         // Extrahiert den Katalognamen ohne Endung (z.B. "MeineFotos")
         // Beispiel: "[Katalogname]"
         public string CatalogName => Path.GetFileNameWithoutExtension(CatalogLocalFile);
 
         // Remote: Vollständiger Pfad zur Lightroom Katalog-Datei auf dem Samba Server
         // Beispiel: "/SambaOrdner/[Katalogname].lrcat"
-        public string CatalogRemoteFile => Path.Combine(CatalogRemotePath, CatalogFileName);
+        public string CatalogRemoteFile => Path.Combine(CatalogRemotePath, Path.GetFileName(CatalogLocalFile));
 
         // Vollständiger Pfad zur Lightroom Lock-Datei (.lrcat.lock)
         // Beispiel: "C:/Benutzer/[Benutzername]/Bilder/Lightroom/[Katalogname].lrcat.lock"
@@ -87,7 +83,7 @@ namespace LRCatalogSync.Infrastructure
 
         // ==================== METHODEN ====================
         // Lädt die Konfiguration aus einer Datei.
-        // "path" --> Pfad zur config.txt
+        // "path" --> Pfad zur Konfigurationsdatei
         // "baseDir" --> Basis-Verzeichnis des Programms
         public void Load(string path, string baseDir)
         {
@@ -191,29 +187,6 @@ namespace LRCatalogSync.Infrastructure
 
             // Schreibe in die Datei
             File.WriteAllLines(path, lines);
-        }
-
-        // Prüft ob der Backup-Pfad innerhalb des Katalog-Pfads liegt
-        public bool IsBackupInsideCatalogPath()
-        {
-            if (string.IsNullOrEmpty(BackupsLocalPath) || 
-                string.IsNullOrEmpty(CatalogLocalPath))
-                return false;
-            
-            string backupNormalized = Path.GetFullPath(BackupsLocalPath).ToLower();
-            string catalogNormalized = Path.GetFullPath(CatalogLocalPath).ToLower();
-            
-            return backupNormalized.StartsWith(catalogNormalized);
-        }
-
-        // Gibt das relative Exclude-Pattern für rclone zurück, wenn Backup im Katalog-Pfad liegt
-        public string GetRelativeBackupExcludePattern()
-        {
-            if (!IsBackupInsideCatalogPath())
-                return string.Empty;
-            
-            string relativeBackupPath = Path.GetRelativePath(CatalogLocalPath, BackupsLocalPath);
-            return relativeBackupPath.Replace("\\", "/");  // Unix-Pfade für rclone
         }
 
         // Statische Methode um Config zu laden (Komfort-Methode)

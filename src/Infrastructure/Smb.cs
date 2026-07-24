@@ -439,9 +439,9 @@ public class SmbClient
         }
     }
 
-    // L�scht eine Datei auf dem Remote-Server
+    // Löscht eine Datei auf dem Remote-Server
     // filePath: Pfad zur Datei (relativ zur Freigabe)
-    // Rueckgabe: true bei erfolgreichem L�schen, sonst false
+    // Rueckgabe: true bei erfolgreichem Löschen, sonst false
     public bool DeleteFile(string filePath)
     {
         if (!_isTreeConnected || _fileStore == null)
@@ -454,14 +454,14 @@ public class SmbClient
             object fileHandle;
             FileStatus fileStatus;
 
-            // F�r SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
+            // Für SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
             string remotePath = filePath;
             if (_fileStore is SMB1FileStore)
             {
                 remotePath = "\\" + remotePath;
             }
 
-            // Datei mit L�schmodus �ffnen
+            // Datei mit Löschmodus öffnen
             NTStatus status = _fileStore.CreateFile(out fileHandle, out fileStatus, remotePath,
                 SMBLibrary.AccessMask.DELETE | SMBLibrary.AccessMask.GENERIC_READ,
                 SMBLibrary.FileAttributes.Normal,
@@ -490,7 +490,7 @@ public class SmbClient
         }
         catch
         {
-            // Fehler ignorieren und false zur�ckgeben
+            // Fehler ignorieren und false zurückgeben
             return false;
         }
     }
@@ -501,10 +501,8 @@ public class SmbClient
 // Schritt 1 der SMB-Integration
 // ============================================================
 
-/// <summary>
-/// Singleton-Klasse für die zentrale Verwaltung einer SMB-Verbindung
-/// Stellt sicher, dass nur eine einzige SMB-Verbindung gleichzeitig existiert
-/// </summary>
+// Singleton-Klasse für die zentrale Verwaltung einer SMB-Verbindung
+// Stellt sicher, dass nur eine einzige SMB-Verbindung gleichzeitig existiert
 public sealed class SMBConnectionManager
 {
     private static readonly Lazy<SMBConnectionManager> _instance = 
@@ -522,12 +520,8 @@ public sealed class SMBConnectionManager
     
     private SMBConnectionManager() { }
     
-    /// <summary>
-    /// Stellt sicher, dass eine aktive SMB-Verbindung besteht
-    /// Mit Auto-Reconnect bei Verbindungsproblemen
-    /// </summary>
-    /// <param name="config">AppConfig mit RemoteIP, SambaUser, SambaPassword, CatalogRemotePath</param>
-    /// <returns>true wenn verbunden, sonst false</returns>
+    // Stellt sicher, dass eine aktive SMB-Verbindung besteht
+    // Mit Auto-Reconnect bei Verbindungsproblemen
     public bool EnsureConnected(AppConfig config)
     {
         // Prüfe ob bereits verbunden mit gleichen Parametern
@@ -575,10 +569,8 @@ public sealed class SMBConnectionManager
         Log.Error("SMB: Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
         return false;
     }
-    
-    /// <summary>
-    /// Testet ob die aktuelle Verbindung noch funktioniert
-    /// </summary>
+
+    // Testet ob die aktuelle Verbindung noch funktioniert
     private bool TestConnection()
     {
         try
@@ -593,9 +585,7 @@ public sealed class SMBConnectionManager
         }
     }
     
-    /// <summary>
-    /// Versucht einmalig eine Verbindung herzustellen
-    /// </summary>
+    // Versucht einmalig eine Verbindung herzustellen
     private bool TryConnect(AppConfig config)
     {
         // Extrahiere Share-Name aus CatalogRemotePath (z.B. "\\NAS\Freigabe\subdir" -> "Freigabe")
@@ -630,10 +620,8 @@ public sealed class SMBConnectionManager
         return true;
     }
     
-    /// <summary>
-    /// Extrahiert den Share-Namen aus einem UNC-Pfad
-    /// Entfernt alle / und \ und gibt den ersten Teil zurück
-    /// </summary>
+    // Extrahiert den Share-Namen aus einem UNC-Pfad
+    // Entfernt alle / und \ und gibt den ersten Teil zurück
     private string ExtractShareName(string uncPath)
     {
         // Entferne alle / und \ am Anfang des Pfads
@@ -650,14 +638,10 @@ public sealed class SMBConnectionManager
         return trimmed;
     }
     
-    /// <summary>
-    /// Prüft ob aktuell verbunden
-    /// </summary>
+    // Prüft ob aktuell verbunden
     public bool IsConnected => _client.IsConnected && _client.IsTreeConnected;
     
-    /// <summary>
-    /// Trennt die SMB-Verbindung
-    /// </summary>
+    // Trennt die SMB-Verbindung
     public void Disconnect()
     {
         if (_ownsConnection)
@@ -674,8 +658,6 @@ public sealed class SMBConnectionManager
             Log.Debug("SMB: Verbindung getrennt");
         }
     }
-    
-    // Wrapper für Dateioperationen (Step 5)
     
     public byte[]? ReadFile(string relativePath) => _client.ReadFile(relativePath);
     
