@@ -1,22 +1,20 @@
 // SMBLibrary from https://github.com/TalAloni/SMBLibrary
-// Verwaltung von SMB-Verbindungen f�r Remote-Dateizugriff
-// Step	Funktion	Status
-// 1	Connect/Disconnect	✅ Implementiert
-// 2	Login/Logoff	✅ Implementiert
-// 3	TreeConnect/TreeDisconnect	✅ Implementiert
-// 4	ListFiles (Dateiauflistung)	✅ Implementiert
-// 5a	ReadFile (Datei lesen)	✅ Implementiert
-// 5b	WriteFile (Datei schreiben)	✅ Implementiert
-// 6	DeleteFile (Datei löschen)	✅ Implementiert
+// Verwaltung von SMB-Verbindungen für Remote-Dateizugriff
+// Funktion
+// (Connect, Disconnect, IsConnected
+// Login/Logoff 
+// TreeConnect, TreeDisconnect, IsTreeConnected
+// ListFiles (Dateiauflistung)	
+// ReadFile (Datei lesen)
+// WriteFile (Datei schreiben)	
+// DeleteFile (Datei löschen)
 
 using SMBLibrary;
 using SMBLibrary.Client;
 
 namespace LRCatalogSync.Infrastructure;
 
-/// <summary>
-/// SMB-Client f�r den Zugriff auf Remote-Freigaben
-/// </summary>
+// SMB-Client für den Zugriff auf Remote-Freigaben
 public class SmbClient
 {
     private SMB2Client _client = new SMB2Client();
@@ -24,12 +22,8 @@ public class SmbClient
     private ISMBFileStore? _fileStore = null;
     private bool _isTreeConnected = false;
 
-    /// <summary>
-    /// Verbindet mit einem SMB-Server
-    /// </summary>
-    /// <param name="hostnameOrIp">Hostname oder IP-Adresse des Servers</param>
-    /// <param name="transportType">Transporttyp (Standard: DirectTCPTransport f�r SMB2/3)</param>
-    /// <returns>true bei erfolgreicher Verbindung, sonst false</returns>
+    // Verbindet mit einem SMB-Server
+    // returns: true bei erfolgreicher Verbindung, sonst false
     public bool Connect(string hostnameOrIp, SMBTransportType transportType = SMBTransportType.DirectTCPTransport)
     {
         // Verbindung herstellen
@@ -38,14 +32,10 @@ public class SmbClient
         return _isConnected;
     }
 
-    /// <summary>
-    /// Pr�ft, ob eine Verbindung zum Server besteht
-    /// </summary>
+    // Prüft, ob die Verbindungs-Flags gesetzt sind (kein aktiver Test!)
     public bool IsConnected => _isConnected;
 
-    /// <summary>
-    /// Trennt die Verbindung zum SMB-Server
-    /// </summary>
+    // Trennt die Verbindung zum SMB-Server
     public void Disconnect()
     {
         if (_isTreeConnected)
@@ -61,13 +51,8 @@ public class SmbClient
         }
     }
 
-    /// <summary>
-    /// Authentifiziert beim SMB-Server
-    /// </summary>
-    /// <param name="domain">Dom�ne (leer f�r lokale Benutzer oder Workgroup)</param>
-    /// <param name="username">Benutzername</param>
-    /// <param name="encryptedPassword">Verschlüsseltes Passwort (AES-256)</param>
-    /// <returns>true bei erfolgreicher Authentifizierung, sonst false</returns>
+    // Authentifiziert beim SMB-Server
+    // returns: true bei erfolgreicher Authentifizierung, sonst false
     public bool Login(string domain, string username, string encryptedPassword)
     {
         if (!_isConnected)
@@ -93,9 +78,7 @@ public class SmbClient
         return status == NTStatus.STATUS_SUCCESS;
     }
 
-    /// <summary>
-    /// Meldet den Benutzer vom Server ab
-    /// </summary>
+    // Meldet den Benutzer vom Server ab
     public void Logoff()
     {
         if (_isConnected)
@@ -104,11 +87,8 @@ public class SmbClient
         }
     }
 
-    /// <summary>
-    /// Verbindet mit einer SMB-Freigabe (Tree Connect)
-    /// </summary>
-    /// <param name="shareName">Name der Freigabe (z.B. "Bilder" f�r \\server\Bilder)</param>
-    /// <returns>true bei erfolgreicher Verbindung, sonst false</returns>
+    // Verbindet mit einer SMB-Freigabe (Tree Connect)
+    // returns: true bei erfolgreicher Verbindung, sonst false    
     public bool TreeConnect(string shareName)
     {
         if (!_isConnected)
@@ -125,14 +105,10 @@ public class SmbClient
         return _isTreeConnected;
     }
 
-    /// <summary>
-    /// Pr�ft, ob eine Verbindung mit einer Freigabe besteht
-    /// </summary>
+    // Prüft, ob eine Verbindung mit einer Freigabe besteht
     public bool IsTreeConnected => _isTreeConnected;
 
-    /// <summary>
-    /// Trennt die Verbindung zur Freigabe (Tree Disconnect)
-    /// </summary>
+    // Trennt die Verbindung zur Freigabe (Tree Disconnect)
     public void TreeDisconnect()
     {
         if (_isTreeConnected)
@@ -142,20 +118,8 @@ public class SmbClient
         }
     }
 
-    /// <summary>
-    /// Listet Dateien und Verzeichnisse im Root-Verzeichnis auf
-    /// </summary>
-    /// <returns>Liste der Datei- und Verzeichnisnamen</returns>
-    public List<string> ListFiles()
-    {
-        return ListFiles(string.Empty);
-    }
-
-    /// <summary>
-    /// Listet Dateien und Verzeichnisse in einem Verzeichnis auf
-    /// </summary>
-    /// <param name="directoryPath">Pfad zum Verzeichnis (leer f�r Root)</param>
-    /// <returns>Liste der Datei- und Verzeichnisnamen</returns>
+    // Listet Dateien und Verzeichnisse in einem Verzeichnis auf
+    // returns: Liste der Datei- und Verzeichnisnamen
     public List<string> ListFiles(string directoryPath)
     {
         if (!_isTreeConnected || _fileStore == null)
@@ -170,13 +134,8 @@ public class SmbClient
             object directoryHandle;
             FileStatus fileStatus;
 
-            // Verzeichnis �ffnen
-            // F�r SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
+            // Verzeichnis öffnen (SMB2/3 verwendet leere Zeichenkette als Pfad)
             string searchPath = directoryPath;
-            if (_fileStore is SMB1FileStore)
-            {
-                searchPath = "\\" + searchPath;
-            }
 
             NTStatus status = _fileStore.CreateFile(out directoryHandle, out fileStatus, searchPath, 
                 SMBLibrary.AccessMask.GENERIC_READ, SMBLibrary.FileAttributes.Directory, 
@@ -194,7 +153,7 @@ public class SmbClient
                 {
                     foreach (FileDirectoryInformation fileInfo in fileListInfo)
                     {
-                        // . und .. Eintr�ge �berspringen
+                        // . und .. Einträge überspringen
                         if (fileInfo.FileName != "." && fileInfo.FileName != "..")
                         {
                             fileList.Add(fileInfo.FileName);
@@ -208,17 +167,14 @@ public class SmbClient
         }
         catch
         {
-            // Fehler ignorieren und leere Liste zur�ckgeben
+            // Fehler ignorieren und leere Liste zurückgeben
         }
 
         return fileList;
     }
 
-    /// <summary>
-    /// Liest eine komplette Datei vom Remote-Server
-    /// </summary>
-    /// <param name="filePath">Pfad zur Datei (relativ zur Freigabe)</param>
-    /// <returns>Dateiinhalt als Byte-Array, oder null bei Fehler</returns>
+    // Liest eine komplette Datei vom Remote-Server
+    // returns: Dateiinhalt als Byte-Array, oder null bei Fehler
     public byte[]? ReadFile(string filePath)
     {
         if (!_isTreeConnected || _fileStore == null)
@@ -231,14 +187,10 @@ public class SmbClient
             object fileHandle;
             FileStatus fileStatus;
 
-            // F�r SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
+            // Datei öffnen (SMB2/3 verwendet leere Zeichenkette als Pfad)
             string remotePath = filePath;
-            if (_fileStore is SMB1FileStore)
-            {
-                remotePath = "\\" + remotePath;
-            }
 
-            // Datei �ffnen
+            // Datei öffnen
             NTStatus status = _fileStore.CreateFile(out fileHandle, out fileStatus, remotePath,
                 SMBLibrary.AccessMask.GENERIC_READ | SMBLibrary.AccessMask.SYNCHRONIZE,
                 SMBLibrary.FileAttributes.Normal,
@@ -252,7 +204,7 @@ public class SmbClient
                 return null;
             }
 
-            // Dateigr��e ermitteln
+            // Dateigröße ermitteln
             FileInformation fileInfo;
             status = _fileStore.GetFileInformation(out fileInfo, fileHandle, FileInformationClass.FileStandardInformation);
             
@@ -292,85 +244,22 @@ public class SmbClient
                     {
                         break;
                     }
-
                     memoryStream.Write(data, 0, data.Length);
                     bytesRead += data.Length;
                 }
-
                 _fileStore.CloseFile(fileHandle);
                 return memoryStream.ToArray();
             }
         }
         catch
         {
-            // Fehler ignorieren und null zur�ckgeben
+            // Fehler ignorieren und null zurückgeben
             return null;
         }
     }
 
-    /// <summary>
-    /// Liest einen Teilbereich einer Datei vom Remote-Server
-    /// </summary>
-    /// <param name="filePath">Pfad zur Datei (relativ zur Freigabe)</param>
-    /// <param name="offset">Startposition im Byte</param>
-    /// <param name="length">Anzahl der zu lesenden Bytes</param>
-    /// <returns>Byte-Array mit den gelesenen Daten, oder null bei Fehler</returns>
-    public byte[]? ReadFilePartial(string filePath, long offset, int length)
-    {
-        if (!_isTreeConnected || _fileStore == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            object fileHandle;
-            FileStatus fileStatus;
-
-            // F�r SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
-            string remotePath = filePath;
-            if (_fileStore is SMB1FileStore)
-            {
-                remotePath = "\\" + remotePath;
-            }
-
-            // Datei �ffnen
-            NTStatus status = _fileStore.CreateFile(out fileHandle, out fileStatus, remotePath,
-                SMBLibrary.AccessMask.GENERIC_READ | SMBLibrary.AccessMask.SYNCHRONIZE,
-                SMBLibrary.FileAttributes.Normal,
-                SMBLibrary.ShareAccess.Read,
-                SMBLibrary.CreateDisposition.FILE_OPEN,
-                SMBLibrary.CreateOptions.FILE_NON_DIRECTORY_FILE | SMBLibrary.CreateOptions.FILE_SYNCHRONOUS_IO_ALERT,
-                null);
-
-            if (status != NTStatus.STATUS_SUCCESS)
-            {
-                return null;
-            }
-
-            // Daten lesen
-            byte[]? data;
-            status = _fileStore.ReadFile(out data, fileHandle, offset, length);
-
-            _fileStore.CloseFile(fileHandle);
-
-            if (status == NTStatus.STATUS_SUCCESS || status == NTStatus.STATUS_END_OF_FILE)
-            {
-                return data;
-            }
-
-            return null;
-        }
-        catch
-        {
-            // Fehler ignorieren und null zur�ckgeben
-            return null;
-        }
-    }
-    /// </summary>
-    /// <param name="filePath">Pfad zur Datei (relativ zur Freigabe)</param>
-    /// <param name="data">Zu schreibende Daten als Byte-Array</param>
-    /// <returns>true bei erfolgreichem Schreibvorgang, sonst false</returns>
+    // Schreibt eine komplette Datei auf den Remote-Server
+    // returns: true bei erfolgreichem Schreibvorgang, sonst false
     public bool WriteFile(string filePath, byte[]? data)
     {
         if (!_isTreeConnected || _fileStore == null)
@@ -388,14 +277,10 @@ public class SmbClient
             object fileHandle;
             FileStatus fileStatus;
 
-            // F�r SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
+            // Datei öffnen oder erstellen (SMB2/3 verwendet leere Zeichenkette als Pfad)
             string remotePath = filePath;
-            if (_fileStore is SMB1FileStore)
-            {
-                remotePath = "\\" + remotePath;
-            }
 
-            // Datei �ffnen oder erstellen
+            // Datei öffnen oder erstellen
             NTStatus status = _fileStore.CreateFile(out fileHandle, out fileStatus, remotePath,
                 SMBLibrary.AccessMask.GENERIC_WRITE | SMBLibrary.AccessMask.SYNCHRONIZE,
                 SMBLibrary.FileAttributes.Normal,
@@ -454,12 +339,8 @@ public class SmbClient
             object fileHandle;
             FileStatus fileStatus;
 
-            // Für SMB1 muss der Pfad mit \\ beginnen, SMB2 verwendet leere Zeichenkette
+            // Datei mit Löschmodus öffnen (SMB2/3 verwendet leere Zeichenkette als Pfad)
             string remotePath = filePath;
-            if (_fileStore is SMB1FileStore)
-            {
-                remotePath = "\\" + remotePath;
-            }
 
             // Datei mit Löschmodus öffnen
             NTStatus status = _fileStore.CreateFile(out fileHandle, out fileStatus, remotePath,
@@ -474,7 +355,7 @@ public class SmbClient
                 return false;
             }
 
-            // Datei als gel�scht markieren
+            // Datei als gelöscht markieren
             FileDispositionInformation dispositionInfo = new FileDispositionInformation();
             dispositionInfo.DeletePending = true;
             status = _fileStore.SetFileInformation(fileHandle, dispositionInfo);
