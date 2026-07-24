@@ -117,7 +117,7 @@ namespace LRCatalogSync.Core
                 if (syncCycleTimer != null)
                 {
                     syncCycleTimer.Dispose();
-                    Log.Info("Sync-Zyklus Timer beendet");
+                    Log.Debug("LRCatSync:Zyklus Timer beendet");
                 }
 
                 // Verstecke Tray-Icon und gebe Ressourcen frei

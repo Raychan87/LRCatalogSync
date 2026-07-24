@@ -542,7 +542,7 @@ public sealed class SMBConnectionManager
                     return true;
                 
                 // Verbindung scheint tot zu sein -> Reconnect
-                Log.Info("[SMB] Verbindungserkennung fehlgeschlagen, trenne und reconnecte...");
+                Log.Error("SMB: Verbindungserkennung fehlgeschlagen, trenne und reconnecte...");
                 Disconnect();
             }
             else
@@ -555,7 +555,7 @@ public sealed class SMBConnectionManager
         // Verbindungsaufbau mit Retry
         for (int attempt = 1; attempt <= MAX_CONNECT_RETRIES; attempt++)
         {
-            Log.Debug($"[SMB] Verbindungsversuch {attempt}/{MAX_CONNECT_RETRIES}");
+            Log.Debug($"SMB: Verbindungsversuch {attempt}/{MAX_CONNECT_RETRIES}");
             
             if (TryConnect(config))
             {
@@ -567,12 +567,12 @@ public sealed class SMBConnectionManager
             if (attempt < MAX_CONNECT_RETRIES)
             {
                 int delay = CONNECT_RETRY_DELAY_MS * attempt; // Exponential backoff
-                Log.Info($"[SMB] Verbindung fehlgeschlagen, warte {delay}ms vor Retry...");
+                Log.Debug($"SMB: Verbindung fehlgeschlagen, warte {delay}ms vor Retry...");
                 Thread.Sleep(delay);
             }
         }
         
-        Log.Error($"[SMB] Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
+        Log.Error("SMB: Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
         return false;
     }
     
@@ -605,14 +605,14 @@ public sealed class SMBConnectionManager
         // Verbinde mit Server
         if (!_client.Connect(serverIP))
         {
-            Log.Error($"[SMB] TCP-Verbindung zu {serverIP} fehlgeschlagen");
+            Log.Error($"SMB: TCP-Verbindung zu {serverIP} fehlgeschlagen");
             return false;
         }
         
         // Anmelden
         if (!_client.Login(string.Empty, config.SambaUser, config.SambaPasswordAes))
         {
-            Log.Error($"[SMB] Anmeldung als {config.SambaUser} fehlgeschlagen");
+            Log.Error($"SMB: Anmeldung als {config.SambaUser} fehlgeschlagen");
             _client.Disconnect();
             return false;
         }
@@ -620,13 +620,13 @@ public sealed class SMBConnectionManager
         // Mit Freigabe verbinden
         if (!_client.TreeConnect(shareName))
         {
-            Log.Error($"[SMB] TreeConnect zu Freigabe '{shareName}' fehlgeschlagen");
+            Log.Error($"SMB: TreeConnect zu Freigabe '{shareName}' fehlgeschlagen");
             _client.Logoff();
             _client.Disconnect();
             return false;
         }
         
-        Log.Info($"[SMB] Verbunden mit {serverIP}/{shareName}");
+        Log.Debug($"SMB: Verbunden mit {serverIP}/{shareName}");
         return true;
     }
     
@@ -671,7 +671,7 @@ public sealed class SMBConnectionManager
             }
             _ownsConnection = false;
             _lastConfig = null;
-            Log.Info("[SMB] Verbindung getrennt");
+            Log.Debug("SMB: Verbindung getrennt");
         }
     }
     

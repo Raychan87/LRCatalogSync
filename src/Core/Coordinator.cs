@@ -75,7 +75,7 @@ namespace LRCatalogSync.Core
                 // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
                 if (IsLightroomRunning(config))
                 {
-                    Log.Info("Coordinator: Lightroom läuft - Katalog-Sync übersprungen");
+                    Log.Debug("Coordinator: Lightroom läuft - Katalog-Sync übersprungen");
                     trayManager.UpdateStatus("Lockfile");
                     return;
                 }

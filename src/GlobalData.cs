@@ -16,10 +16,8 @@ namespace LRCatalogSync
     public static class GlobalConst
     {
         public const string REMOTE_NAME = "synology";
-        public const int WATCHDOG_TIME = 30;                // sec
-        public const int BACKUP_CHECK_INTERVAL = 10;        // sec - Zyklus für automatische Backup-Überprüfung
         
-        // Sync-Lock Timeout - wann ein Lock als "stale" gilt (30 Minuten)
+        // Sync-Lock Timeout - wann ein Lock als "Veraltet" gilt (30 Minuten)
         public const int SYNC_LOCK_TIMEOUT_MIN = 30;
         
         // Heartbeat-Intervall für Lock-Aktualisierung (2,5 Minuten)
@@ -30,9 +28,6 @@ namespace LRCatalogSync
         
         // Lock-Dateinamen für Synchronisation
         public const string LOCK_FILE = "LRCatSync.lock";
-
-        // Backup Ordnername für die Sicherung der Kataloge
-        public const string BACKUP_FOLDER_NAME = "Last_catalog_backup";
     }    
 }
 

@@ -53,12 +53,12 @@ namespace LRCatalogSync.Core
                     {
                         // Lock ist älter als Timeout → Crash-Recovery
                         File.Delete(config.SyncLocalLockFile);
-                        Log.Info($"LockManager: Verwaiste lokale Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                        Log.Notice($"LockManager: Verwaiste lokale Lock gelöscht ({age.TotalMinutes:F0} min alt)");
                     }
                     else
                     {
                         // Lock ist noch aktiv → Info
-                        Log.Info($"LockManager: Lokale Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                        Log.Notice($"LockManager: Lokale Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
                     }
                 }
                 
@@ -82,19 +82,19 @@ namespace LRCatalogSync.Core
                                 // Lock ist veraltet → löschen via SMB
                                 if (SMBConnectionManager.Instance.DeleteFile(GlobalConst.LOCK_FILE))
                                 {
-                                    Log.Info($"LockManager: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                                    Log.Notice($"LockManager: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
                                 }
                             }
                             else
                             {
-                                Log.Info($"LockManager: Remote Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                                Log.Notice($"LockManager: Remote Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
                             }
                         }
                     }
                 }
                 else
                 {
-                    Log.Debug("LockManager: Keine SMB-Verbindung möglich, Remote-Lock wurde nicht geprüft");
+                    Log.Error("LockManager: Keine SMB-Verbindung möglich, Remote-Lock wurde nicht geprüft");
                 }
             }
             catch (Exception ex)
@@ -374,7 +374,7 @@ namespace LRCatalogSync.Core
                 }
                 
                 _locksAcquired = false;
-                Log.Info($"LockManager: Alle Locks freigegeben (SyncGuid: {SyncGuid})");
+                Log.Notice($"LockManager: Alle Locks freigegeben (SyncGuid: {SyncGuid})");
             }
             catch (Exception ex)
             {

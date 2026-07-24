@@ -310,12 +310,12 @@ namespace LRCatalogSync.Core
                 if (direction == SyncDirection.Upload)
                 {
                     sourcePath = config.CatalogLocalPath;
-                    destPath =  $"synology:{config.CatalogRemotePath}";
+                    destPath =  $"{GlobalConst.REMOTE_NAME}:{config.CatalogRemotePath}";
                     Log.Debug("CatalogManager: Starte rclone upload (lokal → NAS)");
                 }
                 else if (direction == SyncDirection.Download)
                 {
-                    sourcePath =  $"synology:{config.CatalogRemotePath}";
+                    sourcePath =  $"{GlobalConst.REMOTE_NAME}:{config.CatalogRemotePath}";
                     destPath = config.CatalogLocalPath;
                     Log.Debug("CatalogManager: Starte rclone download (NAS → lokal)");
                 }
@@ -352,8 +352,8 @@ namespace LRCatalogSync.Core
                     // Bestimme Backup-Pfad basierend auf Sync-Richtung   
                     if (direction == SyncDirection.Upload)
                     {
-                        copyBackupPath = $"synology:{config.CatalogRemotePath}{config.RcloneCopyFolderName}"; 
-                        copySourcePath = $"synology:{config.CatalogRemotePath}";
+                        copyBackupPath = $"{GlobalConst.REMOTE_NAME}:{config.CatalogRemotePath}{config.RcloneCopyFolderName}"; 
+                        copySourcePath = $"{GlobalConst.REMOTE_NAME}:{config.CatalogRemotePath}";
 
                         // Remote-Backup-Ordner löschen
                         var deleteBackupPsi = new ProcessStartInfo
@@ -597,7 +597,7 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                Log.Info("CatalogManager: Starte separaten Sync für Previews.lrdata");
+                Log.Debug("CatalogManager: Starte separaten Sync für Previews.lrdata");
 
                 // Nur den spezifischen Previews-Ordner inkludieren
                 var psi = new ProcessStartInfo
@@ -619,7 +619,7 @@ namespace LRCatalogSync.Core
                     
                     if (p.ExitCode == 0)
                     {
-                        Log.Info($"CatalogManager: Previews.lrdata Sync erfolgreich");
+                        Log.Debug($"CatalogManager: Previews.lrdata Sync erfolgreich");
                     }
                     else
                     {
