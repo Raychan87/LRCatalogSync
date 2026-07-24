@@ -354,11 +354,34 @@ namespace LRCatalogSync.Core
                     {
                         copyBackupPath = $"synology:{config.CatalogRemotePath}{config.RcloneCopyFolderName}"; 
                         copySourcePath = $"synology:{config.CatalogRemotePath}";
+
+                        // Remote-Backup-Ordner löschen
+                        var deleteBackupPsi = new ProcessStartInfo
+                        {
+                            FileName = config.RclonePath,
+                            Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" delete \"{copyBackupPath}\"",
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            CreateNoWindow = true
+                        };                        
+                        using (var deleteProc = Process.Start(deleteBackupPsi))
+                        {
+                            Log.Debug($"CatalogManager: Remote Backup-Ordner gelöscht: {copyBackupPath}");
+                            deleteProc?.WaitForExit();
+                        }
                     }
                     else
                     { 
                         copyBackupPath = Path.Combine(config.CatalogLocalPath, config.RcloneCopyFolderName);
                         copySourcePath = config.CatalogLocalPath;
+
+                        // Lokalen Backup-Ordner löschen
+                        if (Directory.Exists(copyBackupPath))
+                        {
+                            Directory.Delete(copyBackupPath, recursive: true);
+                            Log.Debug($"CatalogManager: Lokalen Backup-Ordner gelöscht: {copyBackupPath}");
+                        }
                     }
 
                     // Erstelle Logs-Ordner falls nicht vorhanden
