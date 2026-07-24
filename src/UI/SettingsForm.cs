@@ -42,8 +42,8 @@ namespace LRCatalogSync.UI
             };
             this.Controls.Add(scrollPanel);
 
-            int yPos = 10;
-            const int labelWidth = 125;
+            int yPos = 15;
+            const int labelWidth = 140;
             const int controlWidth = 300;
             const int lineHeightToHeading = 8;
             const int lineHeight = 25;
@@ -51,13 +51,14 @@ namespace LRCatalogSync.UI
             AddInfoText(scrollPanel, "LRCatalogSync Einstellungen", ref yPos, 10);
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
+            yPos += lineHeight-20;
+            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight-5;
             
-            AddLabelAndTextBox(scrollPanel, "Rclone Pfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "Rclone Verzeichnispfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true);
             yPos += 22;
-            AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth + 17);
+            AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth +10);
             yPos += lineHeight;
-            
             AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "DEBUG", "INFO", "NOTICE", "ERROR" }, config.LogLevel, labelWidth, controlWidth - 200);
             yPos += lineHeight;
             
@@ -65,22 +66,17 @@ namespace LRCatalogSync.UI
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
-            AddCheckBox(scrollPanel, "*Previews.lrdata syncen (Nicht sinnvoll)", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
+            AddCheckBox(scrollPanel, "*Previews.lrdata synchronisieren?", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Katalog-Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "lokale Katalog Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Remote Katalog Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
             yPos += lineHeight;
-            
-            AddInfoText(scrollPanel, "rclone copy (Backup vor Sync)", ref yPos, 10);
-            yPos += lineHeightToHeading;
-            AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
-            yPos += lineHeight - 5;
-            AddCheckBox(scrollPanel, "rclone copy aktivieren", ref yPos, "chkEnableRcloneCopy", config.EnableRcloneCopy, labelWidth);
+            AddCheckBox(scrollPanel, "letzten Katalog behalten?", ref yPos, "chkEnableRcloneCopy", config.EnableRcloneCopy, labelWidth);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Backup-Ordnername:", ref yPos, "txtRcloneCopyFolderName", config.RcloneCopyFolderName, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Ordnername:", ref yPos, "txtRcloneCopyFolderName", config.RcloneCopyFolderName, labelWidth, controlWidth, false);
             yPos += lineHeight;
-            
+
             AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
@@ -96,12 +92,11 @@ namespace LRCatalogSync.UI
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "________________________________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
-            
-            AddLabelAndTextBox(scrollPanel, "Remote Server IP/Name:", ref yPos, "txtRemoteIP", config.RemoteIP, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Server IP/Name:", ref yPos, "txtRemoteIP", config.RemoteIP, labelWidth, controlWidth, false);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Benutzer:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Benutzername:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true);
+            AddLabelAndTextBox(scrollPanel, "Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true);
             yPos += 30;
 
             // Button Panel mit Links
@@ -115,7 +110,7 @@ namespace LRCatalogSync.UI
 
             // Links auf der linken Seite
             AddLinkLabel(btnPanel, "GitHub Project", "https://github.com/Raychan87/LRCatalogSync", 10, 15);
-            AddLinkLabel(btnPanel, "Fototour und Technik", "https://Fototour-und-Technik.de", 10, 35);
+            AddLinkLabel(btnPanel, "© Fototour und Technik", "https://Fototour-und-Technik.de", 10, 35);
 
             // Buttons auf der rechten Seite
             var btnSave = new Button
@@ -217,7 +212,7 @@ namespace LRCatalogSync.UI
             {
                 Name = controlName,
                 Text = value,
-                Left = 10 + labelWidth + 10,
+                Left = labelWidth + 10,
                 Top = yPos,
                 Width = controlWidth,
                 Height = 24
@@ -235,7 +230,7 @@ namespace LRCatalogSync.UI
                 var btnBrowse = new Button
                 {
                     Text = "...",
-                    Left = 10 + labelWidth + 10 + controlWidth + 5,
+                    Left = labelWidth + 10 + controlWidth,
                     Top = yPos,
                     Width = 35,
                     Height = 24
@@ -348,7 +343,7 @@ namespace LRCatalogSync.UI
             var comboBox = new ComboBox
             {
                 Name = controlName,
-                Left = 10 + labelWidth + 10,
+                Left = labelWidth + 10,
                 Top = yPos,
                 Width = controlWidth,
                 Height = 24,
