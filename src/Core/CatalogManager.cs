@@ -193,7 +193,7 @@ namespace LRCatalogSync.Core
                 if (!File.Exists(filePath))
                     return null;
                 
-                return File.GetLastWriteTime(filePath); // Alternativ für UTC: File.GetLastWriteTimeUtc
+                return File.GetLastWriteTimeUtc(filePath); 
             }
             catch
             {
