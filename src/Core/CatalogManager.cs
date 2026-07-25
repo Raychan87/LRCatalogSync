@@ -47,22 +47,14 @@ namespace LRCatalogSync.Core
                 
                 Log.Debug($"CatalogManager: Sync-Richtung erkannt: {syncDirection}");
                 
-                // ========== PHASE 2: LOCK AKQUIRIEREN (NUR BEI UPLOAD!) ==========
-                if (syncDirection == SyncDirection.Upload)
+                // ========== PHASE 2: LOCK AKQUIRIEREN ==========
+                Log.Debug("CatalogManager: Akquiere Locks");
+                lockManager = new LockManager(config);
+                if (!lockManager.AcquireLocks(config))
                 {
-                    Log.Debug("CatalogManager: Akquiere Locks für Upload-Synchronisation");
-                    lockManager = new LockManager(config);
-                    
-                    if (!lockManager.AcquireLocks(config))
-                    {
-                        Log.Debug("CatalogManager: Konnte Locks nicht akquirieren, breche Sync ab");
-                        trayManager.UpdateStatus("Standby");  // 🟢 Grün
-                        return;
-                    }
-                }
-                else if (syncDirection == SyncDirection.Download)
-                {
-                    Log.Debug("CatalogManager: Download-Sync benötigt keine Lock-Akquise");
+                    Log.Error("CatalogManager: Konnte Locks nicht akquirieren, breche Sync ab");
+                    trayManager.UpdateStatus("Standby");  // 🟢 Grün
+                    return;
                 }
 
                 // Erstelle Lightroom-Lock-Datei um Lightroom zu blockieren
