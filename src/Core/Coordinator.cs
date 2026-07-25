@@ -52,6 +52,16 @@ namespace LRCatalogSync.Core
                     return;
                 }
 
+                // ========== PRÜFUNG: LIGHTROOM LÄUFT? ==========
+                // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
+                // Diese Prüfung gilt für BOTH BackupManager UND CatalogManager
+                if (IsLightroomRunning(config))
+                {
+                    Log.Debug("Coordinator: Lightroom läuft - Backup und Katalog-Sync übersprungen");
+                    trayManager.UpdateStatus("Lockfile");
+                    return;
+                }
+
                 if (!config.EnableBackups)
                 {
                     Log.Debug("Coordinator: Backup deaktiviert - überspringe");
@@ -74,15 +84,7 @@ namespace LRCatalogSync.Core
                     }
                 }
 
-                // ========== SCHRITT 2: KATALOG-SYNC (nur wenn Lightroom geschlossen) ==========
-                // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
-                if (IsLightroomRunning(config))
-                {
-                    Log.Debug("Coordinator: Lightroom läuft - Katalog-Sync übersprungen");
-                    trayManager.UpdateStatus("Lockfile");
-                    return;
-                }
-
+                // ========== SCHRITT 2: KATALOG-SYNC ==========
                 // CatalogManager synchronisiert CatalogLocalPath → NAS (oder umgekehrt)
                 Log.Debug("Coordinator: Starte Katalogsync");
                 
