@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 /.vscode
+
+# Ignore GitHub workflows and actions
+.github/
