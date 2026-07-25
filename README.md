@@ -1,3 +1,6 @@
+# ACHTUNG!
+Aktuell ist es noch eine Beta und kann/wird Fehler enthalten. Versioniertes Backup eures Lightroom Katalogs ist immer zu empfehlen.
+
 # LRCatalogSync
 
 Synchronisiert Adobe Lightroom Classic‑Kataloge über Samba Server/NAS.
@@ -75,6 +78,13 @@ Logs finden Sie unter `data/logs/`.
 - *Samba‑Verbindung fehlgeschlagen*: IP, Benutzer, Passwort und Netzwerk prüfen.
 - *Kein *.lrcat* gefunden*: Pfad zum Katalog korrekt angeben.
 - *Lock erkannt*: Lightroom läuft, Sync wird automatisch übersprungen.
+
+## ToDo
+
+- Multilanguage (english)
+- Darkmode
+- Programm Icon
+- Transparente und Konstante Beispieltexte im Einstellungsmenü
 
 ## Ressourcen
 - GitHub: https://github.com/Raychan87/LRCatalogSync
