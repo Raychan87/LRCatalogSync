@@ -224,9 +224,7 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Startet Heartbeat-Thread für regelmäßige Aktualisierung
-        /// </summary>
+        // Startet Heartbeat-Thread für regelmäßige Aktualisierung
         public void StartHeartbeat()
         {
             if (_cts != null)
@@ -261,9 +259,7 @@ namespace LRCatalogSync.Core
             Log.Debug($"LockManager: Heartbeat gestartet (Intervall: {GlobalConst.HEARTBEAT_INTERVAL_SEC} sec)");
         }
         
-        /// <summary>
-        /// Aktualisiert Timestamps in Lock-Dateien (Heartbeat)
-        /// </summary>
+        // Aktualisiert Timestamps in Lock-Dateien (Heartbeat)
         private void UpdateLockTimestamps()
         {
             try
@@ -305,11 +301,9 @@ namespace LRCatalogSync.Core
                 Log.Error($"LockManager: Heartbeat-Update fehlgeschlagen: {ex.Message}");
             }
         }
-        
-        /// <summary>
-        /// Gibt alle Locks wieder frei
-        /// MUSS IMMER im finally-Block aufgerufen werden!
-        /// </summary>
+
+        // Gibt alle Locks wieder frei
+        // MUSS IMMER im finally-Block aufgerufen werden!
         public void ReleaseLocks(AppConfig config)
         {
             try
@@ -373,9 +367,7 @@ namespace LRCatalogSync.Core
             }
         }
         
-        /// <summary>
-        /// Stoppt Heartbeat-Thread
-        /// </summary>
+        // Stoppt Heartbeat-Thread
         private void StopHeartbeat()
         {
             if (_cts != null)

@@ -76,7 +76,7 @@ namespace LRCatalogSync.Core
                 }
 
                 // CatalogManager synchronisiert CatalogLocalPath → NAS (oder umgekehrt)
-                Log.Debug("Coordinator: Starte CatalogManager");
+                Log.Debug("Coordinator: Starte Katalogsync");
                 
                 try
                 {
