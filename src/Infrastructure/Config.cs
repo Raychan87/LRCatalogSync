@@ -52,6 +52,9 @@ namespace LRCatalogSync.Infrastructure
         //Einstellung von LogLevel = DEBUG/INFO/NOTICE/ERROR
         public string LogLevel { get; set; } = "INFO";
 
+        // Autorun beim Systemstart
+        public bool AutoRun { get; set; } = false;
+
         // ==================== BERECHNETE EIGENSCHAFTEN (Read-Only) ====================
 
         // Extrahiert den lokalen Pfad ohne Dateiname (z.B. "C:/Benutzer/[Benutzername]/Bilder/Lightroom/")
@@ -132,6 +135,7 @@ namespace LRCatalogSync.Infrastructure
                         if (key == "SambaPasswordRclone") SambaPasswordRclone = value;
                         if (key == "SambaPasswordAes") SambaPasswordAes = value;
                         if (key == "LogLevel") LogLevel = value;
+                        if (key == "AutoRun") AutoRun = bool.TryParse(value, out bool result4) && result4;
                     }
                 }
             }
@@ -179,7 +183,8 @@ namespace LRCatalogSync.Infrastructure
                 "SambaUser=" + SambaUser,
                 "SambaPasswordRclone=" + SambaPasswordRclone,
                 "SambaPasswordAes=" + SambaPasswordAes,
-                "LogLevel=" + LogLevel
+                "LogLevel=" + LogLevel,
+                "AutoRun=" + AutoRun
             };
 
             // Schreibe in die Datei

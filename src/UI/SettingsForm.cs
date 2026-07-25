@@ -51,7 +51,8 @@ namespace LRCatalogSync.UI
             yPos += lineHeight-20;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight-5;
-            
+            AddCheckBox(scrollPanel, "Automatisch beim Systemstart ausführen", ref yPos, "chkAutoRun", config.AutoRun, labelWidth);
+            yPos += lineHeight;            
             AddLabelAndTextBox(scrollPanel, "Rclone Verzeichnispfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true);
             yPos += 22;
             AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth +10);
@@ -94,8 +95,8 @@ namespace LRCatalogSync.UI
             AddLabelAndTextBox(scrollPanel, "Benutzername:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true);
-            yPos += 30;
-
+            yPos += lineHeight;
+            
             // Button Panel mit Links
             var btnPanel = new Panel
             {
@@ -188,6 +189,13 @@ namespace LRCatalogSync.UI
             if (txtRcloneCopyFolderName.Length > 0)
             {
                 ((TextBox)txtRcloneCopyFolderName[0]).Text = config.RcloneCopyFolderName;
+            }
+
+            // Setze Autorun Checkbox
+            var chkAutoRun = this.Controls.Find("chkAutoRun", true);
+            if (chkAutoRun.Length > 0)
+            {
+                ((CheckBox)chkAutoRun[0]).Checked = config.AutoRun;
             }
         }
 
@@ -399,6 +407,7 @@ namespace LRCatalogSync.UI
                 config.CatalogRemotePath = GetControlValue("txtCatalogRemotePath");
                 config.SambaUser = GetControlValue("txtSambaUser");
                 config.LogLevel = GetControlValue("cmbLogLevel");
+                config.AutoRun = GetCheckBoxValue("chkAutoRun");
 
                 // ================= VALIDIERUNG 1: rclone.exe prüfen =================
                 string rcloneFolder = config.RcloneFolder;
@@ -526,6 +535,17 @@ namespace LRCatalogSync.UI
 
                 config.Save(GlobalData.LRCatSyncConfigPath);
                 SaveRcloneConfig();
+
+                // Autorun aktualisieren
+                if (config.AutoRun)
+                {
+                    string exePath = Application.ExecutablePath;
+                    Autorun.Enable(exePath);
+                }
+                else
+                {
+                    Autorun.Disable();
+                }
 
                 MessageBox.Show("Einstellungen erfolgreich gespeichert!", "Erfolg", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 this.DialogResult = DialogResult.OK;

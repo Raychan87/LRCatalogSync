@@ -26,6 +26,9 @@ namespace LRCatalogSync.Core
             config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
             Log.SetLogLevel(config.LogLevel);
 
+            // Autorun aus Registry laden und in Config speichern (für Anzeige in SettingsForm)
+            config.AutoRun = Autorun.IsEnabled();
+
             // ========== MANAGER INITIALISIEREN ==========
             // Erstelle TrayManager für UI-Verwaltung
             trayManager = new TrayManager();
