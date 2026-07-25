@@ -11,17 +11,16 @@
 	    <SignManifests>false</SignManifests>
 		<NoWarn>$(NoWarn);CA1416</NoWarn> <!--Ignorieren weil Windows only-->
 		
-		<!-- Self-Contained Deployment - alle Abhängigkeiten in die EXE -->
+		<!-- Self-Contained Deployment - .NET in die EXE integriert -->
 		<PublishSingleFile>true</PublishSingleFile>
-		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<SelfContained>true</SelfContained>
 
 	    <!-- Assembly-Metadaten  -->
 	    <AssemblyTitle>LRCatalogSync</AssemblyTitle>
 	    <Description>Synchronisiert ein Katalog von Adobe Lightroom Classic.</Description>
 	    <Company>Fototour-und-Technik.de</Company>
 	    <Product>LRCatalogSync</Product>
-	    <Copyright>Copyright © 2026 Fototour-und-Technik.de</Copyright>
+	    <Copyright>© 2026 Fototour-und-Technik.de</Copyright>
 	    <AssemblyVersion>0.9.4.0</AssemblyVersion>
 	    <FileVersion>0.9.4.0</FileVersion>
 	    <Version>0.9.4-beta</Version>
@@ -39,7 +38,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
+    <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
@@ -55,6 +54,13 @@
     <Compile Update="src\UI\SettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="**\*.config;**\*.log;">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
   </ItemGroup>
 
 </Project>
