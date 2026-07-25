@@ -1,7 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Windows.Forms;
 
 using LRCatalogSync.Infrastructure;    // ← für AppConfig
 
@@ -517,7 +514,7 @@ namespace LRCatalogSync.UI
                 {
                     // Neues Passwort eingegeben - verschlüssele es für beide Systeme
                     config.SambaPasswordRclone = ObscurePassword(passwordInput, absoluteRclonePath);
-                    config.SambaPasswordAes = AesEncryptor.Encrypt(passwordInput);
+                    config.SambaPasswordAes = Cryptor.Encrypt(passwordInput);
                 }
 
                 // Stelle sicher, dass data/config Ordner existiert

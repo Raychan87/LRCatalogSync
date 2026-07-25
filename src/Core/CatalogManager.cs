@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-using System.IO.Compression;
 using System.Diagnostics;
 
 using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, GlobalData

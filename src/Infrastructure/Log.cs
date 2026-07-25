@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-
+﻿
 namespace LRCatalogSync.Infrastructure
 {
     // Logging-Funktion für die Anwendung

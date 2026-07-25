@@ -1,7 +1,4 @@
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
 
 using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, GlobalData
 using LRCatalogSync.UI;                // ← für TrayManager

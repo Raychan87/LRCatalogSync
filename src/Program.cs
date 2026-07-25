@@ -1,7 +1,4 @@
-﻿using System;
-using System.Windows.Forms;
-
-using LRCatalogSync.Core;    // ← für LRCatSync
+﻿using LRCatalogSync.Core;    // ← für LRCatSync
 
 namespace LRCatalogSync
 {

@@ -1,7 +1,3 @@
-using System;
-using System.Drawing;
-using System.Threading;
-using System.Windows.Forms;
 
 namespace LRCatalogSync.UI
 {
@@ -110,9 +106,8 @@ namespace LRCatalogSync.UI
             }
         }
 
-        /// Erstellt ein farbiges Kreis-Icon (32x32 Pixel) für Tray
-        /// color: Farbe des Kreises
-        /// returns: Icon für Tray-Anzeige
+        // Erstellt ein farbiges Kreis-Icon (32x32 Pixel) für Tray
+        // returns: Icon für Tray-Anzeige
         private Icon CreateColoredIcon(Color color)
         {
             // ========== BITMAP ERSTELLEN ==========
@@ -137,8 +132,7 @@ namespace LRCatalogSync.UI
             return Icon.FromHandle(bitmap.GetHicon());
         }
 
-        // ==================== DISPOSE-MUSTER ====================
-        /// Gibt alle verwalteten Ressourcen frei
+        // Gibt alle verwalteten Ressourcen frei
         public void Dispose()
         {
             // Icons freigeben (GDI+ Ressourcen)

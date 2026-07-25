@@ -64,7 +64,7 @@ public class SmbClient
         string password;
         try
         {
-            password = AesEncryptor.Decrypt(encryptedPassword);
+            password = Cryptor.Decrypt(encryptedPassword);
         }
         catch (Exception ex)
         {

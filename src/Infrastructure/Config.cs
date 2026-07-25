@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-using LRCatalogSync.Core;
-
+﻿
 namespace LRCatalogSync.Infrastructure
 {
     // Konfigurationsklasse für das Lightroom Sync Programm.
