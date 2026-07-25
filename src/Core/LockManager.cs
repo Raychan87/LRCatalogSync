@@ -57,8 +57,12 @@ namespace LRCatalogSync.Core
                 }
                 
                 // ========== REMOTE LOCK PRÜFEN (via SMB) ==========
-                // Stelle SMB-Verbindung her
-                if (SMBConnectionManager.Instance.EnsureConnected(config))
+                // Nur versuchen, wenn SMB-Config vollständig ist
+                if (string.IsNullOrEmpty(config.RemoteIP) || string.IsNullOrEmpty(config.SambaUser))
+                {
+                    Log.Debug("LockManager: SMB-Config unvollständig - überspringe Remote-Lock-Prüfung");
+                }
+                else if (SMBConnectionManager.Instance.EnsureConnected(config))
                 {                    
                     // Prüfe ob Remote-Lock existiert
                     byte[]? lockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
@@ -127,6 +131,13 @@ namespace LRCatalogSync.Core
         {
             try
             {
+                // ========== VALIDIERUNG: SMB-Config vollständig? ==========
+                if (string.IsNullOrEmpty(config.RemoteIP) || string.IsNullOrEmpty(config.SambaUser))
+                {
+                    Log.Debug("LockManager: SMB-Config unvollständig - überspringe Lock-Akquise");
+                    return false;
+                }
+
                 // ========== REMOTE LOCK AKQUIRIEREN ==========
                 // Stelle SMB-Verbindung her
                 if (!SMBConnectionManager.Instance.EnsureConnected(config))

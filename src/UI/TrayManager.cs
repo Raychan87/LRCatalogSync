@@ -75,9 +75,13 @@ namespace LRCatalogSync.UI
         {
             switch (state)
             {
+                case "NoCfg":
+                    trayIcon.Icon = iconWhite;
+                    trayIcon.Text = "LR Catalog Sync - Configurationsdatei fehlt";
+                    break;
                 case "Standby":
                     trayIcon.Icon = iconGreen;
-                    trayIcon.Text = "LR Catalog Sync - Standby";
+                    trayIcon.Text = "LR Catalog Sync - Warte auf Änderungen";
                     break;
                 case "BSyncing":
                     trayIcon.Icon = iconYellow;
@@ -93,14 +97,14 @@ namespace LRCatalogSync.UI
                     break;
                 case "Error":
                     trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - Fehler";
+                    trayIcon.Text = "LR Catalog Sync - Interner Fehler";
                     break;
                 case "Lockfile":
                     trayIcon.Icon = iconBlue;
                     trayIcon.Text = "LR Catalog Sync - Lightroom Lockfile erkannt";
                     break;
                 case "NoSamba":
-                    trayIcon.Icon = iconWhite;
+                    trayIcon.Icon = iconRed;
                     trayIcon.Text = "LR Catalog Sync - Keine Verbindung zum Samba Server";
                     break;
             }

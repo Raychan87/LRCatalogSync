@@ -10,6 +10,11 @@
 	    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
 	    <SignManifests>false</SignManifests>
 		<NoWarn>$(NoWarn);CA1416</NoWarn> <!--Ignorieren weil Windows only-->
+		
+		<!-- Self-Contained Deployment - alle Abhängigkeiten in die EXE -->
+		<PublishSingleFile>true</PublishSingleFile>
+		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
 
 	    <!-- Assembly-Metadaten  -->
 	    <AssemblyTitle>LRCatalogSync</AssemblyTitle>

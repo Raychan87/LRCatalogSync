@@ -11,7 +11,7 @@ namespace LRCatalogSync.Core
         // ==================== EIGENSCHAFTEN ====================
         private AppConfig config;                           // Konfigurationsdaten laden/speichern
         private TrayManager trayManager;                    // Manager für Tray-Icon und Status
-        private System.Threading.Timer syncCycleTimer;      // Timer für Sync-Zyklus (Backup + Katalog)
+        private System.Threading.Timer? syncCycleTimer;     // Timer für Sync-Zyklus (Backup + Katalog)
 
         // ==================== KONSTRUKTOR - HAUPTEINSTIEGSPUNKT ====================
         // Initialisiert die Anwendung: Logs, Config, Tray und Menü
@@ -33,12 +33,22 @@ namespace LRCatalogSync.Core
             // Erstelle TrayManager für UI-Verwaltung
             trayManager = new TrayManager();
 
-            // ========== CRASH-RECOVERY: Verwaiste Locks bereinigen ==========
-            // Prüfe beim Programmstart ob verwaiste Locks existieren (>30 min alt)
-            LockManager.CleanupStaleLocks(config);
-
             // ========== KONTEXTMENÜ AUFBAUEN ==========
             SetupContextMenu();
+
+            // ========== PRÜFUNG: Config-Datei vorhanden? ==========
+            // Wenn Config-Datei fehlt, zeige weißen Status an und BEENDHE Konstruktor
+            // Damit ist das Tray-Menü sofort bedienbar - der Nutzer kann eine Config anlegen
+            if (!File.Exists(GlobalData.LRCatSyncConfigPath))
+            {
+                Log.Error("LRCatSync: Konfigurationsdatei fehlt - erstelle Standard-Konfiguration");
+                trayManager.UpdateStatus("NoCfg");
+                return;
+            }
+
+            // ========== CRASH-RECOVERY: Verwaiste Locks bereinigen ==========
+            // Nur ausführen, wenn Config existiert (sonst keine SMB-Verbindung nötig)
+            LockManager.CleanupStaleLocks(config);
 
             // ========== STARTE AUTOMATISCHEN SYNC-ZYKLUS ==========
             // Timer führt alle CATALOG_SYNC_CHECK_INTERVAL Sekunden kompletten Zyklus aus (Backup → Katalog)

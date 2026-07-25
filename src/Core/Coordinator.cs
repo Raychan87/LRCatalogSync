@@ -30,6 +30,14 @@ namespace LRCatalogSync.Core
             try
             {
                 // ========== VALIDIERUNGEN ==========
+                // Prüfe zuerst ob Config-Datei existiert (wichtig für ersten Start)
+                if (!File.Exists(GlobalData.LRCatSyncConfigPath))
+                {
+                    Log.Debug("Coordinator: Konfigurationsdatei fehlt - überspringe Sync-Zyklus");
+                    trayManager.UpdateStatus("NoCfg");
+                    return;
+                }
+
                 if (!File.Exists(GlobalData.RcloneConfigPath))
                 {
                     Log.Error("Coordinator: rclone.conf fehlt. Bitte Einstellungen prüfen.");
