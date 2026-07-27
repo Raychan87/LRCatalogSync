@@ -45,7 +45,7 @@ Diese Dateien werden von Lightroom beim Öffnen des Katalogs erstellt und beim S
 *Stop:* Rechtsklick auf das Tray‑Icon → **Beenden**.
 
 ## Konfiguration (grafisch)
-![alt text](docs\images\config_menu.png)
+![alt text](docs/images/config_menu.png)
 | Feld | Beschreibung |
 |------|--------------|
 | **Auto-Start** | Programm beim Windows-Start automatisch ausführen |
