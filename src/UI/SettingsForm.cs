@@ -4,6 +4,108 @@ using LRCatalogSync.Infrastructure;    // ← für AppConfig
 
 namespace LRCatalogSync.UI
 {
+    // Benutzerdefinierte TextBox mit Watermark-Unterstützung
+    public class WatermarkTextBox : TextBox
+    {
+        private string _watermark = string.Empty;
+        private Color _watermarkColor = Color.Gray;
+        private Label? _watermarkLabel;
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public string Watermark
+        {
+            get => _watermark;
+            set
+            {
+                _watermark = value;
+                UpdateWatermarkLabel();
+            }
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color WatermarkColor
+        {
+            get => _watermarkColor;
+            set
+            {
+                _watermarkColor = value;
+                UpdateWatermarkLabel();
+            }
+        }
+
+        public WatermarkTextBox()
+        {
+            // Erstelle das Watermark-Label
+            _watermarkLabel = new Label
+            {
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = _watermarkColor,
+                BackColor = Color.Transparent,
+                Visible = false,
+                Cursor = Cursors.IBeam // Zeiger auf Text-Eingabe setzen
+            };
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            if (_watermarkLabel != null)
+            {
+                // Füge das Label als Child hinzu
+                Controls.Add(_watermarkLabel);
+                _watermarkLabel.BringToFront();
+                // Verhindere, dass das Label Klicks abfängt
+                _watermarkLabel.Click += (s, e) => this.Focus();
+                _watermarkLabel.MouseDown += (s, e) => this.Focus();
+                UpdateWatermarkLabel();
+            }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            UpdateWatermarkLabel();
+        }
+
+        protected override void OnTextChanged(EventArgs e)
+        {
+            base.OnTextChanged(e);
+            UpdateWatermarkLabel();
+        }
+
+        protected override void OnEnter(EventArgs e)
+        {
+            base.OnEnter(e);
+            UpdateWatermarkLabel();
+        }
+
+        protected override void OnLeave(EventArgs e)
+        {
+            base.OnLeave(e);
+            UpdateWatermarkLabel();
+        }
+
+        private void UpdateWatermarkLabel()
+        {
+            if (_watermarkLabel == null || string.IsNullOrEmpty(_watermark))
+                return;
+
+            // Watermark anzeigen, wenn Text leer ist
+            _watermarkLabel.Visible = string.IsNullOrEmpty(Text);
+            
+            if (_watermarkLabel.Visible)
+            {
+                _watermarkLabel.Text = _watermark;
+                _watermarkLabel.Font = this.Font;
+                _watermarkLabel.Size = this.Size;
+                // Positionierung mit Padding
+                _watermarkLabel.Location = new Point(this.Padding.Left, this.Padding.Top);
+                _watermarkLabel.Width = this.Width - this.Padding.Horizontal;
+            }
+        }
+    }
+
     public partial class SettingsForm : Form
     {
         private AppConfig config;
@@ -53,7 +155,7 @@ namespace LRCatalogSync.UI
             yPos += lineHeight-5;
             AddCheckBox(scrollPanel, "Automatisch beim Systemstart ausführen", ref yPos, "chkAutoRun", config.AutoRun, labelWidth);
             yPos += lineHeight;            
-            AddLabelAndTextBox(scrollPanel, "Rclone Verzeichnispfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "Rclone Verzeichnispfad:", ref yPos, "txtRcloneFolder", config.RcloneFolder, labelWidth, controlWidth, true, false, "z.B. C:\\Program Files\\rclone");
             yPos += 22;
             AddInfoRclone(scrollPanel, "Download von rclone (https://rclone.org/downloads)", ref yPos, labelWidth +10);
             yPos += lineHeight;
@@ -66,13 +168,13 @@ namespace LRCatalogSync.UI
             yPos += lineHeight - 5;
             AddCheckBox(scrollPanel, "*Previews.lrdata synchronisieren?", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "lokale Katalog Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "lokale Katalog Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true, false, "Pfad zur .lrcat Datei auswählen");
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Katalog Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Remote Katalog Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false, false, "z.B. remote:catalog/");
             yPos += lineHeight;
             AddCheckBox(scrollPanel, "letzten Katalog behalten?", ref yPos, "chkEnableRcloneCopy", config.EnableRcloneCopy, labelWidth);
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Ordnername:", ref yPos, "txtRcloneCopyFolderName", config.RcloneCopyFolderName, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Ordnername:", ref yPos, "txtRcloneCopyFolderName", config.RcloneCopyFolderName, labelWidth, controlWidth, false, false, "z.B. backup_v1");
             yPos += lineHeight;
 
             AddInfoText(scrollPanel, "Lightroom Katalog Sicherungsordner", ref yPos, 10);
@@ -81,20 +183,20 @@ namespace LRCatalogSync.UI
             yPos += lineHeight - 5;            
             AddCheckBox(scrollPanel, "Sicherungsordner aktivieren", ref yPos, "chkEnableBackups", config.EnableBackups, labelWidth);
             yPos += lineHeight;            
-            AddLabelAndTextBox(scrollPanel, "Lokaler Backup Pfad:", ref yPos, "txtBackupsLocalPath", config.BackupsLocalPath, labelWidth, controlWidth, true);
+            AddLabelAndTextBox(scrollPanel, "Lokaler Backup Pfad:", ref yPos, "txtBackupsLocalPath", config.BackupsLocalPath, labelWidth, controlWidth, true, false, "Lokaler Ordner auswählen");
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Remote Backup Pfad:", ref yPos, "txtBackupsRemotePath", config.BackupsRemotePath, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Remote Backup Pfad:", ref yPos, "txtBackupsRemotePath", config.BackupsRemotePath, labelWidth, controlWidth, false, false, "z.B. remote:backups/");
             yPos += lineHeight;
             
             AddInfoText(scrollPanel, "Samba Server Einstellungen", ref yPos, 10);
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "________________________________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
-            AddLabelAndTextBox(scrollPanel, "Server IP/Name:", ref yPos, "txtRemoteIP", config.RemoteIP, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Server IP/Name:", ref yPos, "txtRemoteIP", config.RemoteIP, labelWidth, controlWidth, false, false, "z.B. 192.168.1.100");
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Benutzername:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false);
+            AddLabelAndTextBox(scrollPanel, "Benutzername:", ref yPos, "txtSambaUser", config.SambaUser, labelWidth, controlWidth, false, false, "Benutzername für Samba");
             yPos += lineHeight;
-            AddLabelAndTextBox(scrollPanel, "Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true);
+            AddLabelAndTextBox(scrollPanel, "Passwort:", ref yPos, "txtSambaPassword", "", labelWidth, controlWidth, false, true, "Passwort eingeben");
             yPos += lineHeight;
             
             // Button Panel mit Links
@@ -199,7 +301,7 @@ namespace LRCatalogSync.UI
             }
         }
 
-        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false)
+        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false, string watermark = "")
         {
             var label = new Label
             {
@@ -213,14 +315,15 @@ namespace LRCatalogSync.UI
             };
             panel.Controls.Add(label);
 
-            var textBox = new TextBox
+            var textBox = new WatermarkTextBox
             {
                 Name = controlName,
                 Text = value,
                 Left = labelWidth + 10,
                 Top = yPos,
                 Width = controlWidth,
-                Height = 24
+                Height = 24,
+                Watermark = watermark
             };
 
             if (isPassword)
