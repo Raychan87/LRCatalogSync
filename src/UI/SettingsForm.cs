@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-using LRCatalogSync.Infrastructure;    // ← für AppConfig
+using LRCatalogSync.Infrastructure;
 
 namespace LRCatalogSync.UI
 {
@@ -108,9 +108,30 @@ namespace LRCatalogSync.UI
 
     public partial class SettingsForm : Form
     {
+        private readonly string appVersion = GetApplicationVersion();
         private AppConfig config;
         private string originalPasswordRclone; // Speichert das ursprüngliche rclone-verschlüsselte Passwort
         private string originalPasswordAes; // Speichert das ursprüngliche AES-verschlüsselte Passwort
+        private static string GetApplicationVersion() //Aus Assembly-Informationen auslesen
+        {
+            // Lese die Version direkt aus der Assembly Information
+            var assembly = Assembly.GetExecutingAssembly();
+            var versionAttr = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>();
+            if (versionAttr?.InformationalVersion != null)
+            {
+                // Entferne den Hash-Teil nach dem "+"
+                string version = versionAttr.InformationalVersion;
+                int plusIndex = version.IndexOf('+');
+                if (plusIndex > 0)
+                {
+                    version = version.Substring(0, plusIndex);
+                }
+                return version;
+            }
+            
+            // Fallback auf FileVersion
+            return FileVersionInfo.GetVersionInfo(AppContext.BaseDirectory + "LRCatalogSync.exe").ProductVersion ?? "0.0.0.0";
+        }
 
         public SettingsForm(AppConfig cfg)
         {
@@ -125,7 +146,7 @@ namespace LRCatalogSync.UI
 
         private void SetupControls()
         {
-            this.Text = "LRCatalogSync - Fototour-und-Technik.de";
+            this.Text = $"LRCatalogSync v{appVersion} - Fototour-und-Technik.de";
             this.Size = new System.Drawing.Size(510, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;

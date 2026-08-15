@@ -9,6 +9,8 @@
 // WriteFile (Datei schreiben)	
 // DeleteFile (Datei löschen)
 
+using System;
+using System.Net;
 using SMBLibrary;
 using SMBLibrary.Client;
 
@@ -17,18 +19,92 @@ namespace LRCatalogSync.Infrastructure;
 // SMB-Client für den Zugriff auf Remote-Freigaben
 public class SmbClient
 {
-    private SMB2Client _client = new SMB2Client();
+    private SMB2Client _client;
     private bool _isConnected = false;
+    private bool _isLoggedIn = false;
     private ISMBFileStore? _fileStore = null;
     private bool _isTreeConnected = false;
+
+    public SmbClient()
+    {
+        _client = new SMB2Client();
+    }
+
+    private void ResetSessionState()
+    {
+        _isTreeConnected = false;
+        _fileStore = null;
+        _isLoggedIn = false;
+        _isConnected = false;
+    }
+
+    // Erzwingt einen vollständigen Session-Reset, damit bei einer invaliden Session
+    // kein Logoff() mehr auf einem veralteten Login-Status ausgeführt wird.
+    public void InvalidateSession()
+    {
+        try
+        {
+            _fileStore?.Disconnect();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug($"SMB: InvalidateSession TreeDisconnect warf Exception: {ex.Message}");
+        }
+
+        _fileStore = null;
+        _isTreeConnected = false;
+        _isLoggedIn = false;
+        _isConnected = false;
+
+        // Nach einem invaliden State muss der SMB-Client neu initialisiert werden,
+        // damit keine veralteten Credits / Session-Handles aus der alten Verbindung
+        // in den nächsten Reconnect mitlaufen.
+        try
+        {
+            _client.Disconnect();
+        }
+        catch (Exception ex)
+        {
+            Log.Debug($"SMB: InvalidateSession Disconnect warf Exception: {ex.Message}");
+        }
+
+        _client = new SMB2Client();
+    }
 
     // Verbindet mit einem SMB-Server
     // returns: true bei erfolgreicher Verbindung, sonst false
     public bool Connect(string hostnameOrIp, SMBTransportType transportType = SMBTransportType.DirectTCPTransport)
     {
+        // Vorherige Session sauber aufräumen, falls sie bereits veraltet ist.
+        // Besonders wichtig nach Sleep/Wake: Der alte SMB-Client-State kann veraltete
+        // Credits oder Handles behalten, obwohl der Server bereits wieder erreichbar ist.
+        if (_isConnected || _isTreeConnected || _fileStore != null || _isLoggedIn)
+        {
+            Disconnect();
+        }
+
+        // Wenn der Client nach einem früheren Fehler bereits in einem ungültigen Zustand steckt,
+        // muss er vollständig neu erzeugt werden, damit der nächste Connect sauber startet.
+        try
+        {
+            if (!_client.IsConnected)
+            {
+                _client = new SMB2Client();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Debug($"SMB: Client-Recreation beim Connect warf Exception: {ex.Message}");
+            _client = new SMB2Client();
+        }
+
         // Verbindung herstellen
         _isConnected = _client.Connect(hostnameOrIp, transportType);
-        
+        if (!_isConnected)
+        {
+            ResetSessionState();
+        }
+
         return _isConnected;
     }
 
@@ -38,17 +114,52 @@ public class SmbClient
     // Trennt die Verbindung zum SMB-Server
     public void Disconnect()
     {
-        if (_isTreeConnected)
+        if (_isTreeConnected || _fileStore != null)
         {
-            _fileStore?.Disconnect();
+            try
+            {
+                _fileStore?.Disconnect();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SMB: TreeDisconnect beim Reset warf Exception: {ex.Message}");
+            }
+
+            _fileStore = null;
             _isTreeConnected = false;
         }
-        
+
+        if (_isConnected && _isLoggedIn)
+        {
+            try
+            {
+                _client.Logoff();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SMB: Logoff beim Reset warf Exception: {ex.Message}");
+            }
+
+            _isLoggedIn = false;
+        }
+        else
+        {
+            _isLoggedIn = false;
+        }
+
         if (_isConnected)
         {
-            _client.Disconnect();
-            _isConnected = false;
+            try
+            {
+                _client.Disconnect();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SMB: Disconnect beim Reset warf Exception: {ex.Message}");
+            }
         }
+
+        ResetSessionState();
     }
 
     // Authentifiziert beim SMB-Server
@@ -74,24 +185,52 @@ public class SmbClient
 
         // Authentifizieren
         NTStatus status = _client.Login(domain, username, password);
-        
-        return status == NTStatus.STATUS_SUCCESS;
+        _isLoggedIn = status == NTStatus.STATUS_SUCCESS;
+
+        if (!_isLoggedIn)
+        {
+            try
+            {
+                _client.Logoff();
+            }
+            catch
+            {
+                // Keine weitere Aktion, da die Login-Session ungültig ist.
+            }
+
+            _client.Disconnect();
+            ResetSessionState();
+        }
+
+        return _isLoggedIn;
     }
 
     // Meldet den Benutzer vom Server ab
     public void Logoff()
     {
-        if (_isConnected)
+        if (!_isConnected || !_isLoggedIn)
+        {
+            _isLoggedIn = false;
+            return;
+        }
+
+        try
         {
             _client.Logoff();
         }
+        catch (Exception ex)
+        {
+            Log.Debug($"SMB: Logoff warf Exception: {ex.Message}");
+        }
+
+        _isLoggedIn = false;
     }
 
     // Verbindet mit einer SMB-Freigabe (Tree Connect)
     // returns: true bei erfolgreicher Verbindung, sonst false    
     public bool TreeConnect(string shareName)
     {
-        if (!_isConnected)
+        if (!_isConnected || !_isLoggedIn)
         {
             return false;
         }
@@ -99,10 +238,16 @@ public class SmbClient
         // Mit Freigabe verbinden
         NTStatus status;
         _fileStore = _client.TreeConnect(shareName, out status);
-        
-        _isTreeConnected = (status == NTStatus.STATUS_SUCCESS);
-        
-        return _isTreeConnected;
+
+        if (status != NTStatus.STATUS_SUCCESS || _fileStore == null)
+        {
+            _fileStore = null;
+            _isTreeConnected = false;
+            return false;
+        }
+
+        _isTreeConnected = true;
+        return true;
     }
 
     // Prüft, ob eine Verbindung mit einer Freigabe besteht
@@ -111,11 +256,26 @@ public class SmbClient
     // Trennt die Verbindung zur Freigabe (Tree Disconnect)
     public void TreeDisconnect()
     {
-        if (_isTreeConnected)
+        if (_isTreeConnected || _fileStore != null)
         {
-            _fileStore?.Disconnect();
+            try
+            {
+                _fileStore?.Disconnect();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SMB: TreeDisconnect warf Exception: {ex.Message}");
+            }
+
+            _fileStore = null;
             _isTreeConnected = false;
         }
+    }
+
+    // Leitet ListShares an die SMB2Client Library weiter
+    public List<string> ListShares(out NTStatus status)
+    {
+        return _client.ListShares(out status);
     }
 
     // Listet Dateien und Verzeichnisse in einem Verzeichnis auf
@@ -161,7 +321,7 @@ public class SmbClient
                     }
                 }
 
-                // Handle schlie�en
+                // Handle schließen
                 _fileStore.CloseFile(directoryHandle);
             }
         }
@@ -397,105 +557,203 @@ public sealed class SMBConnectionManager
     
     private SmbClient _client = new SmbClient();
     private AppConfig? _lastConfig = null;
-    private bool _ownsConnection = false;
     
     private SMBConnectionManager() { }
     
+    private void ExecuteHardResetWithLogging(string reason)
+    {
+        Log.Debug(reason);
+
+        try
+        {
+            Log.Debug("SMB: Step 1/3: InvalidateSession() start");
+            _client.InvalidateSession();
+            Log.Debug("SMB: Step 1/3: InvalidateSession() OK");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[SMB] Step 1/3: InvalidateSession() warf Exception: {ex.Message}");
+        }
+
+        try
+        {
+            Log.Debug("SMB: Step 2/3: Disconnect() start");
+            _client.Disconnect();
+            Log.Debug("SMB: Step 2/3: Disconnect() OK");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[SMB] Step 2/3: Disconnect() warf Exception: {ex.Message}");
+        }
+    }
+
     // Stellt sicher, dass eine aktive SMB-Verbindung besteht
     // Mit Auto-Reconnect bei Verbindungsproblemen
     public bool EnsureConnected(AppConfig config)
     {
-        // Prüfe ob bereits verbunden mit gleichen Parametern
+        // Prüfe nur den aktuellen Zustand und starte bei Fehler einen Reconnect.
         if (_client.IsConnected && _client.IsTreeConnected && _lastConfig != null)
         {
-            if (_lastConfig.RemoteIP == config.RemoteIP && 
+            if (_lastConfig.RemoteIP == config.RemoteIP &&
                 _lastConfig.SambaUser == config.SambaUser &&
                 _lastConfig.CatalogRemotePath == config.CatalogRemotePath)
             {
-                // Kurze Verbindungserkennung: Kleiner Test-Read
-                if (TestConnection())
+                try
+                {
+                    _client.ListShares(out NTStatus status);
+                    Log.Debug($"SMB: ListShares Status = {status}");
+
+                    if (status != NTStatus.STATUS_SUCCESS)
+                    {
+                        Log.Error($"SMB: ListShares fehlgeschlagen (Status: {status}), trenne und reconnecte...");
+                        ExecuteHardResetWithLogging("SMB: Vor dem Reconnect wird die Verbindung hart zurückgesetzt.");
+                        Log.Debug("SMB: Step 3/3: Reconnect-Start nach ListShares-Fehler");
+                        Thread.Sleep(3000);
+                        return TryConnectWithRetry(config);
+                    }
+
                     return true;
-                
-                // Verbindung scheint tot zu sein -> Reconnect
-                Log.Error("SMB: Verbindungserkennung fehlgeschlagen, trenne und reconnecte...");
-                Disconnect();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"SMB: ListShares warf Exception: {ex.Message}, trenne und reconnecte...");
+                    ExecuteHardResetWithLogging("SMB: Vor dem Reconnect wird die Verbindung hart zurückgesetzt.");
+                    Log.Debug("SMB: Step 3/3: Reconnect-Start nach Exception");
+                    Thread.Sleep(3000);
+                    Log.Debug("SMB: Thread.Sleep(3000) nach Reconnect-Reset.");
+                    return TryConnectWithRetry(config);
+                }
             }
-            else
-            {
-                // Parameter unterschiedlich -> neu verbinden
-                Disconnect();
-            }
+
+            Log.Debug("SMB: Parameter geändert, verbinde neu...");
+            _client.TreeDisconnect();
+            _client.Disconnect();
+            Thread.Sleep(3000);
+            return TryConnectWithRetry(config);
         }
-        
-        // Verbindungsaufbau mit Retry
+
+        Log.Debug("SMB: Keine gültige Verbindung erkannt, starte Reconnect.");
+        return TryConnectWithRetry(config);
+    }
+    
+    private bool TryConnectWithRetry(AppConfig config)
+    {
         for (int attempt = 1; attempt <= MAX_CONNECT_RETRIES; attempt++)
         {
             Log.Debug($"SMB: Verbindungsversuch {attempt}/{MAX_CONNECT_RETRIES}");
-            
+
             if (TryConnect(config))
             {
                 _lastConfig = config;
-                _ownsConnection = true;
+                Log.Debug($"SMB: Reconnect erfolgreich nach Versuch {attempt}.");
                 return true;
             }
-            
+
             if (attempt < MAX_CONNECT_RETRIES)
             {
-                int delay = CONNECT_RETRY_DELAY_MS * attempt; // Exponential backoff
+                int delay = CONNECT_RETRY_DELAY_MS * attempt;
                 Log.Debug($"SMB: Verbindung fehlgeschlagen, warte {delay}ms vor Retry...");
                 Thread.Sleep(delay);
             }
         }
-        
-        Log.Error("SMB: Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
+
+        Log.Error($"SMB: Verbindung nach {MAX_CONNECT_RETRIES} Versuchen fehlgeschlagen");
         return false;
     }
 
-    // Testet ob die aktuelle Verbindung noch funktioniert
-    private bool TestConnection()
+    private void ResetBeforeReconnectWithLogging()
     {
+        Log.Debug("SMB: TryConnect - vor Connect: InvalidateSession() / Disconnect()");
+
         try
         {
-            // Versuche eine kleine Operation (Root-Verzeichnis auflisten)
-            var files = _client.ListFiles("");
-            return true; // Wenn kein Fehler geworfen wurde, ist Verbindung ok
+            _client.InvalidateSession();
+            Log.Debug("SMB: TryConnect - InvalidateSession() OK");
         }
-        catch
+        catch (Exception ex)
         {
-            return false; // Verbindung wahrscheinlich tot
+            Log.Error($"[SMB] TryConnect - InvalidateSession() warf Exception: {ex.Message}");
+        }
+
+        try
+        {
+            _client.Disconnect();
+            Log.Debug("SMB: TryConnect - Disconnect() OK");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[SMB] TryConnect - Disconnect() warf Exception: {ex.Message}");
         }
     }
-    
+
     // Versucht einmalig eine Verbindung herzustellen
     private bool TryConnect(AppConfig config)
     {
         // Extrahiere Share-Name aus CatalogRemotePath (z.B. "\\NAS\Freigabe\subdir" -> "Freigabe")
         string shareName = ExtractShareName(config.CatalogRemotePath);
         string serverIP = config.RemoteIP;
-        
+
+        Log.Debug($"SMB: TryConnect start - Server={serverIP}, Share={shareName}");
+
+        // Sicherstellen, dass eine eventuell kaputte Session vorher sauber zurückgesetzt wird.
+        ResetBeforeReconnectWithLogging();
+
         // Verbinde mit Server
         if (!_client.Connect(serverIP))
         {
             Log.Error($"SMB: TCP-Verbindung zu {serverIP} fehlgeschlagen");
             return false;
         }
+        Log.Debug($"SMB: TCP-Verbindung zu {serverIP} hergestellt.");
         
         // Anmelden
         if (!_client.Login(string.Empty, config.SambaUser, config.SambaPasswordAes))
         {
             Log.Error($"SMB: Anmeldung als {config.SambaUser} fehlgeschlagen");
+            Log.Debug("SMB: TryConnect - Login fehlgeschlagen, Disconnect() wird aufgerufen.");
             _client.Disconnect();
             return false;
         }
+        Log.Debug($"SMB: Login als {config.SambaUser} erfolgreich.");
         
         // Mit Freigabe verbinden
         if (!_client.TreeConnect(shareName))
         {
             Log.Error($"SMB: TreeConnect zu Freigabe '{shareName}' fehlgeschlagen");
-            _client.Logoff();
-            _client.Disconnect();
+            Log.Debug("SMB: TryConnect - TreeConnect fehlgeschlagen, sichere Session-Reset wird aufgerufen.");
+            try
+            {
+                _client.Logoff();
+                Log.Debug("SMB: TryConnect - Logoff() nach TreeConnect-Fehler OK");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SMB: TreeConnect-Fehler Logoff() ignored: {ex.Message}");
+            }
+
+            try
+            {
+                _client.InvalidateSession();
+                Log.Debug("SMB: TryConnect - InvalidateSession() nach TreeConnect-Fehler OK");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[SMB] TryConnect - InvalidateSession() nach TreeConnect-Fehler warf Exception: {ex.Message}");
+            }
+
+            try
+            {
+                _client.Disconnect();
+                Log.Debug("SMB: TryConnect - Disconnect() nach TreeConnect-Fehler OK");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[SMB] TryConnect - Disconnect() nach TreeConnect-Fehler warf Exception: {ex.Message}");
+            }
+
             return false;
         }
+        Log.Debug($"SMB: TreeConnect zu Freigabe '{shareName}' erfolgreich.");
         
         Log.Debug($"SMB: Verbunden mit {serverIP}/{shareName}");
         return true;
@@ -521,24 +779,6 @@ public sealed class SMBConnectionManager
     
     // Prüft ob aktuell verbunden
     public bool IsConnected => _client.IsConnected && _client.IsTreeConnected;
-    
-    // Trennt die SMB-Verbindung
-    public void Disconnect()
-    {
-        if (_ownsConnection)
-        {
-            if (_client.IsTreeConnected)
-                _client.TreeDisconnect();
-            if (_client.IsConnected)
-            {
-                _client.Logoff();
-                _client.Disconnect();
-            }
-            _ownsConnection = false;
-            _lastConfig = null;
-            Log.Debug("SMB: Verbindung getrennt");
-        }
-    }
     
     public byte[]? ReadFile(string relativePath) => _client.ReadFile(relativePath);
     
