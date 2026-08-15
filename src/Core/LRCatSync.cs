@@ -32,6 +32,7 @@ namespace LRCatalogSync.Core
             // ========== MANAGER INITIALISIEREN ==========
             // Erstelle TrayManager für UI-Verwaltung
             trayManager = new TrayManager();
+            SMBConnectionManager.Instance.SetStatusCallback(trayManager.UpdateStatus);
 
             // ========== KONTEXTMENÜ AUFBAUEN ==========
             SetupContextMenu();
