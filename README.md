@@ -32,13 +32,11 @@ Diese Dateien werden von Lightroom beim Öffnen des Katalogs erstellt und beim S
 
 ## Voraussetzungen
 - Windows 8.1 + (empfohlen 10/11)
-- **.NET 10 (Windows‑Spezifisch)** – das Projekt verwendet das SDK‑Target `net10.0-windows`.
 - **rclone** (https://rclone.org)
 
 ## Installation
-1. **.NET 10 (Windows‑Spezifisch)** Runtime installieren – das Projekt nutzt das SDK‑Target `net10.0-windows`. Die aktuelle Runtime finden Sie unter https://dotnet.microsoft.com/download/dotnet/10.0.
-2. rclone herunterladen, `rclone.exe` z. B. nach `C:\Programme\rclone` entpacken.
-3. LRCatalogSync von GitHub herunterladen, entpacken und `LRCatalogSync.exe` starten – das Symbol erscheint im Tray.
+1. rclone herunterladen, `rclone.exe` z. B. nach `C:\Programme\rclone` entpacken.
+2. LRCatalogSync von GitHub herunterladen und `LRCatalogSync.exe` starten – das Symbol erscheint im Tray.
 
 ## Nutzung
 *Start:* Doppelklick auf `LRCatalogSync.exe` (kann beim Systemstart aktiviert werden). 
@@ -91,4 +89,5 @@ Logs finden Sie unter `data/logs/`.
 - rclone: https://rclone.org
 - Lightroom Classic: https://adobe.com/products/lightroom
 
-*Version **0.9.4‑beta** – Stand: Juli 2026*
+*Version **0.9.5-beta** – Stand: August 2026*
+
