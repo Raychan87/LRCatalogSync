@@ -160,11 +160,10 @@ namespace LRCatalogSync.Core
                 }
 
                 // ========== REMOTE LOCK PRÜFEN ==========
-                // Lädt alle Filenamen von dem Remote Pfad
-                var existingFiles = SMBConnectionManager.Instance.ListFiles(Path.GetDirectoryName(config.CatalogRemotePath) ?? "");
-
-                // Prüfe ob das Lockfile vorhanden ist
-                if (!existingFiles.Contains(GlobalConst.LOCK_FILE))
+                // Versuche Lockfile direkt zu lesen
+                byte[]? lockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
+                
+                if (lockData == null)
                 {
                     // ========== REMOTE LOCK VERSCHWUNDEN ==========
                     // Wenn es vorher da war → Cleanup durchführen
@@ -179,8 +178,7 @@ namespace LRCatalogSync.Core
                     return 1; // Kein Lock vorhanden
                 }
 
-                // ========== LOCKFILE INHALT LESEN UND PRÜFEN ==========
-                byte[]? lockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
+                // ========== LOCKFILE INHALT PRÜFEN ==========
                 if (lockData == null)
                 {
                     Log.Error("LockManager: Remote Lock-Datei konnte nicht gelesen werden");
@@ -226,7 +224,7 @@ namespace LRCatalogSync.Core
                     Log.Debug("LockManager: Remote Lock ist DOWNLOAD - kein Lightroom-Lock nötig");
                 }
                 
-                Log.Debug($"LockManager: Remote Lock von anderem Client aktiv ({lockAge.TotalMinutes:F1} min alt, {direction}). Warte auf Freigabe...");
+                Log.Notice($"LockManager: Remote Lock von anderem Client aktiv ({lockAge.TotalMinutes:F1} min alt, {direction}). Warte auf Freigabe...");
                 trayManager.UpdateStatus("RemoteLockfile");
                 wasRemoteLockPresent = true; // Merken dass wir ein aktives Remote Lock haben
                 return 2; // Lock aktiv und aktuell

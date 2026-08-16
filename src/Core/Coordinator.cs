@@ -53,16 +53,6 @@ namespace LRCatalogSync.Core
                     return;
                 }
 
-                // ========== PRÜFUNG: LIGHTROOM LÄUFT? ==========
-                // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
-                // Wenn ja überspringe Backup und Katalog-Sync, zeige roten Status an
-                if (IsLightroomRunning(config))
-                {
-                    Log.Debug("Coordinator: Lightroom läuft - Backup und Katalog-Sync übersprungen");
-                    trayManager.UpdateStatus("Lockfile");
-                    return;
-                }
-
                 // ========== PRÜFUNG: Ob ein anderer LRCatalogSync läuft (Anderer Rechner) ==========
                 // Remote Lockfile vom Samba-Server prüfen
                 // Rückgabewerte: 0=Fehler, 1=Kein Lock, 2=Lock aktiv, 3=Lock veraltet
@@ -71,6 +61,16 @@ namespace LRCatalogSync.Core
                 // Wenn Lockfile erkannt, Fehlerhaft oder veraltet ist, dann Zyklus überspringen und roten Status anzeigen
                 if (remoteLockStatus != 1)
                 {
+                    return;
+                }
+
+                // ========== PRÜFUNG: LIGHTROOM LÄUFT? ==========
+                // Prüfe ob Lightroom geöffnet ist (Lock-Dateien erkennen)
+                // Wenn ja überspringe Backup und Katalog-Sync, zeige roten Status an
+                if (IsLightroomRunning(config))
+                {
+                    Log.Debug("Coordinator: Lightroom läuft - Backup und Katalog-Sync übersprungen");
+                    trayManager.UpdateStatus("Lockfile");
                     return;
                 }
 
