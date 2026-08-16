@@ -363,14 +363,16 @@ namespace LRCatalogSync.Core
                                 Log.Debug($"LockManager: Remote Lock-Datei gelöscht via SMB");
                             }
                         }
+                        else
+                        {
+                            Log.Error($"LockManager: Keine SMB-Verbindung, Remote Lock wurde nicht gelöscht");
+                        }
                     }
                     catch (Exception ex)
                     {
                         Log.Error($"LockManager: Fehler beim Löschen der remote Lock-Datei: {ex.Message}");
                     }
                 }
-                
-                Log.Notice($"LockManager: Alle Locks freigegeben (SyncGuid: {SyncGuid})");
             }
             catch (Exception ex)
             {

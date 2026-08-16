@@ -85,7 +85,6 @@ namespace LRCatalogSync.Core
                         config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
                         Log.SetLogLevel(config.LogLevel);
                         Log.Info("Config: Einstellungen aktualisiert");
-                        trayManager.UpdateStatus("Standby");
                     }
                 }
             };

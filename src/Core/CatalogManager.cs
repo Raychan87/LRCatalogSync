@@ -9,6 +9,7 @@ namespace LRCatalogSync.Core
     // Führt sequenziell Backup, rclone sync und Cleanup aus
     public static class CatalogManager
     {
+        private static bool hasError = false;  // Flag für Fehler während des Syncs
         // Enum für Sync-Richtung
         private enum SyncDirection
         {
@@ -24,10 +25,11 @@ namespace LRCatalogSync.Core
         // Phase 2: Lock akquirieren (NUR bei Upload!)
         // Phase 3: rclone sync ausführen (Upload oder Download)
         // Phase 4: Cleanup (IMMER im finally!)
-        public static void RunCatalogSync(AppConfig config, TrayManager trayManager)
+        public static bool RunCatalogSync(AppConfig config, TrayManager trayManager)
         {
             LockManager? lockManager = null;
             SyncDirection syncDirection = SyncDirection.None;
+            hasError = false;
 
             try
             {
@@ -41,20 +43,20 @@ namespace LRCatalogSync.Core
                 if (syncDirection == SyncDirection.None)
                 {
                     Log.Debug("CatalogManager: Katalog ist bereits synchron (kein Sync nötig)");
-                    trayManager.UpdateStatus("Standby");  // 🟢 Grün
-                    return;
+                    return true;
                 }
                 
                 Log.Debug($"CatalogManager: Sync-Richtung erkannt: {syncDirection}");
                 
                 // ========== PHASE 2: LOCK AKQUIRIEREN ==========
-                Log.Debug("CatalogManager: Akquiere Locks");
+                Log.Debug("CatalogManager: setze Lockfiles");
                 lockManager = new LockManager(config);
                 if (!lockManager.AcquireLocks(config))
                 {
-                    Log.Error("CatalogManager: Konnte Locks nicht akquirieren, breche Sync ab");
-                    trayManager.UpdateStatus("Standby");  // 🟢 Grün
-                    return;
+                    Log.Error("CatalogManager: Konnte Locks nicht setzen, breche Sync ab");
+                    trayManager.UpdateStatus("NoSamba");  // 🔴 Rot
+                    hasError = true;
+                    return false;
                 }
 
                 // Erstelle Lightroom-Lock-Datei um Lightroom zu blockieren
@@ -75,11 +77,14 @@ namespace LRCatalogSync.Core
                 
                 // ========== PHASE 4: CLEANUP ==========
                 Log.Debug("CatalogManager: Cleanup - Locks freigeben");
+                return true;
             }
             catch (Exception ex)
             {
+                hasError = true;
                 Log.Error($"CatalogManager: Fehler: {ex.Message}");
                 trayManager.UpdateStatus("Error");  // 🔴 Rot
+                return false;
             }
             finally
             {
@@ -88,10 +93,16 @@ namespace LRCatalogSync.Core
                 
                 // Lightroom-Lock-Dateien löschen (nur die von uns erstellten)
                 CleanupLightroomLocks(config);
-                
-                // Tray-Status zurücksetzen
-                trayManager.UpdateStatus("Standby");  // 🟢 Grün
-                Log.Debug("CatalogManager: Sync abgeschlossen");
+
+                if (hasError)
+                {
+                    Log.Debug("CatalogManager: mit Fehler abgebrochen");
+                }
+                else
+                {
+                    trayManager.UpdateStatus("Standby");  // 🟢 Grün
+                    Log.Debug("CatalogManager: Sync erfolgreich abgeschlossen");
+                }
             }
         }
         
@@ -122,7 +133,6 @@ namespace LRCatalogSync.Core
             }
         }
         
-        // geprüft!! 2026.07.05
         // Prüft die Sync-Richtung basierend auf Änderungsdatum (via rclone lsl)
         // Vergleicht die letzte Änderungszeit von lokalem und remote Katalog
         private static SyncDirection CheckSyncDirection(AppConfig config)

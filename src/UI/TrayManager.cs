@@ -8,6 +8,7 @@ namespace LRCatalogSync.UI
         private NotifyIcon trayIcon;                           // Tray-Icon in der Taskleiste
         private Icon iconGreen;                                 // Status: Standby
         private Icon iconRed;                                   // Status: Fehler
+        private Icon iconOrange;                               // Status: Syncing
         private Icon iconYellow;                                // Status: Syncing
         private Icon iconBlue;                                  // Status: Lockfile erkannt
         private Icon iconWhite;                                 // Status: Keine Samba-Verbindung
@@ -23,7 +24,8 @@ namespace LRCatalogSync.UI
             // Erstelle farbige Kreisicons für verschiedene Status
             iconGreen = CreateColoredIcon(Color.Green);   // Standby
             iconRed = CreateColoredIcon(Color.Red);       // Fehler
-            iconYellow = CreateColoredIcon(Color.Orange); // Syncing
+            iconOrange = CreateColoredIcon(Color.Orange); // Syncing
+            iconYellow = CreateColoredIcon(Color.Yellow); // Syncing
             iconBlue = CreateColoredIcon(Color.Blue);     // Lockfile erkannt
             iconWhite = CreateColoredIcon(Color.White);   // Keine Samba-Verbindung
 
@@ -77,35 +79,39 @@ namespace LRCatalogSync.UI
             {
                 case "NoCfg":
                     trayIcon.Icon = iconWhite;
-                    trayIcon.Text = "LR Catalog Sync - Configurationsdatei fehlt";
+                    trayIcon.Text = "LRCatSync: Konfigurationsdateien fehlen!";
                     break;
                 case "Standby":
                     trayIcon.Icon = iconGreen;
-                    trayIcon.Text = "LR Catalog Sync - Warte auf Änderungen";
+                    trayIcon.Text = "LRCatSync: wartet auf Änderungen...";
                     break;
                 case "BSyncing":
-                    trayIcon.Icon = iconYellow;
-                    trayIcon.Text = "LR Catalog Sync - Synchronisiere Backups";
+                    trayIcon.Icon = iconOrange;
+                    trayIcon.Text = "LRCatSync: synchronisiere Lightroom Sicherungsordner.";
                     break;
                 case "LSyncing":
                     trayIcon.Icon = iconYellow;
-                    trayIcon.Text = "LR Catalog Sync - Synchronisiere Katalog";
-                    break;   
-                case "rclone":
+                    trayIcon.Text = "LRCatSync: synchronisiere Lightroom Katalog.";
+                    break;
+                case "RcloneCfg":
                     trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - rclone Fehler";
+                    trayIcon.Text = "LRCatSync: rclone Konfigurationsdatei fehlt!";
+                    break;
+                case "RcloneExe":
+                    trayIcon.Icon = iconRed;
+                    trayIcon.Text = "LRCatSync: rclone.exe fehlt!";
                     break;
                 case "Error":
                     trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - Interner Fehler";
+                    trayIcon.Text = "LRCatSync: Interner Programm fehler, bitte Log überprüfen!";
                     break;
                 case "Lockfile":
                     trayIcon.Icon = iconBlue;
-                    trayIcon.Text = "LR Catalog Sync - Lightroom Lockfile erkannt";
+                    trayIcon.Text = "LRCatSync: Lightroom Classic ist aktiv.";
                     break;
                 case "NoSamba":
                     trayIcon.Icon = iconRed;
-                    trayIcon.Text = "LR Catalog Sync - Keine Verbindung zum Samba Server";
+                    trayIcon.Text = "LRCatSync: Keine Verbindung zum Samba Server!";
                     break;
             }
         }

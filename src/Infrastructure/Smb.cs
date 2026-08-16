@@ -630,7 +630,7 @@ public sealed class SMBConnectionManager
 
         if (!_client.Connect(serverIP))
         {
-            Log.Debug($"SMB: TCP-Verbindung zu {serverIP} fehlgeschlagen.");
+            Log.Error($"SMB: TCP-Verbindung zu {serverIP} fehlgeschlagen.");
             NotifyTrayStatus("NoSamba");
             return false;
         }

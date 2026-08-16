@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 
 using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, GlobalData
@@ -12,7 +13,7 @@ namespace LRCatalogSync.Core
         // Führt Backup-Sync durch (rclone bisync)
         // config: App-Konfiguration
         // remoteFullPath: Remote-Pfad
-        public static void SyncBackups(AppConfig config, string remoteFullPath)
+        public static bool SyncBackups(AppConfig config, string remoteFullPath)
         {
             try
             {
@@ -44,10 +45,10 @@ namespace LRCatalogSync.Core
                 using (var p = Process.Start(psi))
                 {
                     if (p == null)
-                        return;
+                        return false;
 
                     p.WaitForExit(); // Warte bis Prozess beendet ist
-                    
+
                     // ========== FEHLERBEHANDLUNG FÜR BISYNC ==========
                     // Prüfe ob Fehler "cannot find prior Path1 or Path2 listings" auftrat
                     if (p.ExitCode != 0)
@@ -57,12 +58,12 @@ namespace LRCatalogSync.Core
                         if (lines != null)
                         {
                             string logContent = string.Join("\n", lines);
-                            
+
                             // Prüfe auf spezifischen Fehler
                             if (logContent.Contains("cannot find prior Path1 or Path2 listings"))
                             {
                                 Log.Debug("BackupManager: Bisync-Fehler erkannt, starte mit --resync neu");
-                                
+
                                 // Erstelle neuen ProcessStartInfo mit --resync
                                 var resyncPsi = new ProcessStartInfo
                                 {
@@ -73,29 +74,30 @@ namespace LRCatalogSync.Core
                                     RedirectStandardError = true,
                                     CreateNoWindow = true
                                 };
-                                
+
                                 // Führe resync aus
                                 using (var resyncProc = Process.Start(resyncPsi))
                                 {
-                                    if (resyncProc != null)
+                                    if (resyncProc == null)
+                                        return false;
+
+                                    resyncProc.WaitForExit();
+
+                                    // Logge Ergebnis
+                                    if (resyncProc.ExitCode == 0)
                                     {
-                                        resyncProc.WaitForExit();
-                                        
-                                        // Logge Ergebnis
-                                        if (resyncProc.ExitCode == 0)
-                                        {
-                                            Log.Debug("BackupManager: Bisync mit --resync erfolgreich");
-                                        }
-                                        else
-                                        {
-                                            Log.Error($"BackupManager: Bisync mit --resync fehlgeschlagen (ExitCode: {resyncProc.ExitCode})");
-                                        }
+                                        Log.Debug("BackupManager: Bisync mit --resync erfolgreich");
+                                        return true;
                                     }
+
+                                    Log.Error($"BackupManager: Bisync mit --resync fehlgeschlagen (ExitCode: {resyncProc.ExitCode})");
+                                    return false;
                                 }
-                                
-                                return; // Nach resync beenden
                             }
                         }
+
+                        Log.Error($"BackupManager: Bisync fehlgeschlagen (ExitCode: {p.ExitCode})");
+                        return false;
                     }
                 }
 
@@ -105,10 +107,12 @@ namespace LRCatalogSync.Core
 
                 // ========== LOG-EINTRAG: ENDE ==========
                 Log.Debug("BackupManager: abgeschlossen");
+                return true;
             }
             catch (Exception ex)
             {
                 Log.Error($"BackupManager: {ex.Message}");
+                return false;
             }
         }
 
@@ -117,7 +121,7 @@ namespace LRCatalogSync.Core
         /// Aktualisiert Tray-Status.
         /// config: App-Konfiguration mit Pfaden und Einstellungen
         /// trayManager: TrayManager für Status-Updates (Syncing/Standby/Error)
-        public static void RunBackupProcess(AppConfig config, TrayManager trayManager)
+        public static bool RunBackupProcess(AppConfig config, TrayManager trayManager)
         {
             try
             {
@@ -129,18 +133,24 @@ namespace LRCatalogSync.Core
                 // Setze Tray auf "Syncing" und starte Sync
                 trayManager.UpdateStatus("BSyncing");
 
-                // Führe Sync durch
-                SyncBackups(config, remoteFullPath);
+                // Führe Sync durch und verwende das Ergebnis für den Erfolg/Fehler
+                bool syncSucceeded = SyncBackups(config, remoteFullPath);
+
+                if (syncSucceeded)
+                {
+                    trayManager.UpdateStatus("Standby");
+                    return true;
+                }else
+                {
+                    trayManager.UpdateStatus("Error");
+                    return false;
+                }
             }
             catch (Exception ex)
             {
                 Log.Error($"BackupManager: {ex.Message}");
                 trayManager.UpdateStatus("Error");
-            }
-            finally
-            {
-                // Nach Backup immer zu "Standby" zurücksetzen
-                trayManager.UpdateStatus("Standby");
+                return false;
             }
         }
 
