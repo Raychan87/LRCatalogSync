@@ -281,7 +281,7 @@ namespace LRCatalogSync.Core
             try
             {
                 // Schreibe Sync-Info in Lock-Datei (Lightroom ignoriert Inhalt, prüft nur Existenz)
-                File.WriteAllText(config.CatalogLockFile, $"LRCatSync={DateTime.Now:yyyy-MM-dd HH:mm:ss}\nSyncGuid={Guid.NewGuid():N}");
+                File.WriteAllText(config.CatalogLockFile, $"LRCatSync={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}\nSyncGuid={Guid.NewGuid():N}");
                 
                 Log.Debug($"CatalogManager: Lightroom-Lock erstellt: {config.CatalogLockFile}");
             }
@@ -297,7 +297,7 @@ namespace LRCatalogSync.Core
         {
             try
             {
-                DateTime syncStartTime = DateTime.Now;                             
+                DateTime syncStartTime = DateTime.UtcNow;                             
                 int transferredFiles = 0;
                 long transferredBytes = 0;    
                 string sourcePath, destPath, copyBackupPath, copySourcePath;               
@@ -510,7 +510,7 @@ namespace LRCatalogSync.Core
                         transferredFiles = stats.Files;
                         transferredBytes = stats.Bytes;
                         
-                        TimeSpan duration = DateTime.Now - syncStartTime;
+                        TimeSpan duration = DateTime.UtcNow - syncStartTime;
                         
                         Log.Debug($"CatalogManager: rclone {direction.ToString().ToLower()} erfolgreich");
                         Log.Debug($"CatalogManager: Transfer-Statistiken:");

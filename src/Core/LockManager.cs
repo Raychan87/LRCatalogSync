@@ -45,7 +45,7 @@ namespace LRCatalogSync.Core
                 if (File.Exists(config.SyncLocalLockFile))
                 {
                     FileInfo lockFile = new FileInfo(config.SyncLocalLockFile);
-                    TimeSpan age = DateTime.Now - lockFile.LastWriteTime;
+                    TimeSpan age = DateTime.UtcNow - lockFile.LastWriteTimeUtc;
                     
                     if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
                     {
@@ -77,7 +77,7 @@ namespace LRCatalogSync.Core
                         // Parse Timestamp aus Lock-Datei
                         if (TryParseLockTimestampStatic(lockContent, out DateTime lockTimestamp))
                         {
-                            TimeSpan age = DateTime.Now - lockTimestamp;
+                            TimeSpan age = DateTime.UtcNow - lockTimestamp;
                             
                             if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
                             {
@@ -320,7 +320,7 @@ namespace LRCatalogSync.Core
                 }
 
                 // Erstelle remote Lock-Datei via SMB mit Direction Information
-                string lockContentNew = $"SyncGuid={SyncGuid}\nDirection={syncDirection}\nTimestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                string lockContentNew = $"SyncGuid={SyncGuid}\nDirection={syncDirection}\nTimestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
                 byte[] lockBytes = Encoding.UTF8.GetBytes(lockContentNew);
                 
                 if (!SMBConnectionManager.Instance.WriteFile(GlobalConst.LOCK_FILE, lockBytes))
@@ -337,7 +337,7 @@ namespace LRCatalogSync.Core
                 {
                     // Prüfe ob Lock veraltet ist (älter als SYNC_LOCK_TIMEOUT_MIN Minuten)
                     FileInfo lockInfo = new FileInfo(config.SyncLocalLockFile);
-                    if (lockInfo.LastWriteTime.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.Now)
+                    if (lockInfo.LastWriteTimeUtc.AddMinutes(GlobalConst.SYNC_LOCK_TIMEOUT_MIN) < DateTime.UtcNow)
                     {
                         Log.Debug($"LockManager: veraltete lokale Lock File erkannt, überschreibe {config.SyncLocalLockFile}");
                         File.Delete(config.SyncLocalLockFile);
@@ -356,7 +356,7 @@ namespace LRCatalogSync.Core
                 // WICHTIG: StreamWriter disposed nicht den underlying Stream!
                 var writer = new StreamWriter(_localLockStream);
                 writer.WriteLine($"SyncGuid={SyncGuid}");
-                writer.WriteLine($"Timestamp={DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                writer.WriteLine($"Timestamp={DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
                 writer.Flush();
                 writer.Dispose(); // Nur Writer disposed, NICHT den underlying Stream!
                 
