@@ -8,6 +8,7 @@ Das Programm erkennt, wenn Lightroom Classic läuft, und verzichtet dann auf den
 Es synchronisiert alle vom Lightroom Katalog benötigten Hilfsdateien.
 LRCatalogSync ist dafür gedacht, Lightroom Classic auf mehreren Rechnern zu betreiben und diese über ein NAS mit Samba zu synchronisieren.
 Es zeigt über ein Symbol im Traymenü den Status des Programms an und kann im Autostart hinterlegt werden.
+Es blockiert auch den Lightroom katalog, wenn ein gerade ein Sync vom eigenen Rechner statt findet oder ein anderer Rechner gerade auf dem Samba Share eine neue Lightroom version hochlädt, damit die aktuelle Version wieder heruntergeladen kann.
 
 ## Funktionsweise
 
@@ -28,10 +29,10 @@ Das Programm erkennt automatisch, wenn Lightroom geöffnet ist, und verzichtet d
 - `*.lrcat-shm` – Shared Memory Segment
 - `*.lrcat-wal` – Write-Ahead Log
 
-Diese Dateien werden von Lightroom beim Öffnen des Katalogs erstellt und beim Schließen wieder gelöscht.
+Diese Dateien werden von Lightroom Classic beim Öffnen des Katalogs erstellt und beim Schließen wieder gelöscht.
 
 ## Voraussetzungen
-- Windows 8.1 + (empfohlen 10/11)
+- ab Windows 8.1
 - **rclone** (https://rclone.org)
 
 ## Installation
@@ -64,9 +65,11 @@ Einstellungen werden in `data/config/` gespeichert.
 
 Tray‑Icon‑Status:
 - 🟢 Standby – bereit, kein Sync aktiv
-- 🟡 Syncing – Synchronisiere Backups und Katalog
-- 🔵 Lock – Lightroom ist geöffnet, Sync übersprungen
-- 🔴 Error – Fehler, siehe Log
+- 🟠 Syncing – Synchronisiere Lightroom Sicherungsordner
+- 🟡 Syncing – Synchronisiere Lightroom Katalog 
+- 🔵 Lock – Lightroom Classic ist aktiv und Sync wird blockiert
+- 🟣 Remote Lock – Ein Sync läuft gerade von einen anderen Rechner
+- 🔴 Error/SMB/rclone – Fehler, siehe Log
 - ⚪ Error – Konfigurationsdatei fehlt
 
 Logs finden Sie unter `data/logs/`.
@@ -82,12 +85,12 @@ Logs finden Sie unter `data/logs/`.
 - Multilanguage (english)
 - Darkmode
 - Programm Icon
-- Transparente und Konstante Beispieltexte im Einstellungsmenü
+- Wenn Lightroom auf Rechner A läuft, sollte LRCatSync verhindern, das Lightroom auf Rechner B gestartet werden kann.
 
 ## Ressourcen
 - GitHub: https://github.com/Raychan87/LRCatalogSync
 - rclone: https://rclone.org
 - Lightroom Classic: https://adobe.com/products/lightroom
 
-*Version **0.9.5-beta** – Stand: August 2026*
+*Version **0.9.7-beta** – Stand: August 2026*
 

@@ -64,13 +64,13 @@ namespace LRCatalogSync.Core
             var menu = new ContextMenuStrip();
 
             // ========== MENÜ-EINTRAG: Status (nur anzeigen) ==========
-            var statusItem = new ToolStripMenuItem("Status: Standby") 
-            { 
-                Enabled = false, 
-                Name = "statusItem" 
-            };
-            menu.Items.Add(statusItem);
-            menu.Items.Add(new ToolStripSeparator());
+//            var statusItem = new ToolStripMenuItem("Status: Standby") 
+//            { 
+//                Enabled = false, 
+//                Name = "statusItem" 
+//            };
+//            menu.Items.Add(statusItem);
+//            menu.Items.Add(new ToolStripSeparator());
 
             // ========== MENÜ-EINTRAG: Einstellungen öffnen ==========
             var settingsItem = new ToolStripMenuItem("Einstellungen");

@@ -303,11 +303,11 @@ namespace LRCatalogSync.Core
 
                 // ========== REMOTE LOCK AKQUIRIEREN ==========
                 // Stelle SMB-Verbindung her
-//                if (!SMBConnectionManager.Instance.EnsureConnected(config))
-//                {
-//                    Log.Error($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
-//                    return false;
-//                }                
+               if (!SMBConnectionManager.Instance.EnsureConnected(config))
+                {
+                    Log.Error($"LockManager: SMB-Verbindung fehlgeschlagen, kein Remote-Lock möglich");
+                    return false;
+                }
 
                 int remoteLockStatus = CheckRemoteLock(config, trayManager);
                 
