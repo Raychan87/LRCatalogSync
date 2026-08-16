@@ -63,6 +63,17 @@ namespace LRCatalogSync.Core
                     return;
                 }
 
+                // ========== PRÜFUNG: Ob ein anderer LRCatalogSync läuft (Anderer Rechner) ==========
+                // Remote Lockfile vom Samba-Server prüfen
+                // Rückgabewerte: 0=Fehler, 1=Kein Lock, 2=Lock aktiv, 3=Lock veraltet
+                int remoteLockStatus = LockManager.CheckRemoteLock(config, trayManager);
+                
+                // Wenn Lockfile erkannt, Fehlerhaft oder veraltet ist, dann Zyklus überspringen und roten Status anzeigen
+                if (remoteLockStatus != 1)
+                {
+                    return;
+                }
+
                 // ========== PRÜFUNG: BACKUP AKTIV? ==========
                 if (!config.EnableBackups)
                 {

@@ -11,7 +11,7 @@ namespace LRCatalogSync.Core
     {
         private static bool hasError = false;  // Flag für Fehler während des Syncs
         // Enum für Sync-Richtung
-        private enum SyncDirection
+        public enum SyncDirection
         {
             None,      // Keine Änderungen
             Upload,    // Lokal → NAS
@@ -51,7 +51,7 @@ namespace LRCatalogSync.Core
                 // ========== PHASE 2: LOCK AKQUIRIEREN ==========
                 Log.Debug("CatalogManager: setze Lockfiles");
                 lockManager = new LockManager(config);
-                if (!lockManager.AcquireLocks(config))
+                if (!lockManager.AcquireLocks(config, trayManager, syncDirection))
                 {
                     Log.Error("CatalogManager: Konnte Locks nicht setzen, breche Sync ab");
                     trayManager.UpdateStatus("NoSamba");  // 🔴 Rot
@@ -109,7 +109,7 @@ namespace LRCatalogSync.Core
         // geprüft!!
         // Löscht die von uns erstellte Lightroom-Lock-Datei
         // Erkennung NUR am Inhalt: Unsere enthält "LRCatSync=", Lightrooms enthält Prozesspfad
-        private static void CleanupLightroomLocks(AppConfig config)
+        public static void CleanupLightroomLocks(AppConfig config)
         {
             try
             {
@@ -276,7 +276,7 @@ namespace LRCatalogSync.Core
         // geprüft!!
         // Erstellt Lightroom-Lock-Datei um Lightroom zu blockieren
         // Verwendet festen Namen [Katalogname].lrcat.lock
-        private static void CreateLightroomLock(AppConfig config)
+        public static void CreateLightroomLock(AppConfig config)
         {
             try
             {

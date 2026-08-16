@@ -12,6 +12,7 @@ namespace LRCatalogSync.UI
         private Icon iconYellow;                                // Status: Syncing
         private Icon iconBlue;                                  // Status: Lockfile erkannt
         private Icon iconWhite;                                 // Status: Keine Samba-Verbindung
+        private Icon iconMagenta;                               // Status: Remote Lockfile aktiv
         private readonly SynchronizationContext? uiContext = null!;      // Für Thread-sichere UI-Updates
         // ==================== KONSTRUKTOR ====================
         // Initialisiert TrayManager mit Icons und Tray-Icon
@@ -28,6 +29,7 @@ namespace LRCatalogSync.UI
             iconYellow = CreateColoredIcon(Color.Yellow); // Syncing
             iconBlue = CreateColoredIcon(Color.Blue);     // Lockfile erkannt
             iconWhite = CreateColoredIcon(Color.White);   // Keine Samba-Verbindung
+            iconMagenta = CreateColoredIcon(Color.Magenta); // Remote Lockfile aktiv
 
             // ========== TRAY-ICON EINRICHTEN ==========
             trayIcon = new NotifyIcon()
@@ -113,6 +115,14 @@ namespace LRCatalogSync.UI
                     trayIcon.Icon = iconRed;
                     trayIcon.Text = "LRCatSync: Keine Verbindung zum Samba Server!";
                     break;
+                case "RemoteLockfile":
+                    trayIcon.Icon = iconMagenta;
+                    trayIcon.Text = "LRCatSync: Remote Sync ist aktiv.";
+                    break;
+                case "LockfileErr":
+                    trayIcon.Icon = iconRed;
+                    trayIcon.Text = "LRCatSync: Veralteter Remote Sync Prozess erkannt, bitte Remotepfad prüfen!";
+                    break;
             }
         }
 
@@ -151,6 +161,7 @@ namespace LRCatalogSync.UI
             iconYellow?.Dispose();
             iconBlue?.Dispose();
             iconWhite?.Dispose();
+            iconMagenta?.Dispose();
             
             // Tray-Icon entfernen und freigeben
             trayIcon?.Dispose();
