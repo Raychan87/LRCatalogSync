@@ -2,325 +2,218 @@
 
 > **Entscheidungen (Stand 2026-06-28)**
 >
-> - Unterstützte Sprachen: **Deutsch (de-DE)** als Standard + **Englisch (en-US)**
-> - Die Architektur ist offen für weitere Sprachen (z.B. Französisch, Spanisch) – einfach neue RESX-Dateien hinzufügen.
-> - Sprachwechsel erfolgt per **Neustart** der Anwendung (kein dynamisches Umschalten zur Laufzeit).
-> - Logging bleibt weiterhin auf **Deutsch** (keine Lokalisierung der Log-Nachrichten).
+> - Unterstützte Sprachen: **Deutsch (de)** als Standard/Fallback + **Englisch (en)**
+> - Architektur ist offen für weitere Sprachen – neue JSON-Datei hinzufügen genügt
+> - **Dynamischer Sprachwechsel ohne Neustart**
+> - Speicherung als **embedded Resource** in der EXE (passt zu `PublishSingleFile=true`)
+> - Sprachdateien sind **kein** Bestandteil des `data/`-Verzeichnisses und liegen nicht neben der EXE
+> - Logging bleibt weiterhin auf **Deutsch** (keine Lokalisierung der Log-Nachrichten)
+> - Interne Status-Identifier (`"Standby"`, `"Error"`, `"Lockfile"`, …) bleiben unverändert
 
 ---
 
-## Architektur-Übersicht
-
-```mermaid
-flowchart TD
-    A["Programmstart"] --> B["Kultur aus Config laden"]
-    B --> C{"Kultur bekannt?<br/>Sonst: Fallback de-DE"}
-    C -- "Ja" --> D["CultureInfo setzen<br/>(Thread.CurrentThread.CurrentUICulture)"]
-    C -- "Nein" --> E["Fallback: de-DE"]
-    D --> F["ResourceManager initialisieren"]
-    E --> F
-    F --> G["UI aufbauen:<br/>SettingsForm + Tray"]
-    G --> H{"Sprache in Settings<br/>geändert?"}
-    H -- "Nein" --> I["Anwendung läuft weiter"]
-    H -- "Ja" --> J["Sprache in Config speichern"]
-    J --> K["Anwendung neustarten<br/>(Application.Restart)"]
-    K -.-> A
-```
-
-**Alternativ als kompakte Text-Darstellung (falls Mermaid nicht gerendert wird):**
+## 1. Architektur-Übersicht
 
 ```
-[Programmstart]
-       ↓
-[Kultur aus Config laden]
-       ↓
-<Kultur bekannt?> ── Nein → [Fallback: de-DE] ↘
-       ↓                                          \
-       Ja                                         /
-       ↓                                        ↙
-[CultureInfo setzen]                         ─→ ⤓
-       ↓                                        ↓
-[ResourceManager initialisieren] ◄───────────────┘
-       ↓
-[Alle UI-Strings über ResourceManager laden]
-       ↓
-[UI aufbauen: SettingsForm + Tray]
-       ↓
-<Sprache in Settings geändert?>
-   ├── Nein → [Anwendung läuft weiter] → (bleibt im Betrieb)
-   └── Ja → [Sprache in Config speichern]
-                      ↓
-                [Anwendung neustarten]
-                      ↓
-                  zurück zum Start
-```
+┌──────────────────────────────────────────────────────────────┐
+│  Build-Zeit                                                 │
+│  ──────────                                                  │
+│  Lang/de.json  ──► EmbeddedResource  ──► Assembly in .EXE    │
+│  Lang/en.json  ──► EmbeddedResource  ──► Assembly in .EXE    │
+└──────────────────────────────────────────────────────────────┘
 
----
-                    ┌─────────────┐
-                    │ Programmstart│
-                    └──────┬──────┘
-                           ▼
-                ┌────────────────────┐
-                │ Kultur aus Config   │
-                │     laden           │
-                └──────────┬─────────┘
-                           ▼
-                    ┌──────┴──────┐
-                    │ Kultur      │
-                    │ bekannt?    │
-                    └──────┬──────┘
-                   ┌───────┴───────┐
-                   │ Ja            │ Nein
-                   ▼               ▼
-          ┌─────────────┐  ┌─────────────────┐
-          │ CultureInfo  │  │ Fallback: de-DE │
-          │ setzen       │  └─────────────────┘
-          └──────┬───────┘
-                 ▼
-        ┌─────────────────┐
-        │ ResourceManager  │
-        │ initialisieren   │
-        └────────┬─────────┘
-                 ▼
-    ┌──────────────────────────┐
-    │ Alle UI-Strings über      │
-    │ ResourceManager laden     │
-    └────────────┬──────────────┘
-                 ▼
-        ┌─────────────────┐
-        │ UI aufbauen:     │◄────────────────┐
-        │ SettingsForm +   │                 │
-        │ Tray             │                 │
-        └────────┬─────────┘                 │
-                 ▼                           │
-         ┌──────┴──────┐                    │
-         │ Sprache in   │                    │
-         │ Settings     │                    │
-         │ geändert?    │                    │
-         └──────┬──────┘                    │
-           ┌────┴────┐                       │
-           │ Nein    │ Ja                    │
-           ▼         ▼                       │
-    ┌──────────┐  ┌───────────────────┐     │
-    │Anwendung │  │ Sprache in Config  │     │
-    │läuft     │  │ speichern          │     │
-    │weiter    │  └─────────┬─────────┘     │
-    └────▲─────┘            ▼                │
-         │          ┌─────────────────┐      │
-         │          │ Anwendung       │      │
-         └──────────│ neustarten      ├──────┘
-                    └─────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Laufzeit                                                   │
+│  ────────                                                    │
+│  Localizer (Singleton)                                       │
+│    └─ Lädt JSON via Assembly.GetManifestResourceStream()     │
+│    └─ Hält aktuelle Strings im Speicher                      │
+│    └─ Feuert LanguageChanged-Event                           │
+│                                                               │
+│  Abonnenten (= UI-Bereiche):                                 │
+│    ├─ TrayManager    → setzt Tray.Text neu                   │
+│    ├─ SettingsForm   → ruft ApplyLocalization() neu          │
+│    └─ LRCatSync      → baut Menü neu auf                     │
+└──────────────────────────────────────────────────────────────┘
 ```
-
-**Alternativ als kompakte Text-Darstellung (falls das Diagramm oben nicht korrekt angezeigt wird):**
 
 ```
 [Programmstart]
        ↓
-[Kultur aus Config laden]
+[Language aus Config laden]
        ↓
-   <Kultur bekannt?>
-   ├── Ja → [CultureInfo setzen] → [ResourceManager initialisieren]
-   └── Nein → [Fallback: de-DE] → [ResourceManager initialisieren]
+   <Gesetzt?>
+   ├── Nein ──► [System-Sprache prüfen] ──► [Falls unterstützt: übernehmen, sonst de]
+   └── Ja ──► [de / en]
        ↓
-[Alle UI-Strings über ResourceManager laden]
+[Localizer.Load(language)]
        ↓
-[UI aufbauen: SettingsForm + Tray]
+[SettingsForm: ComboBox mit Sprachen füllen]
        ↓
 <Sprache in Settings geändert?>
-   ├── Nein → [Anwendung läuft weiter] → (bleibt im Betrieb)
-   └── Ja → [Sprache in Config speichern] → [Anwendung neustarten] → zurück zum Start
+   ├── Nein  → [Anwendung läuft]
+   └── Ja    → [Localizer.SetLanguage(lang)]
+                    ↓
+              [LanguageChanged-Event]
+                    ↓
+              [Alle UI-Bereiche aktualisieren sich]
+                    ↓
+              [Sprache in Config speichern]
+```
 
 ---
 
-## Schritt-für-Schritt Anleitung
+## 2. Verzeichnisstruktur (Erweiterung)
 
-### Schritt 1: Vorbereitung – String-Inventur erstellen
+```
+src/
+├── Infrastructure/
+│   └── Localization/
+│       ├── Localizer.cs             ← Hauptklasse (Singleton)
+│       ├── LanguageInfo.cs          ← Sprach-Metadaten
+│       └── Lang/
+│           ├── de.json              ← Deutsche Strings
+│           └── en.json              ← Englische Strings
+```
 
-**Ziel:** Alle hartcodierten Texte sammeln, bevor sie ersetzt werden.
-
-1. Eine Tabelle mit drei Spalten anlegen: `Key`, `Deutsch (de-DE)`, `Englisch (en-US)`
-2. Folgende Dateien durchgehen und jeden sichtbaren Text erfassen:
-   - `src/UI/SettingsForm.cs` – Fenster-Titel, Labels, Button-Texte, MessageBox-Meldungen
-   - `src/Core/LRCatSync.cs` – Tray-Menü-Einträge ("Einstellungen", "Beenden")
-   - `src/UI/TrayManager.cs` – Status-Texte ("Standby", "Syncing", "Error", ...)
-3. Pro Eintrag einen eindeutigen Key festlegen (z.B. `btn_save`, `menu_exit`, `status_standby`)
-4. Die Tabelle wird in Schritt 3 als Vorlage für die RESX-Dateien verwendet
-
-**Ergebnis:** Vollständige Liste aller zu lokalisierenden Strings mit Keys.
-
----
-
-### Schritt 2: RESX-Dateien erstellen
-
-**Ziel:** Zentrale Ressourcendateien für alle UI-Texte anlegen.
-
-1. Neuen Ordner `src/Infrastructure/Localization/Resources/` erstellen
-2. Datei `Strings.resx` anlegen – dies ist die **Fallback-Datei** (Deutsch als Standard)
-3. Datei `Strings.en.resx` anlegen – dies ist die **englische Übersetzung**
-4. In beiden Dateien dieselben Keys verwenden (z.B. `btn_save` → "Speichern" / "Save")
-5. Die Reihenfolge der Keys in beiden Dateien identisch halten, damit sie leicht vergleichbar bleiben
-6. Optional: Weitere Sprachen später als `Strings.<culture>.resx` hinzufügen (z.B. `Strings.fr.resx`)
-
-**Wichtig:** Die Fallback-Datei `Strings.resx` MUSS alle Keys enthalten, da sie bei unbekannter Kultur geladen wird.
-
-**Ergebnis:** Zwei RESX-Dateien mit allen UI-Strings.
+Die Dateien werden im `.csproj` als `<EmbeddedResource>` markiert – sie landen damit beim Build in der Assembly und bei `PublishSingleFile=true` in der EXE.
 
 ---
 
-### Schritt 3: Designer-Datei generieren lassen
+## 3. Storage-Form: JSON
 
-**Ziel:** Automatisch eine stark typisierte Zugriffsklasse erzeugen, damit im Code nicht mit Magic-Strings gearbeitet werden muss.
+### 3.1 Aufbau einer Sprachdatei
 
-1. In der `.csproj`-Datei den Eintrag `<Generator>` für die Fallback-RESX-Datei `Strings.resx` hinzufügen
-2. Als Generator `PublicResXFileCodeGenerator` verwenden (erzeugt eine öffentliche, stark typisierte Klasse)
-3. Visual Studio / VS Code generiert daraufhin automatisch eine Datei `Strings.Designer.cs`
-4. Diese enthält eine statische Eigenschaft pro Key, z.B. `Strings.btn_save`
-5. Die Designer-Datei wird automatisch bei jedem Build aktualisiert, wenn sich die RESX-Datei ändert
+Jede Sprache ist eine JSON-Datei mit zwei Sektionen: `meta` (Anzeigename, Code) und `strings` (Key/Value-Paare).
 
-**Ergebnis:** Eine stark typisierte `Strings`-Klasse steht im Namespace zur Verfügung.
+```json
+{
+  "meta": {
+    "code": "de",
+    "display": "Deutsch"
+  },
+  "strings": {
+    "menu_settings": "Einstellungen",
+    "menu_exit": "Beenden",
+    "tray_standby": "wartet auf Änderungen…",
+    "settings_title": "Einstellungen",
+    "label_auto_run": "Automatisch beim Systemstart ausführen",
+    "btn_save": "Speichern",
+    "btn_cancel": "Abbrechen",
+    "msg_link_error": "Link konnte nicht geöffnet werden.",
+    "msg_save_success": "Einstellungen erfolgreich gespeichert!",
+    "msg_rclone_missing": "rclone.exe nicht gefunden!",
+    "msg_no_catalog": "Katalog-Datei fehlt",
+    "msg_remote_sync_active": "Lightroom Classic ist aktiv.",
+    "msg_remote_backup_sync": "synchronisiere Lightroom Sicherungsordner.",
+    "msg_remote_catalog_sync": "synchronisiere Lightroom Katalog.",
+    "msg_no_cfg": "Konfigurationsdateien fehlen!",
+    "msg_no_samba": "Keine Verbindung zum Samba Server!",
+    "msg_rclonerc_missing": "rclone Konfigurationsdatei fehlt!",
+    "msg_rcloneexe_missing": "rclone.exe fehlt!"
+  }
+}
+```
 
----
+### 3.2 Englische Variante (`en.json`)
 
-### Schritt 4: AppConfig um Sprachfeld erweitern
+```json
+{
+  "meta": {
+    "code": "en",
+    "display": "English"
+  },
+  "strings": {
+    "menu_settings": "Settings",
+    "menu_exit": "Exit",
+    "tray_standby": "waiting for changes…",
+    ...
+  }
+}
+```
 
-**Ziel:** Die gewählte Sprache persistieren.
+### 3.3 Namenskonvention für Keys
 
-1. In der Klasse `AppConfig` ein neues Feld `Language` vom Typ `string` hinzufügen
-2. Standardwert auf `"de-DE"` setzen
-3. In der Methode `Load()` das Feld aus der Config-Datei auslesen
-4. In der Methode `Save()` das Feld in die Config-Datei schreiben
-5. Auch in der Standard-Konfiguration (Defaults) den Wert `"de-DE"` hinterlegen
-
-**Ergebnis:** Die Spracheinstellung wird in der Konfigurationsdatei gespeichert und beim nächsten Start wiederhergestellt.
-
----
-
-### Schritt 5: ResourceManager + Kultur-Umschaltung im Programmstart integrieren
-
-**Ziel:** Beim Start der Anwendung die richtige Kultur setzen.
-
-1. In `Program.cs` ganz am Anfang (vor dem Application.Run) die gespeicherte Sprache aus der Config laden
-2. Mit `CultureInfo` die aktuelle UI-Kultur setzen:
-   - `Thread.CurrentThread.CurrentUICulture = new CultureInfo(config.Language)`
-   - `Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture` (für Datumsformate etc.)
-3. Danach wird automatisch die richtige RESX-Datei geladen (de-DE oder en-US)
-4. Falls die gespeicherte Kultur ungültig ist, auf `"de-DE"` zurückfallen (Fallback)
-
-**Wichtig:** Die Kultur MUSS gesetzt werden, BEVOR die UI aufgebaut wird – sonst greift die Umschaltung nicht.
-
-**Ergebnis:** Beim Programmstart wird automatisch die richtige Sprache geladen.
-
----
-
-### Schritt 6: Hartcodierte Strings in SettingsForm ersetzen
-
-**Ziel:** Alle direkten Texte in der UI durch ResourceManager-Aufrufe ersetzen.
-
-1. In der Klasse `SettingsForm` eine Referenz auf den ResourceManager anlegen (Singleton-Muster)
-2. Nacheinander jeden hartcodierten String ersetzen:
-   - Fenstertitel (`this.Text = ...`)
-   - Section-Überschriften ("Lightroom Katalog", "Samba Server Einstellungen")
-   - Label-Texte ("Lokaler Pfad:", "Remote Benutzer:")
-   - Button-Texte ("Speichern", "Abbrechen")
-   - MessageBox-Meldungen ("Link konnte nicht geöffnet werden.")
-3. Für jeden Text den entsprechenden Key aus der RESX-Datei verwenden
-4. MessageBox-Titel ebenfalls lokalisieren (z.B. "Fehler" → "Error")
-
-**Reihenfolge:** Von oben nach unten durch die Datei arbeiten, damit nichts vergessen wird.
-
-**Ergebnis:** Alle sichtbaren Texte in SettingsForm kommen aus den RESX-Dateien.
+- Bereichs-Präfix (`menu_*`, `tray_*`, `settings_*`, `label_*`, `btn_*`, `msg_*`)
+- Snake_case
+- Englischer Basisbezeichner (Sprachneutral)
 
 ---
 
-### Schritt 7: Hartcodierte Strings in TrayManager ersetzen
+## 4. Was wird NICHT übersetzt
 
-**Ziel:** Die Status-Texte des Tray-Icons lokalisieren.
-
-1. Im TrayManager eine Mapping-Tabelle anlegen: Status-Key → übersetzter Text
-2. Statt hartkodierter Strings wie `"Standby"` oder `"Synchronisiere..."` jeweils den ResourceManager verwenden
-3. Besonders wichtig: Die Status-Konstanten (`"Standby"`, `"Syncing"`, `"Error"`) als interne Keys behalten und nur für die Anzeige übersetzen
-4. Dadurch bleibt die Logik sprachunabhängig (die internen Status-Werte bleiben gleich)
-
-**Wichtig:** Die internen Status-Identifier (`"Standby"`, `"Syncing"`, ...) dürfen NICHT übersetzt werden – nur die angezeigten Texte!
-
-**Ergebnis:** Tray-Statusmeldungen werden je nach Sprache angezeigt.
+| Bereich | Grund |
+|---|---|
+| Log-Strings (`Log.Debug/Info/Notic/Error`) | Debugging stabil, einheitlich für Support |
+| Interne Status-Keys (`"Standby"`, `"Error"`, …) | Werden als Schlüssel benutzt, sprachneutral |
+| Fenstertitel `LRCatalogSync v…` | Branding, bleibt |
+| Webseiten-Linkbeschriftungen im SettingsForm | Branding (`GitHub Project`, `© Fototour und Technik`) |
+| Technische Bezeichner | `.lrcat`, `rclone.exe`, `Samba`, ... |
 
 ---
 
-### Schritt 8: Hartcodierte Strings in LRCatSync.cs ersetzen
+## 5. Komponenten-Design
 
-**Ziel:** Die Tray-Menü-Einträge lokalisieren.
+### 5.1 `Localizer.cs` (Singleton)
 
-1. Den Menüeintrag "Einstellungen" durch ResourceManager-Key ersetzen
-2. Den Menüeintrag "Beenden" durch ResourceManager-Key ersetzen
-3. Den Fenstertitel "LRCatalogSync - ..." zusammenbauen aus konstantem Präfix + lokalisiertem Suffix
-4. Auch eventuelle Status-Meldungen wie "Status: Standby" lokalisieren
+**Hauptklasse** - wird einmalig beim Start über `Localizer.Instance` angesprochen.
 
-**Ergebnis:** Das Tray-Kontextmenü ist vollständig lokalisiert.
+**Eigenschaften:**
+- `static Localizer Instance` - Lazy-Thread-Safe-Singleton
+- `IReadOnlyList<LanguageInfo> AvailableLanguages` - Liste der gefundenen Sprachen für ComboBox
+- `string CurrentLanguage` - aktuell aktiver Sprach-Code (`"de"`, `"en"`)
+- `event EventHandler? LanguageChanged` - feuert bei jedem Sprachwechsel
 
----
+**Methoden:**
+- `void Load(string language)` - Sprache aus embedded Resource laden
+- `string Get(string key)` - String abrufen mit Fallback auf Key selbst
+- `void SetLanguage(string language)` - Sprache wechseln + Event feuern
+- `static string GetSystemLanguage()` - Windows-Sprache ermitteln (`"de"`/`"en"`/`null`)
 
-### Schritt 9: Sprachauswahl im SettingsForm hinzufügen
+**Verhalten:**
+- Standard-Sprache und Fallback: `"de"`
+- Lädt beim ersten Zugriff automatisch die aktive Sprache
+- Bei unbekanntem Key -> gibt den Key selbst zurück (kein Crash)
 
-**Ziel:** Dem Benutzer eine Möglichkeit geben, die Sprache zu ändern.
+### 5.2 `LanguageInfo.cs`
 
-1. Im Bereich "Allgemein" der SettingsForm ein neues Steuerelement zur Sprachauswahl hinzufügen:
-   - Option A: Ein Dropdown (`ComboBox`) mit verfügbaren Sprachen
-   - Option B: RadioButtons für jede Sprache
-2. Beim Speichern der Einstellungen den gewählten Wert in die Config schreiben
-3. Nach dem Speichern einen Hinweis anzeigen: "Bitte starten Sie die Anwendung neu, um die Sprache zu wechseln"
-4. Alternativ: Automatischen Neustart der Anwendung anbieten (siehe Schritt 11)
+Record-Klasse für die ComboBox-Befüllung.
 
-**Wichtig:** Da wir uns für Neustart entschieden haben, reicht es, wenn die Änderung nach einem Neustart greift – kein dynamisches Umschalten nötig!
+- `string Code` - Sprachcode (`"de"`, `"en"`)
+- `string DisplayName` - Name in eigener Sprache (`"Deutsch"`, `"English"`)
+- **`override ToString()`** -> liefert `DisplayName`
 
-**Ergebnis:** Der Benutzer kann die Sprache in den Einstellungen wählen.
+### 5.3 Sprachdateien automatisch entdecken
 
----
+Beim Start scannt der Localizer per `Assembly.GetManifestResourceNames()` alle Resourcen mit dem Muster `*.Lang.*.json`. Für eine neue Sprache muss nur die JSON-Datei im `.csproj` als Embedded Resource markiert werden - kein C#-Code-Edit.
 
-### Schritt 10: README-Dokumentation aufteilen
+### 5.4 Sprachwechsel ohne Neustart
 
-**Ziel:** Mehrsprachige Dokumentation bereitstellen.
+`Localizer.SetLanguage(...)` läuft intern:
 
-1. Aktuelle `README.md` umbenennen in `README.de.md` und nach `docs/` verschieben
-2. Neue Root-`README.md` erstellen als Sprachauswahl-Seite:
-   ```
-   🌐 Languages: Deutsch | English
-   ```
-3. Am Anfang der Root-README kurze Projektbeschreibung + Links zu den Übersetzungen
-4. Englische Übersetzung als `README.en.md` im `docs/`-Ordner ablegen
-5. Optional: Weitere Sprachen später analog hinzufügen (`README.fr.md`, etc.)
+1. Lädt die neue Sprachdatei in den Speicher.
+2. Setzt `CurrentLanguage`.
+3. Feuert `LanguageChanged`.
 
-**Ergebnis:** Mehrsprachige README mit Sprachauswahl im Root-Verzeichnis.
+UI-Bereiche abonnieren `LanguageChanged` einmalig beim Start und reagieren selbständig:
 
----
-
-### Schritt 11 (optional): Automatischer Neustart nach Sprachwechsel
-
-**Ziel:** Dem Benutzer den Neustart erleichtern, statt ihn manuell durchführen zu lassen.
-
-1. Nach dem Speichern der neuen Sprache in der Config:
-   - Variante A (empfohlen): Einen Dialog zeigen "Sprache geändert – Anwendung wird neu gestartet" und danach per `Application.Restart()` neu starten
-   - Variante B: Nur einen Hinweis zeigen "Bitte starten Sie die Anwendung neu"
-2. Vor dem Neustart sicherstellen, dass die Config bereits gespeichert wurde
-3. Falls Variante A: Eventuell Kommandozeilenparameter nutzen, um die neue Kultur direkt mitzugeben
-
-**Empfehlung:** Variante A mit `Application.Restart()` – das ist benutzerfreundlich und funktioniert zuverlässig unter .NET.
-
-**Ergebnis:** Nach dem Ändern der Sprache startet die Anwendung automatisch neu und lädt die neue Kultur.
+| Bereich | Reaktion |
+|---|---|
+| `TrayManager` | `tray.Text` wird beim nächsten `UpdateStatus` neu gesetzt |
+| `SettingsForm` | ruft `ApplyLocalization()` neu auf |
+| `LRCatSync.SetupContextMenu()` | Menu wird beim Sprachwechsel neu aufgebaut |
 
 ---
 
-## Checkliste zur Abnahme
+## 6. System-Sprache Auto-Erkennung
 
-Folgende Punkte sollten am Ende alle erfüllt sein:
+Reihenfolge beim ersten Start (kein Wert in `config.Language`):
 
-- [ ] Alle sichtbaren UI-Strings sind in RESX-Dateien ausgelagert
-- [ ] Deutsche Texte sind in `Strings.resx` (Fallback)
-- [ ] Englische Texte sind in `Strings.en.resx`
-- [ ] Die Kultur wird beim Programmstart aus der Config geladen
-- [ ] Sprachauswahl ist im SettingsForm verfügbar
-- [ ] Nach Sprachänderung startet die Anwendung automatisch neu (Variante A aus Schritt 11)
-- [ ] README ist mehrsprachig aufgeteilt (Root + docs/)
-- [ ] Logging bleibt unverändert auf Deutsch
-- [ ] Interne Status-Identifier (`"Standby"`, `"Syncing"`, ...) sind NICHT übersetzt worden
+1. `CultureInfo.CurrentUICulture.TwoLetterISOLanguageName` lesen (z. B. `"de"`, `"en"`, ...).
+2. Prüfen, ob dieser Code in der Liste der unterstützten Sprachen enthalten ist.
+3. Falls ja -> übernehmen.
+4. Falls nein -> Fallback `"de"`.
+
+Umsetzung als `Localizer.GetSystemLanguage()`.
+
+---

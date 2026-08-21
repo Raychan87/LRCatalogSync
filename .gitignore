@@ -430,3 +430,6 @@ FodyWeavers.xsd
 
 # Ignore GitHub workflows and actions
 .github/
+
+# Ignore Github Copilot configuration files
+.copilotignore
