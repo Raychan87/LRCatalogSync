@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 
 using LRCatalogSync.Infrastructure;    // ← für Log, AppConfig, SMBConnectionManager
@@ -33,100 +34,93 @@ namespace LRCatalogSync.Core
             _config = config;
         }
 
-        // ==================== STATIC CLEANUP METHODEN ====================
-        // geprpüft!! 2026.07.18
-        // Bereinigt verwaiste Locks beim Programmstart (Crash-Recovery)
-        // Prüft lokale und remote Lock-Dateien und löscht diese wenn älter als SYNC_LOCK_TIMEOUT_MIN
-        public static void CleanupStaleLocks(AppConfig config)
+        // ==================== CRASH-RECOVERY ====================
+        // Prüft ob ein LRCatSync Crash vorlag 
+        // Remote und Lokal Lock müssen vorhanden sein und SyncGuid muss übereinstimmen
+        // Wenn ja, führt Crash-Recovery ein rclone Sync durch, so wie vor den letzten Crash
+        public static bool CheckRecovery(AppConfig config, TrayManager trayManager)
         {
             try
             {
-                // ========== LOKALE LOCK PRÜFEN ==========
-                if (File.Exists(config.SyncLocalLockFile))
+                // ========== Local Lock ERKENNUNG ==========
+                //Wenn Local Lock vorhanden ist und lese SyncGuid aus
+                if (File.Exists(config.SyncLocalLockFile) && IsCatalogLockOurs(config))
                 {
-                    FileInfo lockFile = new FileInfo(config.SyncLocalLockFile);
-                    TimeSpan age = DateTime.UtcNow - lockFile.LastWriteTimeUtc;
-                    
-                    if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
+                    // Prüfe lokalen Lock auf SyncGuid und speichere es
+                    string localLockContent = File.ReadAllText(config.SyncLocalLockFile);
+                    var localLines = localLockContent.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                    string localSyncGuid = string.Empty;
+                    foreach (var line in localLines)
                     {
-                        // Lock ist älter als Timeout → Crash-Recovery
-                        File.Delete(config.SyncLocalLockFile);
-                        Log.Notice($"LockManager: Verwaiste lokale Lock gelöscht ({age.TotalMinutes:F0} min alt)");
-                    }
-                    else
-                    {
-                        // Lock ist noch aktiv → Info
-                        Log.Notice($"LockManager: Lokale Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
-                    }
-                }
-                
-                // ========== REMOTE LOCK PRÜFEN (via SMB) ==========
-                // Nur versuchen, wenn SMB-Config vollständig ist
-                if (string.IsNullOrEmpty(config.RemoteIP) || string.IsNullOrEmpty(config.SambaUser))
-                {
-                    Log.Debug("LockManager: SMB-Config unvollständig - überspringe Remote-Lock-Prüfung");
-                }
-                else if (SMBConnectionManager.Instance.EnsureConnected(config))
-                {                    
-                    // Prüfe ob Remote-Lock existiert
-                    byte[]? lockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
-                    if (lockData != null)
-                    {
-                        string lockContent = Encoding.UTF8.GetString(lockData);
-                        
-                        // Parse Timestamp aus Lock-Datei
-                        if (TryParseLockTimestampStatic(lockContent, out DateTime lockTimestamp))
+                        if (line.StartsWith("SyncGuid="))
                         {
-                            TimeSpan age = DateTime.UtcNow - lockTimestamp;
-                            
-                            if (age.TotalMinutes > GlobalConst.SYNC_LOCK_TIMEOUT_MIN)
+                            localSyncGuid = line.Substring("SyncGuid=".Length).Trim();
+                            break;
+                        }
+                    }
+
+                    // ========== Remote Lock ERKENNUNG ==========
+                    // Stelle SMB-Verbindung her falls nicht vorhanden
+                    if (SMBConnectionManager.Instance.EnsureConnected(config))
+                    {
+                        byte[]? remoteLockData = SMBConnectionManager.Instance.ReadFile(GlobalConst.LOCK_FILE);
+                        if (remoteLockData != null)
+                        {
+                            // SyncGuid und Direction aus Remote Lock extrahieren
+                            string remoteLockContent = Encoding.UTF8.GetString(remoteLockData);
+                            CatalogManager.SyncDirection direction = ExtractDirection(remoteLockContent);
+                            var remoteLines = remoteLockContent.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                            string remoteSyncGuid = string.Empty;
+                            foreach (var line in remoteLines)
                             {
-                                // Lock ist veraltet → löschen via SMB
-                                if (SMBConnectionManager.Instance.DeleteFile(GlobalConst.LOCK_FILE))
+                                if (line.StartsWith("SyncGuid="))
                                 {
-                                    Log.Notice($"LockManager: Verwaiste Remote-Lock gelöscht ({age.TotalMinutes:F0} min alt)");
+                                    remoteSyncGuid = line.Substring("SyncGuid=".Length).Trim();
+                                    break;
                                 }
+                            }
+                            // Prüfe ob SyncGuids übereinstimmen
+                            if (localSyncGuid != remoteSyncGuid)
+                            {
+                                Log.Error($"LockManager: SyncGuids stimmen nicht überein (Lokal: {localSyncGuid}, Remote: {remoteSyncGuid}) - Crash-Recovery abbruch");
+                                trayManager.UpdateStatus("Error");
+                                return false;
+                            }
+
+                            trayManager.UpdateStatus("CrashRecovery");
+                            Log.Error($"LockManager: LRCatSync Crash erkannt - Recovery gestartet - rclone (Direction: {direction})");
+
+                            // ========== RCLONE SYNC  ==========
+                            bool recoveryOk = CatalogManager.RunRcloneSync(config, direction, false); // false = rclone copy überspringen beim Crash-Recovery
+
+                            if (recoveryOk)
+                            {
+                                // Alle drei Locks nur bei Erfolg bereinigen
+                                try { File.Delete(config.SyncLocalLockFile); } catch { }
+                                CatalogManager.CleanupLightroomLocks(config);
+                                SMBConnectionManager.Instance.DeleteFile(GlobalConst.LOCK_FILE);
+                                Log.Debug("LockManager: Crash-Recovery abgeschlossen - alle Locks bereinigt");
+                                trayManager.UpdateStatus("Standby");
+                                return true;
                             }
                             else
                             {
-                                Log.Notice($"LockManager: Remote Lock existiert noch ({age.TotalMinutes:F0} min alt) - Anderer Client aktiv?");
+                                Log.Error("LockManager: Crash-Recovery rclone fehlgeschlagen - Locks bleiben für erneuten Versuch");
+                                trayManager.UpdateStatus("Error");
+                                return false;
                             }
                         }
                     }
                 }
-                else
-                {
-                    Log.Error("LockManager: Keine SMB-Verbindung möglich, Remote-Lock wurde nicht geprüft");
-                }
             }
             catch (Exception ex)
             {
-                Log.Error($"LockManager: Fehler beim Bereinigen: {ex.Message}");
+                Log.Error($"LockManager: Crash-Recovery rclone fehlgeschlagen: {ex.Message}");
+                trayManager.UpdateStatus("Error");
             }
-        }
-  
-        // geprpüft!! 2026.07.18
-        // Statische Version von TryParseLockTimestamp für CleanupStaleLocks
-        private static bool TryParseLockTimestampStatic(string content, out DateTime timestamp)
-        {
-            timestamp = DateTime.MinValue;
-            try
-            {
-                var lines = content.Split('\n');
-                foreach (var line in lines)
-                {
-                    if (line.StartsWith("Timestamp="))
-                    {
-                        string dateStr = line.Substring("Timestamp=".Length);
-                        if (DateTime.TryParse(dateStr, out timestamp))
-                            return true;
-                    }
-                }
-            }
-            catch { }
             return false;
         }
-
+  
         // ==================== ÖFFENTLICHE METHODEN ====================
         
         // Prüft ob ein Remote Lock von einem anderen Client aktiv ist
@@ -372,7 +366,20 @@ namespace LRCatalogSync.Core
                 return false;
             }
         }
-        
+                
+        // Prüft ob vorhandene Catalog-Lock-Datei von uns erstellt wurde (Crash-Recovery)
+        private static bool IsCatalogLockOurs(AppConfig config)
+        {
+            try
+            {
+                if (!File.Exists(config.CatalogLockFile))
+                    return false;
+                string content = File.ReadAllText(config.CatalogLockFile);
+                return content.StartsWith("LRCatSync=");
+            }
+            catch { return false; }
+        }
+
         // Startet Heartbeat-Thread für regelmäßige Aktualisierung
         public void StartHeartbeat()
         {

@@ -49,7 +49,8 @@ namespace LRCatalogSync.Core
 
             // ========== CRASH-RECOVERY: Verwaiste Locks bereinigen ==========
             // Nur ausführen, wenn Config existiert (sonst keine SMB-Verbindung nötig)
-            LockManager.CleanupStaleLocks(config);
+            if (LockManager.CheckRecovery(config, trayManager))
+                Log.Debug("LRCatSync: Crash-Recovery abgeschlossen - nächster Zyklus startet Sync neu");
 
             // ========== STARTE AUTOMATISCHEN SYNC-ZYKLUS ==========
             // Timer führt alle CATALOG_SYNC_CHECK_INTERVAL Sekunden kompletten Zyklus aus (Backup → Katalog)

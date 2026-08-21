@@ -68,11 +68,11 @@ namespace LRCatalogSync.Core
                 
                 if (syncDirection == SyncDirection.Upload)
                 {
-                    RunRcloneSync(config, SyncDirection.Upload);
+                    RunRcloneSync(config, SyncDirection.Upload, config.EnableRcloneCopy);
                 }
                 else if (syncDirection == SyncDirection.Download)
                 {
-                    RunRcloneSync(config, SyncDirection.Download);
+                    RunRcloneSync(config, SyncDirection.Download, config.EnableRcloneCopy);
                 }
                 
                 // ========== PHASE 4: CLEANUP ==========
@@ -293,7 +293,7 @@ namespace LRCatalogSync.Core
         
         // geprüft!! 2026.07.24
         // Führt rclone sync aus (Upload oder Download) mit dynamischen Excludes
-        private static void RunRcloneSync(AppConfig config, SyncDirection direction)
+        public static bool RunRcloneSync(AppConfig config, SyncDirection direction, bool EnableRcloneCopy)
         {
             try
             {
@@ -321,7 +321,7 @@ namespace LRCatalogSync.Core
                 else
                 {
                     Log.Debug("CatalogManager: Keine Sync-Richtung erkannt, breche ab");
-                    return;
+                    return false;
                 }
                 
                 // ========== Include-Filter  ==========
@@ -342,7 +342,7 @@ namespace LRCatalogSync.Core
                 
                 // ========== RCLONE COPY AUSFÜHREN (Backup) ==========                
                 // Prüfe ob rclone copy aktiviert ist
-                if (!config.EnableRcloneCopy)
+                if (!EnableRcloneCopy)
                 {
                     Log.Debug("CatalogManager: rclone copy ist deaktiviert, überspringe Backup");
                 }
@@ -494,7 +494,7 @@ namespace LRCatalogSync.Core
                 using (var p = Process.Start(psi))
                 {
                     if (p == null)
-                        return;
+                        return false;
                     
                     // Lese Output für Statistiken
                     string output = p.StandardOutput.ReadToEnd();
@@ -530,10 +530,12 @@ namespace LRCatalogSync.Core
                 {
                     SyncPreviewsData(config);
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 Log.Error($"CatalogManager: rclone sync Fehler: {ex.Message}");
+                return false;
             }
         }
         
