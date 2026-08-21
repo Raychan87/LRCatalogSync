@@ -34,7 +34,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -68,7 +68,7 @@ namespace LRCatalogSync.Core
                                 var resyncPsi = new ProcessStartInfo
                                 {
                                     FileName = config.RclonePath,
-                                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --resync",
+                                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.BackupsLocalPath}\" {remoteFullPath} --compare modtime,size --metadata --log-file \"{tempLog}\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT} --resync",
                                     UseShellExecute = false,
                                     RedirectStandardOutput = true,
                                     RedirectStandardError = true,

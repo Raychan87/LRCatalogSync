@@ -209,7 +209,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl \"{GlobalConst.REMOTE_NAME}:{config.CatalogRemoteFile}\"",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" lsl \"{GlobalConst.REMOTE_NAME}:{config.CatalogRemoteFile}\" --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -397,7 +397,7 @@ namespace LRCatalogSync.Core
                     var copyPsi = new ProcessStartInfo
                     {
                         FileName = config.RclonePath,
-                        Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" copy \"{copySourcePath}\" \"{copyBackupPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                        Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" copy \"{copySourcePath}\" \"{copyBackupPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
@@ -441,7 +441,7 @@ namespace LRCatalogSync.Core
                 var deletePsi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" delete \"{destPath}\" {includeArgs} --rmdirs --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" delete \"{destPath}\" {includeArgs} --rmdirs --log-file \"{tempLog}\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -483,7 +483,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" sync \"{sourcePath}\" \"{destPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" sync \"{sourcePath}\" \"{destPath}\" {includeArgs} --log-file \"{tempLog}\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -602,7 +602,7 @@ namespace LRCatalogSync.Core
                 var psi = new ProcessStartInfo
                 {
                     FileName = config.RclonePath,
-                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFile}\" --include \"{config.CatalogName} Previews.lrdata/**\" --log-level {config.LogLevel}",
+                    Arguments = $"--config \"{GlobalData.RcloneConfigPath}\" bisync \"{config.CatalogLocalPath}\" \"{config.CatalogRemoteFile}\" --include \"{config.CatalogName} Previews.lrdata/**\" --log-level {config.LogLevel} --contimeout {GlobalConst.RCLONE_CONNECT_TIMEOUT}",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
