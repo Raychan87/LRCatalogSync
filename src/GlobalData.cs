@@ -19,6 +19,9 @@
         
         // Katalog-Sync Intervall (Sekunden) - Häufigkeit der Prüfzyklen
         public const int CATALOG_SYNC_CHECK_INTERVAL = 30;
+
+        // Rclone-Timeouts (Go-Duration-Format, z.B. "30s")
+        public const string RCLONE_CONNECT_TIMEOUT = "30s";
         
         // Lock-Dateinamen für Synchronisation
         public const string LOCK_FILE = "LRCatSync.lock";
