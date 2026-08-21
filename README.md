@@ -68,6 +68,7 @@ Tray‑Icon‑Status:
 - 🟠 Syncing – Synchronisiere Lightroom Sicherungsordner
 - 🟡 Syncing – Synchronisiere Lightroom Katalog 
 - 🔵 Lock – Lightroom Classic ist aktiv und Sync wird blockiert
+- 🔵 Crash Recovery - Wenn der PC während des Sync neugestartet wurde, wird dieser Recovery Prozess gestartet
 - 🟣 Remote Lock – Ein Sync läuft gerade von einen anderen Rechner
 - 🔴 Error/SMB/rclone – Fehler, siehe Log
 - ⚪ Error – Konfigurationsdatei fehlt
@@ -92,5 +93,5 @@ Logs finden Sie unter `data/logs/`.
 - rclone: https://rclone.org
 - Lightroom Classic: https://adobe.com/products/lightroom
 
-*Version **0.9.7-beta** – Stand: August 2026*
+*Version **0.9.8-beta** – Stand: August 2026*
 
