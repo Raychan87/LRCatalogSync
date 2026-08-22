@@ -28,6 +28,7 @@ namespace LRCatalogSync.UI
         private void SetupControls()
         {
             this.Text = $"LRCatalogSync v{appVersion} - Fototour-und-Technik.de";
+            this.Icon = LoadIcon("LRCatalogSync.Resources.app_icon.ico");
             this.Size = new System.Drawing.Size(510, 650); // Setze die Größe des Formulars (Breite, Höhe)
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -692,6 +693,14 @@ namespace LRCatalogSync.UI
             
             // Fallback auf FileVersion
             return FileVersionInfo.GetVersionInfo(AppContext.BaseDirectory + "LRCatalogSync.exe").ProductVersion ?? "0.0.0.0";
+        }
+
+        private static Icon LoadIcon(string resourceName)
+        {
+            using var stream = typeof(SettingsForm).Assembly.GetManifestResourceStream(resourceName)
+                ?? throw new InvalidOperationException($"Icon-Ressource nicht gefunden: {resourceName}");
+            using var icon = new Icon(stream);
+            return new Icon(icon, icon.Width, icon.Height);
         }
         
         private void LoadSettings()

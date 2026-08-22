@@ -81,11 +81,16 @@ Logs finden Sie unter `data/logs/`.
 - *Kein *.lrcat* gefunden*: Pfad zum Katalog korrekt angeben.
 - *Lock erkannt*: Lightroom läuft, Sync wird automatisch übersprungen.
 
-## ToDo
+## ToDo/Ideen
 
+- Sync Historie
+- Manueller Sync Button
+- Fehlermeldung, wenn der Check-Recovery unklar ist
+- rclone Breitbandlimit??
+- WebDav alternative
+- Update-Checker
 - Multilanguage (english)
 - Darkmode
-- Programm Icon
 - Wenn Lightroom auf Rechner A läuft, sollte LRCatSync verhindern, das Lightroom auf Rechner B gestartet werden kann.
 
 ## Ressourcen
@@ -93,5 +98,5 @@ Logs finden Sie unter `data/logs/`.
 - rclone: https://rclone.org
 - Lightroom Classic: https://adobe.com/products/lightroom
 
-*Version **0.9.8-beta** – Stand: August 2026*
+*Version **0.9.9-beta** – Stand: August 2026*
 
