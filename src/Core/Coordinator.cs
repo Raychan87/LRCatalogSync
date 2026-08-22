@@ -16,7 +16,7 @@ namespace LRCatalogSync.Core
 
         // Führt kompletten Sync-Zyklus aus: Backup → Katalog-Sync
         // Wird vom Timer in LRCatSync aufgerufen
-        public static void RunSyncCycle(AppConfig config, TrayManager trayManager)
+        public static void RunCoordinator(AppConfig config, TrayManager trayManager)
         {
             // Verhindere parallele Ausführung
             lock (cycleLock)

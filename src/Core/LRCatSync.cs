@@ -11,7 +11,7 @@ namespace LRCatalogSync.Core
         // ==================== EIGENSCHAFTEN ====================
         private AppConfig config;                           // Konfigurationsdaten laden/speichern
         private TrayManager trayManager;                    // Manager für Tray-Icon und Status
-        private System.Threading.Timer? syncCycleTimer;     // Timer für Sync-Zyklus (Backup + Katalog)
+        private System.Threading.Timer? MainCycleTimer;     // Timer für Sync-Zyklus (Backup + Katalog)
 
         // ==================== KONSTRUKTOR - HAUPTEINSTIEGSPUNKT ====================
         // Initialisiert die Anwendung: Logs, Config, Tray und Menü
@@ -52,10 +52,9 @@ namespace LRCatalogSync.Core
             if (LockManager.CheckRecovery(config, trayManager))
                 Log.Debug("LRCatSync: Crash-Recovery abgeschlossen - nächster Zyklus startet Sync neu");
 
-            // ========== STARTE AUTOMATISCHEN SYNC-ZYKLUS ==========
-            // Timer führt alle CATALOG_SYNC_CHECK_INTERVAL Sekunden kompletten Zyklus aus (Backup → Katalog)
-            Log.Debug($"LRCatSync: Starte Sync-Zyklus ({GlobalConst.CATALOG_SYNC_CHECK_INTERVAL}sec Intervall)");
-            syncCycleTimer = new System.Threading.Timer(SyncCycleCallback, null, 0, GlobalConst.CATALOG_SYNC_CHECK_INTERVAL * 1000);
+            // ==================== STARTE SYNC-ZYKLUS ====================
+            // Timer führt alle GlobalCycleInterval Sekunden kompletten Zyklus aus (Backup → Katalog)            
+            MainCycle();
         }
 
         // ==================== MENÜ-SETUP ====================
@@ -82,9 +81,10 @@ namespace LRCatalogSync.Core
                 {
                     if (form.ShowDialog() == DialogResult.OK)
                     {
-                        // Config neu laden (wurde in SettingsForm gespeichert)
+                        // Config neu laden (wenn in SettingsForm gespeichert wurde)
                         config = AppConfig.LoadFromFile(GlobalData.LRCatSyncConfigPath, GlobalData.BaseDir);
                         Log.SetLogLevel(config.LogLevel);
+                        MainCycle();
                         Log.Info("Config: Einstellungen aktualisiert");
                     }
                 }
@@ -107,13 +107,21 @@ namespace LRCatalogSync.Core
             trayManager.GetTrayIcon().ContextMenuStrip = menu;
         }
 
-        // ==================== TIMER-CALLBACK FÜR AUTOMATISCHE ÜBERPRÜFUNG ====================
-        // Timer-Callback: Führt kompletten Sync-Zyklus aus (Backup → Katalog-Sync)
-        // Wird alle CATALOG_SYNC_CHECK_INTERVAL Sekunden aufgerufen
-        private void SyncCycleCallback(object? state)
+        // ==================== TIMER-CALLBACK FÜR COORDINATOR ====================
+        // Ein Zyklus des Programms: Backup → Katalog-Sync
+        private void MainCycleCallback(object? state)
         {
             // Coordinator übernimmt die sequenzielle Ausführung
-            Coordinator.RunSyncCycle(config, trayManager);
+            Coordinator.RunCoordinator(config, trayManager);
+        }
+        // ==================== STARTE SYNC-ZYKLUS ====================
+        private void MainCycle()
+        {
+            // Stoppe vorherigen Timer (falls vorhanden) und starte neuen Timer mit aktuellem Intervall
+            MainCycleTimer?.Dispose();    
+            Log.Debug($"LRCatSync: Starte Sync-Zyklus ({config.GlobalCycleInterval}sec Intervall)");   
+            // Timer führt alle GlobalCycleInterval Sekunden kompletten Zyklus aus (Backup → Katalog)     
+            MainCycleTimer = new System.Threading.Timer(MainCycleCallback, null, 0, config.GlobalCycleInterval * 1000);
         }
 
         // ==================== BEREINIGUNG ====================
@@ -123,9 +131,9 @@ namespace LRCatalogSync.Core
             if (disposing)
             {
                 // Stoppe und dispose Timer
-                if (syncCycleTimer != null)
+                if (MainCycleTimer != null)
                 {
-                    syncCycleTimer.Dispose();
+                    MainCycleTimer.Dispose();
                     Log.Debug("LRCatSync:Zyklus Timer beendet");
                 }
 

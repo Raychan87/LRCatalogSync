@@ -11,26 +11,6 @@ namespace LRCatalogSync.UI
         private AppConfig config;
         private string originalPasswordRclone; // Speichert das ursprüngliche rclone-verschlüsselte Passwort
         private string originalPasswordAes; // Speichert das ursprüngliche AES-verschlüsselte Passwort
-        private static string GetApplicationVersion() //Aus Assembly-Informationen auslesen
-        {
-            // Lese die Version direkt aus der Assembly Information
-            var assembly = Assembly.GetExecutingAssembly();
-            var versionAttr = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>();
-            if (versionAttr?.InformationalVersion != null)
-            {
-                // Entferne den Hash-Teil nach dem "+"
-                string version = versionAttr.InformationalVersion;
-                int plusIndex = version.IndexOf('+');
-                if (plusIndex > 0)
-                {
-                    version = version.Substring(0, plusIndex);
-                }
-                return version;
-            }
-            
-            // Fallback auf FileVersion
-            return FileVersionInfo.GetVersionInfo(AppContext.BaseDirectory + "LRCatalogSync.exe").ProductVersion ?? "0.0.0.0";
-        }
 
         public SettingsForm(AppConfig cfg)
         {
@@ -43,10 +23,11 @@ namespace LRCatalogSync.UI
             LoadSettings();
         }
 
+        // ==================== EINRICHTUNG DER FORMULAR-CONTROLS ====================
         private void SetupControls()
         {
             this.Text = $"LRCatalogSync v{appVersion} - Fototour-und-Technik.de";
-            this.Size = new System.Drawing.Size(510, 620);
+            this.Size = new System.Drawing.Size(510, 650); // Setze die Größe des Formulars (Breite, Höhe)
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
@@ -81,13 +62,14 @@ namespace LRCatalogSync.UI
             yPos += lineHeight;
             AddLabelAndComboBox(scrollPanel, "Log-Level:", ref yPos, "cmbLogLevel", new[] { "DEBUG", "INFO", "NOTICE", "ERROR" }, config.LogLevel, labelWidth, controlWidth - 200);
             yPos += lineHeight;
-            
+            AddLabelAndTextBox(scrollPanel, "Aktuallisierungszeit:", ref yPos, "txtGlobalCycleInterval", config.GlobalCycleInterval.ToString(), labelWidth, 35, false, false, "Sekunden", HorizontalAlignment.Right);
+            yPos += lineHeight;            
             AddInfoText(scrollPanel, "Lightroom Katalog", ref yPos, 10);
             yPos += lineHeightToHeading;
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;
             AddCheckBox(scrollPanel, "*Previews.lrdata synchronisieren?", ref yPos, "chkSyncPreviewData", config.SyncPreviewData, labelWidth);
-            yPos += lineHeight;
+            yPos += lineHeight + 2;
             AddLabelAndTextBox(scrollPanel, "lokale Katalog Datei:", ref yPos, "txtCatalogLocalFile", config.CatalogLocalFile, labelWidth, controlWidth, true);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Remote Katalog Pfad:", ref yPos, "txtCatalogRemotePath", config.CatalogRemotePath, labelWidth, controlWidth, false);
@@ -102,7 +84,7 @@ namespace LRCatalogSync.UI
             AddInfoText(scrollPanel, "_________________________________________________________________________", ref yPos, 10);
             yPos += lineHeight - 5;            
             AddCheckBox(scrollPanel, "Sicherungsordner aktivieren", ref yPos, "chkEnableBackups", config.EnableBackups, labelWidth);
-            yPos += lineHeight;            
+            yPos += lineHeight + 2;            
             AddLabelAndTextBox(scrollPanel, "Lokaler Backup Pfad:", ref yPos, "txtBackupsLocalPath", config.BackupsLocalPath, labelWidth, controlWidth, true);
             yPos += lineHeight;
             AddLabelAndTextBox(scrollPanel, "Remote Backup Pfad:", ref yPos, "txtBackupsRemotePath", config.BackupsRemotePath, labelWidth, controlWidth, false);
@@ -158,6 +140,7 @@ namespace LRCatalogSync.UI
             this.CancelButton = btnCancel;
         }
 
+        // ==================== HILFSMETHODEN FÜR FORMULAR-CONTROLS ====================
         private void AddLinkLabel(Panel panel, string text, string url, int left, int top)
         {
             var linkLabel = new LinkLabel
@@ -171,8 +154,7 @@ namespace LRCatalogSync.UI
                 LinkColor = System.Drawing.Color.FromArgb(0, 120, 215),
                 VisitedLinkColor = System.Drawing.Color.FromArgb(0, 120, 215),
                 LinkBehavior = LinkBehavior.NeverUnderline //Kein Unterstrich
-        };
-
+            };
             linkLabel.LinkClicked += (s, e) =>
             {
                 try
@@ -192,59 +174,36 @@ namespace LRCatalogSync.UI
             panel.Controls.Add(linkLabel);
         }
 
-        private void LoadSettings()
+        /// Fügt ein Label und ein TextBox-Control zum Panel hinzu.
+        /// Optional können ein Suffix-Label (z.B. "Sekunden") und ein Browse-Button für Datei-/Ordnerauswahl hinzugefügt werden.
+        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false, string suffixText = "", HorizontalAlignment textAlignment = HorizontalAlignment.Left)
         {
-            var passwordControl = this.Controls.Find("txtSambaPassword", true);
-            if (passwordControl.Length > 0 && (!string.IsNullOrEmpty(originalPasswordRclone) || !string.IsNullOrEmpty(originalPasswordAes)))
-            {
-                ((TextBox)passwordControl[0]).Text = "****";
-            }
-            
-            // Setze Standardwerte für rclone copy, falls noch nicht gesetzt
-            var chkEnableRcloneCopy = this.Controls.Find("chkEnableRcloneCopy", true);
-            if (chkEnableRcloneCopy.Length > 0)
-            {
-                ((CheckBox)chkEnableRcloneCopy[0]).Checked = config.EnableRcloneCopy;
-            }
-            
-            var txtRcloneCopyFolderName = this.Controls.Find("txtRcloneCopyFolderName", true);
-            if (txtRcloneCopyFolderName.Length > 0)
-            {
-                ((TextBox)txtRcloneCopyFolderName[0]).Text = config.RcloneCopyFolderName;
-            }
-
-            // Setze Autorun Checkbox
-            var chkAutoRun = this.Controls.Find("chkAutoRun", true);
-            if (chkAutoRun.Length > 0)
-            {
-                ((CheckBox)chkAutoRun[0]).Checked = config.AutoRun;
-            }
-        }
-
-        private void AddLabelAndTextBox(Panel panel, string labelText, ref int yPos, string controlName, string value, int labelWidth, int controlWidth, bool isPathField, bool isPassword = false)
-        {
+            // Label erstellen und hinzufügen
             var label = new Label
             {
-                Text = labelText,
-                Left = 10,
-                Top = yPos,
-                Width = labelWidth,
-                Height = 20,
-                TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-                AutoSize = false
+                Text = labelText,                                   // Anzeigetext des Labels
+                Left = 10,                                          // Horizontale Position (10px vom linken Rand)
+                Top = yPos,                                         // Vertikale Position
+                Width = labelWidth,                                 // Breite des Labels
+                Height = 20,                                        // Höhe des Labels
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft, // Textausrichtung linksbündig
+                AutoSize = false                                    // Größe nicht automatisch anpassen
             };
             panel.Controls.Add(label);
 
+            // TextBox erstellen und konfigurieren
             var textBox = new TextBox
             {
-                Name = controlName,
-                Text = value,
-                Left = labelWidth + 10,
-                Top = yPos,
-                Width = controlWidth,
-                Height = 24
+                Name = controlName,               // Name des Controls für spätere Wertabfrage
+                Text = value,                     // Anfangswert aus der Konfiguration
+                Left = labelWidth + 10,           // Position direkt nach dem Label (10px Abstand)
+                Top = yPos,                       // Vertikale Position
+                Width = controlWidth,             // Breite des Eingabefelds
+                Height = 24,                      // Höhe des Eingabefelds
+                TextAlign = textAlignment         // Textausrichtung (links, rechts, zentriert)
             };
 
+            // Wenn isPassword true ist, Eingabe maskieren (Passwort-Feld)
             if (isPassword)
             {
                 textBox.UseSystemPasswordChar = true;
@@ -252,21 +211,39 @@ namespace LRCatalogSync.UI
 
             panel.Controls.Add(textBox);
 
+            // Wenn suffixText angegeben ist, Label rechts neben der TextBox hinzufügen
+            // Dies wird verwendet, um Einheiten wie z.B."Sekunden" anzuzeigen
+            if (!string.IsNullOrEmpty(suffixText))
+            {
+                var suffixLabel = new Label
+                {
+                    Text = suffixText,                                // Anzeigetext (z.B. "Sekunden")
+                    Left = textBox.Right,                         // Position direkt nach der TextBox (8px Abstand)
+                    Top = yPos,                                       // Vertikale Position (gleich wie TextBox)
+                    Width = 70,                                       // Breite des Suffix-Labels
+                    Height = 20,                                      // Höhe des Labels
+                    TextAlign = System.Drawing.ContentAlignment.MiddleLeft, // Textausrichtung linksbündig
+                    AutoSize = false                                  // Größe nicht automatisch anpassen
+                };
+                panel.Controls.Add(suffixLabel);
+            }
+
+            // Wenn isPathField true ist, Browse-Button hinzufügen für Datei-/Ordnerauswahl
             if (isPathField)
             {
                 var btnBrowse = new Button
                 {
-                    Text = "...",
-                    Left = labelWidth + 10 + controlWidth,
-                    Top = yPos,
-                    Width = 35,
-                    Height = 24
+                    Text = "...",                                       // Button-Text mit drei Punkten
+                    Left = labelWidth + 10 + controlWidth,            // Position direkt nach der TextBox
+                    Top = yPos,                                         // Vertikale Position (gleich wie TextBox)
+                    Width = 35,                                         // Breite des Buttons
+                    Height = 24                                         // Höhe des Buttons
                 };
                 btnBrowse.Click += (s, e) =>
                 {
                     string path = "";
                     
-                    // Für Katalog-Datei: File-Dialog verwenden
+                    // Unterscheidung zwischen Katalog-Datei (File-Dialog) und anderen Pfeldern (Folder-Dialog)
                     if (controlName == "txtCatalogLocalFile")
                     {
                         path = BrowseFile("Lightroom Katalog-Datei (*.lrcat)|*.lrcat|Alle Dateien (*.*)|*.*");
@@ -289,14 +266,14 @@ namespace LRCatalogSync.UI
         {
             var checkBox = new CheckBox
             {
-                Name = controlName,
-                Text = labelText,
-                Checked = isChecked,
-                Left = 10 + labelWidth + 10,
-                Top = yPos,
-                Width = 300,
-                Height = 20,
-                AutoSize = false
+                Name = controlName,                                 // Name des Controls für spätere Wertabfrage
+                Text = labelText,                                   // Anzeigetext des Checkboxes
+                Checked = isChecked,                                // Aktueller Status (angehakt oder nicht)
+                Left = 10 + labelWidth + 10,                      // Position nach dem Label (10px + Labelbreite + 10px)
+                Top = yPos,                                         // Vertikale Position
+                Width = 300,                                        // Breite des Checkboxes
+                Height = 20,                                        // Höhe des Checkboxes
+                AutoSize = false                                    // Größe nicht automatisch anpassen
             };
             panel.Controls.Add(checkBox);
 
@@ -307,13 +284,13 @@ namespace LRCatalogSync.UI
         {
             var infoLabel = new Label
             {
-                Text = infoText,
-                Left = leftPosition,
-                Top = yPos,
-                Width = 300,
-                Height = 20,
-                ForeColor = System.Drawing.Color.FromArgb(0, 120, 215),
-                AutoSize = false
+                Text = infoText,                                    // Anzeigetext (Info-Text mit Link)
+                Left = leftPosition,                                // Horizontale Position
+                Top = yPos,                                         // Vertikale Position
+                Width = 300,                                        // Breite des Labels
+                Height = 20,                                        // Höhe des Labels
+                ForeColor = System.Drawing.Color.FromArgb(0, 120, 215), // Textfarbe (Blau: RGB 0,120,215)
+                AutoSize = false                                    // Größe nicht automatisch anpassen
             };
 
             // Macht den Text klickbar als Link
@@ -341,13 +318,14 @@ namespace LRCatalogSync.UI
         {
             var infoLabel = new Label
             {
-                Text = infoText,
-                Left = leftPosition,
-                Top = yPos,
-                Width = 300,
-                Height = 20,
-                TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-                AutoSize = false
+                Text = infoText,                                    // Anzeigetext (Info-Text)
+                Left = leftPosition,                                // Horizontale Position
+                Top = yPos,                                         // Vertikale Position
+                Width = 300,                                        // Breite des Labels
+                Height = 20,                                        // Höhe des Labels
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft, // Textausrichtung linksbündig
+                AutoSize = false,                                   // Größe nicht automatisch anpassen
+                Font = new Font("Segoe UI", 9f, FontStyle.Bold)     // Fette Schriftart für Überschriften
             };
 
             panel.Controls.Add(infoLabel);
@@ -357,24 +335,24 @@ namespace LRCatalogSync.UI
         {
             var label = new Label
             {
-                Text = labelText,
-                Left = 10,
-                Top = yPos,
-                Width = labelWidth,
-                Height = 20,
-                TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
-                AutoSize = false
+                Text = labelText,                                   // Anzeigetext des Labels
+                Left = 10,                                          // Horizontale Position (10px vom linken Rand)
+                Top = yPos,                                         // Vertikale Position
+                Width = labelWidth,                                 // Breite des Labels
+                Height = 20,                                        // Höhe des Labels
+                TextAlign = System.Drawing.ContentAlignment.MiddleLeft, // Textausrichtung linksbündig
+                AutoSize = false                                    // Größe nicht automatisch anpassen
             };
             panel.Controls.Add(label);
 
             var comboBox = new ComboBox
             {
-                Name = controlName,
-                Left = labelWidth + 10,
-                Top = yPos,
-                Width = controlWidth,
-                Height = 24,
-                DropDownStyle = ComboBoxStyle.DropDownList
+                Name = controlName,                                 // Name des Controls für spätere Wertabfrage
+                Left = labelWidth + 10,                             // Position direkt nach dem Label (10px Abstand)
+                Top = yPos,                                         // Vertikale Position
+                Width = controlWidth,                               // Breite des ComboBox
+                Height = 24,                                        // Höhe des ComboBox
+                DropDownStyle = ComboBoxStyle.DropDownList          // Nur Dropdown-Liste, keine manuelle Eingabe
             };
 
             foreach (string item in items)
@@ -385,6 +363,8 @@ namespace LRCatalogSync.UI
             comboBox.SelectedItem = selectedValue;
             panel.Controls.Add(comboBox);
         }
+
+        // ==================== HILFSMETHODEN FÜR DATEI- UND ORDNERDIALOGE ====================
 
         private string BrowseFolder()
         {
@@ -430,6 +410,29 @@ namespace LRCatalogSync.UI
                 config.SambaUser = GetControlValue("txtSambaUser");
                 config.LogLevel = GetControlValue("cmbLogLevel");
                 config.AutoRun = GetCheckBoxValue("chkAutoRun");
+
+                if (!int.TryParse(GetControlValue("txtGlobalCycleInterval"), out int globalCycleInterval) || globalCycleInterval <= 0)
+                {
+                    MessageBox.Show(
+                        "Fehler: Die Aktualisierungszeit muss eine positive Zahl in Sekunden sein!",
+                        "Ungültige Aktualisierungszeit",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Prüfe ob der Wert im gültigen Bereich liegt (1-999 Sekunden)
+                if (globalCycleInterval < 1 || globalCycleInterval > 999)
+                {
+                    MessageBox.Show(
+                        "Fehler: Die Aktualisierungszeit muss zwischen 1 und 999 Sekunden liegen!",
+                        "Ungültiger Wertebereich",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                config.GlobalCycleInterval = globalCycleInterval;
 
                 // ================= VALIDIERUNG 1: rclone.exe prüfen =================
                 string rcloneFolder = config.RcloneFolder;
@@ -641,6 +644,57 @@ namespace LRCatalogSync.UI
 
             File.WriteAllLines(GlobalData.RcloneConfigPath, lines);
             Log.Debug("Config: rclone.conf erfolgreich erstellt");
+        }
+
+        // ==================== HILFSMETHODEN FÜR VERSION UND EINSTELLUNGEN ====================
+        private static string GetApplicationVersion() //Aus Assembly-Informationen auslesen
+        {
+            // Lese die Version direkt aus der Assembly Information
+            var assembly = Assembly.GetExecutingAssembly();
+            var versionAttr = assembly.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>();
+            if (versionAttr?.InformationalVersion != null)
+            {
+                // Entferne den Hash-Teil nach dem "+"
+                string version = versionAttr.InformationalVersion;
+                int plusIndex = version.IndexOf('+');
+                if (plusIndex > 0)
+                {
+                    version = version.Substring(0, plusIndex);
+                }
+                return version;
+            }
+            
+            // Fallback auf FileVersion
+            return FileVersionInfo.GetVersionInfo(AppContext.BaseDirectory + "LRCatalogSync.exe").ProductVersion ?? "0.0.0.0";
+        }
+        
+        private void LoadSettings()
+        {
+            var passwordControl = this.Controls.Find("txtSambaPassword", true);
+            if (passwordControl.Length > 0 && (!string.IsNullOrEmpty(originalPasswordRclone) || !string.IsNullOrEmpty(originalPasswordAes)))
+            {
+                ((TextBox)passwordControl[0]).Text = "****";
+            }
+            
+            // Setze Standardwerte für rclone copy, falls noch nicht gesetzt
+            var chkEnableRcloneCopy = this.Controls.Find("chkEnableRcloneCopy", true);
+            if (chkEnableRcloneCopy.Length > 0)
+            {
+                ((CheckBox)chkEnableRcloneCopy[0]).Checked = config.EnableRcloneCopy;
+            }
+            
+            var txtRcloneCopyFolderName = this.Controls.Find("txtRcloneCopyFolderName", true);
+            if (txtRcloneCopyFolderName.Length > 0)
+            {
+                ((TextBox)txtRcloneCopyFolderName[0]).Text = config.RcloneCopyFolderName;
+            }
+
+            // Setze Autorun Checkbox
+            var chkAutoRun = this.Controls.Find("chkAutoRun", true);
+            if (chkAutoRun.Length > 0)
+            {
+                ((CheckBox)chkAutoRun[0]).Checked = config.AutoRun;
+            }
         }
 
         private void InitializeComponent()

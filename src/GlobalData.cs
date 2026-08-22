@@ -17,9 +17,6 @@
         // Heartbeat-Intervall für Lock-Aktualisierung (2,5 Minuten)
         public const int HEARTBEAT_INTERVAL_SEC = 150;
         
-        // Katalog-Sync Intervall (Sekunden) - Häufigkeit der Prüfzyklen
-        public const int CATALOG_SYNC_CHECK_INTERVAL = 10;
-
         // Rclone-Timeouts (Go-Duration-Format, z.B. "30s")
         public const string RCLONE_CONNECT_TIMEOUT = "30s";
         

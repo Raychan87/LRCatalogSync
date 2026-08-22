@@ -52,6 +52,9 @@ namespace LRCatalogSync.Infrastructure
         //Einstellung von LogLevel = DEBUG/INFO/NOTICE/ERROR
         public string LogLevel { get; set; } = "INFO";
 
+        // Intervall für die Prüfzyklen in Sekunden
+        public int GlobalCycleInterval { get; set; } = 10;
+
         // Autorun beim Systemstart
         public bool AutoRun { get; set; } = false;
 
@@ -135,6 +138,7 @@ namespace LRCatalogSync.Infrastructure
                         if (key == "SambaPasswordRclone") SambaPasswordRclone = value;
                         if (key == "SambaPasswordAes") SambaPasswordAes = value;
                         if (key == "LogLevel") LogLevel = value;
+                        if (key == "GlobalCycleInterval" && int.TryParse(value, out int globalCycleInterval)) GlobalCycleInterval = globalCycleInterval;
                         if (key == "AutoRun") AutoRun = bool.TryParse(value, out bool result4) && result4;
                     }
                 }
@@ -184,6 +188,7 @@ namespace LRCatalogSync.Infrastructure
                 "SambaPasswordRclone=" + SambaPasswordRclone,
                 "SambaPasswordAes=" + SambaPasswordAes,
                 "LogLevel=" + LogLevel,
+                "GlobalCycleInterval=" + GlobalCycleInterval,
                 "AutoRun=" + AutoRun
             };
 
