@@ -11,6 +11,7 @@ namespace LRCatalogSync.UI
         private AppConfig config;
         private string originalPasswordRclone; // Speichert das ursprüngliche rclone-verschlüsselte Passwort
         private string originalPasswordAes; // Speichert das ursprüngliche AES-verschlüsselte Passwort
+        private readonly ToolTip settingsToolTip = new ToolTip();
 
         public SettingsForm(AppConfig cfg)
         {
@@ -209,6 +210,8 @@ namespace LRCatalogSync.UI
                 textBox.UseSystemPasswordChar = true;
             }
 
+            settingsToolTip.SetToolTip(textBox, GetToolTipText(controlName));
+
             panel.Controls.Add(textBox);
 
             // Wenn suffixText angegeben ist, Label rechts neben der TextBox hinzufügen
@@ -275,9 +278,32 @@ namespace LRCatalogSync.UI
                 Height = 20,                                        // Höhe des Checkboxes
                 AutoSize = false                                    // Größe nicht automatisch anpassen
             };
+            settingsToolTip.SetToolTip(checkBox, GetToolTipText(controlName));
             panel.Controls.Add(checkBox);
 
             return checkBox;
+        }
+
+        private string GetToolTipText(string controlName)
+        {
+            return controlName switch
+            {
+                "chkAutoRun" => "Startet LRCatalogSync automatisch beim Windows-Systemstart.",
+                "txtRcloneFolder" => "Pfad zur rclone-Installation oder zum rclone-Verzeichnis.",
+                "txtGlobalCycleInterval" => "Zeit in Sekunden zwischen den automatischen Synchronisationszyklen (1 bis 999).",
+                "chkSyncPreviewData" => "Wenn aktiv, wird zusätzlich der Ordner *Previews.lrdata des Lightroom-Katalogs synchronisiert.",
+                "txtCatalogLocalFile" => "Lokaler Pfad zur Lightroom-Katalogdatei (.lrcat).",
+                "txtCatalogRemotePath" => "Zielpfad auf dem Samba-Server z.B. //192.168.1.100/SambaOrdner/ -> /SambaOrdner/",
+                "chkEnableRcloneCopy" => "Behält nach der Synchronisation eine Kopie des letzten Katalogs.",
+                "txtRcloneCopyFolderName" => "Name des Ordners für die Kopie des letzten Lightroom-Katalogs.",
+                "chkEnableBackups" => "Aktiviert die Sicherung der Sicherungsordner die Lightroom Classic ablegt.",
+                "txtBackupsLocalPath" => "Lokaler Pfad zum Sicherungsordner von Lightroom Classic.",
+                "txtBackupsRemotePath" => "Zielpfad auf dem entfernten Speicher für die Sicherungsordner von Lightroom Classic.",
+                "txtRemoteIP" => "IP-Adresse oder Hostname des Samba-Servers.",
+                "txtSambaUser" => "Benutzername für die Verbindung zum Samba-Server.",
+                "txtSambaPassword" => "Passwort für die Verbindung zum Samba-Server.",
+                _ => string.Empty
+            };
         }
 
         private void AddInfoRclone(Panel panel, string infoText, ref int yPos, int leftPosition)
